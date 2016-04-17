@@ -9,6 +9,7 @@
 (defonce ^:private sequencer-handlers (atom {}))
 (defonce ^:private trigger-sources (atom {}))
 (defonce ^:private trigger-buses (atom {}))
+(defonce ^:private sequence-buffers (atom {}))
 (defonce t-source-g (group "trigger sources"))
 (defonce t-synth-g (group "trigger generators" :after t-source-g))
 
@@ -33,6 +34,12 @@
   (+ (rand-int (- max min)) min)
   )
 
+(defn- to-str [inst]
+  (if (contains? inst :name)
+    (:name inst)
+    inst
+    )
+  )
 (defn get-val-if-ref [x]
   (if (instance? clojure.lang.Atom x)
     @x
@@ -65,35 +72,56 @@
 
 
 (defn pp-pattern [pattern]
-  (println "{")
-  (doseq [i (sort (keys pattern))]
-    (print i " ")
-    (doseq [[instrument args] (partition 2 (pattern i))]
-      (print "[" (.name instrument) args "]"))
-    (println)
+  (when (map? pattern)
+    (println "{")
+    (doseq [i (sort (keys pattern))]
+      (print i " ")
+      (doseq [[instrument args] (partition 2 (pattern i))]
+        (print "[" (.name instrument) args "]"))
+      (println)
+      )
+    (println "}"))
+  (when (sequential? pattern)
+    (println "[")
+    (doseq [i pattern]
+      (print " [")
+      (doseq [[instrument args] (partition 2 i)]
+        (print (.name instrument) args))
+      (println "]")
+      )
+    (println "]")
     )
-  (println "}")
   )
 
 
 
 
-(defn player
+(defn play
   [cur-beat pattern]
   (let [beat-actions
         (cond
           (fn? pattern) (pattern cur-beat)
           (map? pattern) (pattern (int cur-beat))
           (sequential? pattern)
-          (if (< cur-beat (count pattern)) (nth pattern (dec cur-beat))))]
+          (if (<= cur-beat (count pattern)) (nth pattern (dec cur-beat))))]
+    ;; (if (> (count beat-actions) 0)
+    ;;   (println "playing " (reduce (fn [a b] (str (to-str a) " " (to-str b) " ")) beat-actions) " for beat " cur-beat))
     (dorun
-     ;(println "playing " beat-actions " for beat " cur-beat)
      (for [[instrument args] (partition 2 beat-actions)]
-       (do
-         (apply instrument args)
-         )
-       ))
-    )
+       (if (not (nil? instrument))
+         (let [inst (apply instrument args)]
+           (if (and (instance? overtone.studio.inst.Inst instrument) ;;If instrument has a gate argument, set it to 0 after trigger
+                    (some #(= (:name %) "gate") (:params instrument)))
+             (do
+               (at (+ (now)
+                      (* (if (>= (.indexOf args :dur) 0)
+                           (nth args (inc (.indexOf args :dur)))
+                           1
+                           ) 1000))
+                   (ctl inst :gate 0)
+                   ))
+             )
+           )))))
   )
 
 (defsynth trigger-source [out-bus 3 clock-speed 2]
@@ -118,7 +146,7 @@
                           (cond
                             (map? val) (apply max (keys val))
                             (sequential? val) (count val)
-                            true 1))
+                            true (node-get-control sequencer :pattern-size)))
                      ))
                  1 (get @patterns (to-sc-id sequencer)))))
   )
@@ -155,15 +183,40 @@
     )
   )
 
-(defmacro create-anon-synth [bus ugen]
+(defmacro create-anon-synth [bus ugen & args]
   `(synth []
-          (out:kr ~bus ~ugen)
+          (out:kr ~bus (~ugen ~@args))
           )
   )
 
+(defn- cleanup [in]
+  (let [id (to-sc-id (in :node))
+        trigger-source (@trigger-sources id)
+        trigger-bus (@trigger-buses id)
+        sequence-handler (@sequencer-handlers id)
+        sequence-buffer (@sequence-buffers id)
+        do-if (fn [in action] (if (not (nil? in)) (apply action [in])))]
+
+    (swap! patterns (fn [p] (dissoc p id)))
+
+    (do-if sequence-handler remove-event-handler)
+
+    (do-if trigger-source kill)
+    (swap! trigger-sources (fn [sources]
+                             (dissoc sources id)
+                             ))
+    (do-if trigger-bus free-bus)
+    (swap! trigger-buses (fn [buses]
+                           (dissoc buses id)
+                           ))
+    (do-if sequence-buffer buffer-free)
+    (swap! sequence-buffers (fn [b]
+                              (dissoc b id)))
+    )
+  )
 (defn- build-sequencer [source-synth bus]
   (let [uid (trig-id)
-        synth (trigger-synth [:tail t-synth-g] bus uid 10)
+        synth (trigger-synth [:tail t-synth-g] bus uid 4)
         key (keyword (gensym "sequencer"))]
 
     (swap! trigger-buses (fn [buses]
@@ -175,16 +228,17 @@
     (on-trigger synth uid
                 (fn [beat]
                   (doseq [p (get @patterns (to-sc-id synth))]
-                    (player beat (get-val-if-ref p))))
+                    (play beat (get-val-if-ref p))))
                 key)
     (swap! sequencer-handlers (fn [handlers]
                                 (assoc handlers (to-sc-id synth) key)))
+    (on-node-destroyed synth cleanup)
     synth
     ))
 
 (defn gets
   "Get default sequencer which uses impulse as source"
-  ([] (get-sequencer 2))
+  ([] (gets 2))
   ([clock-speed]
    (let [trigger-bus (control-bus)]
      (build-sequencer
@@ -199,6 +253,40 @@
      ((create-anon-synth trigger-bus t-ugen) [:tail t-source-g])
      trigger-bus))
   )
+
+
+(defn gbs
+  "Sequencer runs using a buffer created using offsets"
+  ([offsets] (gbs offsets 0))
+  ([offsets gap]
+   (let [trigger-bus (control-bus)
+         start (first offsets)
+         end (last offsets)
+         dur (- end start)
+         sample-rate (/ 44.1 64) ;;sample rate in milliseconds
+         size (+ (Math/ceil (* dur sample-rate)) (* gap sample-rate))
+         buf (buffer size 1)
+         digits (-> (str size) count dec)
+         indices (map #(Math/round (* (- % start) sample-rate))
+                      offsets)
+         trigger (build-sequencer
+                  ((create-anon-synth trigger-bus play-buf:kr 1 buf :loop 1) [:tail t-source-g])
+                  trigger-bus)]
+     (doseq [offset indices]
+       (buffer-set! buf offset 0.9))
+     (swap! sequence-buffers (fn [buffers] (assoc buffers (to-sc-id trigger) buf)))
+     trigger
+     ))
+  )
+
+(defn- get-buffer-indices [pattern sample-rate]
+  (map #(let [pos (double (* (- % start) coeff))
+              pos-digits (long pos)
+              mul (Math/pow 10 (- digits pos-digits))]
+          (int (* pos mul)))
+       pattern)
+  )
+
 
 
 
@@ -218,21 +306,7 @@
     )
   )
 
-(defn kill-sequencer [sequencer]
-  (let [id (to-sc-id sequencer)]
-    (swap! patterns (fn [p] (dissoc p id)))
-    (remove-event-handler (get sequencer-handlers id))
-    (kill (@trigger-sources id))
-    (swap! trigger-sources (fn [sources]
-                             (dissoc sources id)
-                             ))
-    (free-bus (@trigger-buses id))
-    (swap! trigger-buses (fn [buses]
-                           (dissoc buses id)
-                           ))
-    (kill sequencer)
-    )
-  )
+
 
 (defn replp [sequencer replacement]
   (swap! patterns (fn [p]
@@ -244,6 +318,16 @@
   ([sequencer]
    (get patterns (to-sc-id sequencer) []))
   )
+
+(defn setsp [sequencer speed]
+  (ctl (get-source sequencer) :clock-speed speed)
+  )
+(defn set-size [sequencer size]
+  (ctl sequencer :pattern-size size)
+  )
+
+
+
 (defunk-env adsr-ng
   "Create an non-gated attack decay sustain release envelope
   suitable for use as the envelope parameter of the

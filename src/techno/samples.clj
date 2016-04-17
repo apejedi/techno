@@ -1,6 +1,7 @@
 (ns techno.samples
   (:use [clojure.java.io]
         [overtone.sc.sample]
+        [clojure.string :as s]
         )
   (:require [clojure.string :as string])
   )
@@ -35,10 +36,23 @@
     )
   )
 
+(defn group-samples [samples]
+  (let [sample-names (sort (map name (keys samples)))]
+    (reduce (fn [g sample]
+              (let [group (-> (re-seq #"([A-Za-z]+)[^\dA-Za-z]?[\d]+\..*$" sample) first last keyword)
+                    inst (keyword sample)]
+                (assoc-in g [group inst] (samples inst))
+                )) {} sample-names)
+    )
+  )
 
-;; (def sample-test (create-sample-map "D:\\musicradar-drum-samples\\musicradar-drum-samples\\Assorted Hits\\Kicks\\Kes Kick"))
+(defn longest [xs ys] (if (> (count xs) (count ys)) xs ys))
 
-;; (doseq [[_ s] sample-test]
-;;   (s)
-;;   (java.lang.Thread/sleep 1000)
-;;   )
+
+(def lcs
+  (memoize
+   (fn [[x & xs] [y & ys]]
+     (cond
+      (or (= x nil) (= y nil) ) nil
+      (= x y) (cons x (lcs xs ys))
+      :else (longest (lcs (cons x xs) ys) (lcs xs (cons y ys)))))))

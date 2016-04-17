@@ -1,14 +1,17 @@
 (ns techno.recorder
-  (:use [overtone.inst.drum])
+  (:use [overtone.core]
+        [overtone.inst.drum])
   (:import (javax.swing JTextArea JFrame JTextField JScrollPane)
            (java.awt Dimension BorderLayout Font Color)
            (java.awt.event KeyListener KeyEvent))
   )
 
 
-(defonce *position* (atom 0))
-(defonce *insts* (atom (cycle [dance-kick noise-snare tone-snare])))
-
+(defonce position (atom 0))
+(defonce insts (atom (cycle [dance-kick noise-snare tone-snare])))
+(defonce time-patterns (atom {}))
+(defonce time-pattern (atom []))
+(defonce recording (atom false))
 
 
 ;(start-recorder [dance-kick noise-snare tone-snare])
@@ -59,16 +62,16 @@
   )
 
 (defn start-recorder [instruments]
-  (swap! *insts* (fn [_] (cycle instruments)))
+  (swap! insts (fn [_] (cycle instruments)))
   (create-console (fn [^KeyEvent e ^JTextArea out ^JTextField text]
                     (let [key-pressed (keyword (if (= (.getID e) KeyEvent/KEY_TYPED)
                                                  (str (.getKeyChar e))
                                                  (KeyEvent/getKeyText (.getKeyCode e))))
                           mods (KeyEvent/getModifiersExText (.getModifiersEx e))
                           key-seq [:q :w :e :r :t :y :u :i :o :p :a :s :d :f :g :h :j :k :l :z :x :c :v :b :n :m]
-                          pos (if (= (keyword ",") key-pressed) (+ 26 @*position*) @*position*)
+                          pos (if (= (keyword ",") key-pressed) (+ 26 @position) @position)
                           get-inst (fn [key-pressed]
-                                     (nth @*insts*
+                                     (nth @insts
                                           (if (>= (.indexOf key-seq key-pressed) 0)
                                             (+ pos (.indexOf key-seq key-pressed))
                                             0)))
@@ -84,12 +87,55 @@
                             (if (not (nil? inst)) (inst)))
                         )
                       (.setText text "")
-                      (swap! *position* (fn [_] pos))
+                      (swap! position (fn [_] pos))
                       )))
 
   )
 
 
+(defn record-time-pattern []
+  (create-console
+   (fn [^KeyEvent e ^JTextArea out ^JTextField text]
+     (let [timestamp (System/currentTimeMillis)
+           key-pressed (keyword (if (= (.getID e) KeyEvent/KEY_TYPED)
+                                  (str (.getKeyChar e))
+                                  (KeyEvent/getKeyText (.getKeyCode e))))
+           mods (KeyEvent/getModifiersExText (.getModifiersEx e))]
+       (if (= key-pressed :r)
+         (dosync (swap! recording (fn [r] (not r)))
+             (if @recording
+               (dosync (.append out "\nRecording\n")
+                   (swap! time-pattern (fn [_] [timestamp])))
+                 (.append out "\nStopped recording\n")))
+         (dosync
+          (swap! time-pattern (fn [t] (conj t timestamp)))
+          (.append out (str "\n" timestamp "\n")))
+         )
+       (.setText text "")
+       )
+     ))
+  )
+
+
+
+;; Todo, use dur to scale offsets in sequence
+
+(defn get-time-pattern []
+  @time-pattern
+  )
+
+(defn- get-dur [p]
+  "Calculates the duration in seconds of a pattern recorded by record-time-pattern"
+  (let [start (first @time-pattern)
+        end (last @time-pattern)
+        dur (/ (- end start) 1000)]
+    dur
+    )
+  )
+
+(defn pp-time []
+  (println @time-pattern)
+  )
 
 
 (defn- test-instrument [instruments]
@@ -111,6 +157,20 @@
         )
       ))
   )
+
+(defsynth rec-out [buf 0]
+  (record-buf (in:ar 0 2) buf :action 2 :loop 0)
+  )
+(defn record-out [path dur]
+  (let [buf (buffer (* 44100 dur) 2)
+        rec (rec-out [:tail 1] buf)]
+    (on-node-destroyed rec
+                       (fn [_]
+                         (buffer-save buf path)
+                         (buffer-free buf)))
+    )
+  )
+
 
 
 (defn- crawl [graph f]

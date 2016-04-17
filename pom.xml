@@ -3,7 +3,7 @@
   <groupId>techno</groupId>
   <artifactId>techno</artifactId>
   <packaging>jar</packaging>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1</version>
   <name>techno</name>
   <description>FIXME: write description</description>
   <url>http://example.com/FIXME</url>
@@ -13,6 +13,11 @@
       <url>http://www.eclipse.org/legal/epl-v10.html</url>
     </license>
   </licenses>
+  <scm>
+    <tag>1b58055f983fb06b4da9c3db5004e671267cfa5f
+</tag>
+    <url/>
+  </scm>
   <build>
     <sourceDirectory>src</sourceDirectory>
     <testSourceDirectory>test</testSourceDirectory>
