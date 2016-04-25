@@ -25,23 +25,36 @@
     (out:ar 1 (* sig env amp))
     )
   )
+(defsynth grit-bass [note 35 dur 2 amp 0.4]
+  (let [freq (midicps note)
+        modulator (* freq 1.5)
+        sig (pm-osc freq modulator 10)
+        env-args [0.1 0.5 0.2 0.2] ;a d s r
+        env (env-gen (apply s/adsr-ng (map * env-args (repeat 4 dur))) :action 2)]
+    (out:ar 0 (* sig env amp))
+    (out:ar 1 (* sig env amp))
+    )
+  )
 
 
 (defonce bass-line (atom []))
-(swap! bass-line (fn [_]
-                   ;; {1 [my-bass [(note :Eb3) :dur 3]]
-                   ;;  4 [my-bass [(note :Eb3) :dur 1]]
-                   ;;  5 [my-bass [(note :Eb3) :dur 1]]
-                   ;;  6 [my-bass [(note :C#3) :dur 3]]
-                   ;;  9 [my-bass [(note :C#3) :dur 3]]
-                   ;;  12 [my-bass [(note :F3) :dur 1]]
-                   ;;  13 [my-bass [(note :Ab3) :dur 1]]
-                   ;;  }
-                   (mapcat
-                    #(repeat 4 [my-bass [(note %) :dur 0.5 :amp 0.2]])
-                    [:Eb3 :C#3 :F3 :Ab3]
-                    )
-                   ))
+(swap! bass-line
+       (fn [_]
+         (mapcat
+          #(repeat 2 [my-bass [(note %) :dur 0.6 :amp 0.05]])
+          [:Ab2 :C2 :G2 :D2 :Bb2]
+          )
+         )
+       ;; (fn [_]
+       ;;   (let [dur 2 amp 0.05]
+       ;;     {2 [my-bass [(note :Ab2) dur amp]]
+       ;;      4 [my-bass [(note :C2) dur amp]]
+       ;;      6 [my-bass [(note :G2) dur amp]]
+       ;;      8 [my-bass [(note :D2) dur amp]]
+       ;;      10 [my-bass [(note :Bb2) dur amp]]
+       ;;      }
+       ;;     ))
+       )
 
 (comment
   (def bass-player (s/gets 4))

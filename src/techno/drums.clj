@@ -38,26 +38,26 @@
 (defonce drum-kit (atom {}))
 (swap! drum-kit (fn [_]
                   (group-samples
-                   (drum-kits (keyword (choose (filter #(.contains (str %) "Acoustic") (keys drum-kits))))))
+                   (drum-kits (keyword (choose (filter #(.contains (str %) "Electro") (keys drum-kits))))))
                   ))
 
 (defonce beat (atom {}))
 (swap! beat (fn [_]
-              ;; (fn [beat]
-              ;;   (let [get-if #(if (contains? @drum-kit %) % (choose (keys @drum-kit)))
-              ;;         type-map {1 :Kick 3 :ClHat 4 :Snr 6 :Kick 7 :ClHat 8 :Tom}
-              ;;         action (vector (choose (vals (@drum-kit (get-if (type-map (int beat)))))) [])]
-              ;;                           ;(println beat " " action)
-              ;;     action
-              ;;     )
-              ;;   )
-              ;; (map #(vector (get-in drum-kits [:Kit6-Electro %]) [])
-              ;;      (map #(keyword (str "CYCdh_ElecK03-" % ".wav") )
-              ;;           ["Tom03" nil "Snr02" nil "Tom02" "Tom03" nil "Snr02" nil]))
-              (let [kit "CYCdh_ElecK02-"
-                    sounds (drum-kits :Kit5-Electro)
-                    sound #(vector (sounds (keyword (str kit % ".wav"))) [])]
-                [(sound "FX03")]
+              (let [sounds (drum-kits :Kit6-Electro)
+                    key (-> sounds keys first name)
+                    prefix (.substring key 0 (inc (.indexOf key "-")))
+                    s (fn [& ins]
+                        (mapcat #(vector (sounds (keyword (str prefix % ".wav"))) []) ins))]
+                {2  (s "Tom02" "Kick01")
+                 4  (s "PdHat" "Kick02")
+                 4.25 (s "Tom05")
+                 5  (s "Tom03" "Tom04")
+                 6  (s "OpHat")
+                 7.75 (s "Snr01")
+                 8  (s "Snr02" "Clap02" "Tom05")
+                                        ;1 [dance-kick []]
+                 ;8.5 (s "Tom05")
+                 }
                 )
               ))
 
@@ -76,13 +76,15 @@
                           (vals (group-samples (drum-kits :Kit6-Electro)))))
   (record-time-pattern 100)
   (def b1 (get-time-pattern))
-  (def beat-player (s/gbs b1 200))
+  (def beat-player (s/gets 8 0.25))
+  (def beat-player (s/gcs (latch:kr (env-gen:kr 8 16) (impulse:kr 1/3))))
   (s/setsp beat-player 8)
   (s/set-size beat-player 8)
   (s/addp beat-player electro-beat)
   (s/addp beat-player beat)
-  (s/rmp beat-player electro-beat)
+  (s/addp beat-player electro-beat)
   (kill beat-player)
+  (stop)
+  (ctl beat-player :reset 1)
   (start-recorder (vals (drum-kits :Kit7-Electro)))
-
   )

@@ -35,7 +35,7 @@
   )
 
 (defn- to-str [inst]
-  (if (contains? inst :name)
+  (if (and (coll? inst) (contains? inst :name))
     (:name inst)
     inst
     )
@@ -101,11 +101,14 @@
   (let [beat-actions
         (cond
           (fn? pattern) (pattern cur-beat)
-          (map? pattern) (pattern (int cur-beat))
+          (map? pattern) (pattern cur-beat)
           (sequential? pattern)
           (if (<= cur-beat (count pattern)) (nth pattern (dec cur-beat))))]
+    ;(println cur-beat)
     ;; (if (> (count beat-actions) 0)
-    ;;   (println "playing " (reduce (fn [a b] (str (to-str a) " " (to-str b) " ")) beat-actions) " for beat " cur-beat))
+    ;;   (println "playing "
+    ;;            (reduce (fn [a b] (str (to-str a) " " (to-str b) " ")) beat-actions)
+    ;;            " for beat " cur-beat))
     (dorun
      (for [[instrument args] (partition 2 beat-actions)]
        (if (not (nil? instrument))
@@ -124,14 +127,14 @@
            )))))
   )
 
-(defsynth trigger-source [out-bus 3 clock-speed 2]
-  (out:kr out-bus (impulse:kr clock-speed))
+(defsynth trigger-source [out-bus 3 clock-speed 2 step 0.25]
+  (out:kr out-bus (impulse:kr (* clock-speed (/ 1 step))))
   )
 
-(defsynth trigger-synth [listen-bus 3
-                         uid 0 pattern-size 4]
+(defsynth trigger-synth [listen-bus 3 uid 0 pattern-size 4 step 1 reset 0]
   (let [trigger (in:kr listen-bus)
-        count (stepper:kr trigger :min 1 :max pattern-size)]
+        count   (stepper:kr trigger :min 1 :max (* pattern-size (/ 1 step))
+                                 :reset reset)]
     (send-trig:kr trigger uid count)
     )
   )
@@ -144,7 +147,7 @@
                    (let [val (get-val-if-ref p)]
                      (max c
                           (cond
-                            (map? val) (apply max (keys val))
+                            (map? val) (Math/ceil (apply max (keys val)))
                             (sequential? val) (count val)
                             true (node-get-control sequencer :pattern-size)))
                      ))
@@ -184,9 +187,15 @@
   )
 
 (defmacro create-anon-synth [bus ugen & args]
-  `(synth []
-          (out:kr ~bus (~ugen ~@args))
-          )
+  (println ugen)
+  (if (= (type ugen) overtone.sc.machinery.ugen.sc_ugen.SCUGen)
+    `(synth []
+            (out:kr ~bus ~ugen)
+            )
+    `(synth []
+            (out:kr ~bus (~ugen ~@args))
+            )
+    )
   )
 
 (defn- cleanup [in]
@@ -214,36 +223,46 @@
                               (dissoc b id)))
     )
   )
-(defn- build-sequencer [source-synth bus]
-  (let [uid (trig-id)
-        synth (trigger-synth [:tail t-synth-g] bus uid 4)
-        key (keyword (gensym "sequencer"))]
-
-    (swap! trigger-buses (fn [buses]
-                           (assoc buses (to-sc-id synth) bus)
-                           ))
-    (swap! trigger-sources (fn [sources]
-                             (assoc sources (to-sc-id synth) source-synth)
-                             ))
-    (on-trigger synth uid
-                (fn [beat]
-                  (doseq [p (get @patterns (to-sc-id synth))]
-                    (play beat (get-val-if-ref p))))
-                key)
-    (swap! sequencer-handlers (fn [handlers]
-                                (assoc handlers (to-sc-id synth) key)))
-    (on-node-destroyed synth cleanup)
-    synth
-    ))
+(defn- build-sequencer
+  ([source-synth bus] (build-sequencer source-synth bus 1))
+  ([source-synth bus step]
+   (let [uid (trig-id)
+         synth (trigger-synth [:tail t-synth-g] bus uid 4 step)
+         key (keyword (gensym "sequencer"))]
+     (swap! trigger-buses (fn [buses]
+                            (assoc buses (to-sc-id synth) bus)
+                            ))
+     (swap! trigger-sources (fn [sources]
+                              (assoc sources (to-sc-id synth) source-synth)
+                              ))
+     (on-trigger synth uid
+                 (fn [beat]
+                   (let [step (node-get-control source-synth :step)
+                         stepped-beat (inc (* (dec beat) step))
+                         stepped-beat (cond (=  (mod stepped-beat (int stepped-beat)) 0.0)
+                                            (int stepped-beat)
+                                            true stepped-beat)]
+                     (doseq [p (get @patterns (to-sc-id synth))]
+                       (play stepped-beat
+                             (get-val-if-ref p)))
+                     )
+                   ) key)
+     (swap! sequencer-handlers (fn [handlers]
+                                 (assoc handlers (to-sc-id synth) key)))
+     (on-node-destroyed synth cleanup)
+     synth
+     )))
 
 (defn gets
   "Get default sequencer which uses impulse as source"
-  ([] (gets 2))
-  ([clock-speed]
+  ([] (gets 2 1))
+  ([speed] (gets speed 1))
+  ([clock-speed step]
    (let [trigger-bus (control-bus)]
      (build-sequencer
-      (trigger-source [:tail t-source-g] trigger-bus clock-speed)
-      trigger-bus)))
+      (trigger-source [:tail t-source-g] trigger-bus clock-speed step)
+      trigger-bus
+      step)))
   )
 
 (defn gcs [t-ugen]
@@ -279,13 +298,6 @@
      ))
   )
 
-(defn- get-buffer-indices [pattern sample-rate]
-  (map #(let [pos (double (* (- % start) coeff))
-              pos-digits (long pos)
-              mul (Math/pow 10 (- digits pos-digits))]
-          (int (* pos mul)))
-       pattern)
-  )
 
 
 
@@ -324,6 +336,12 @@
   )
 (defn set-size [sequencer size]
   (ctl sequencer :pattern-size size)
+  )
+(defn setst [sequencer step]
+  (when (node-active? sequencer)
+    (ctl (@trigger-sources (to-sc-id sequencer)) :step step)
+    (ctl sequencer :step step)
+    )
   )
 
 
