@@ -41,33 +41,72 @@
                    (drum-kits (keyword (choose (filter #(.contains (str %) "Electro") (keys drum-kits))))))
                   ))
 
+(defn build-from-kits [kits pattern]
+  (let [sounds (reduce #(merge %1 (drum-kits %2)) {} kits)
+        s (fn [ins]
+            (mapcat (fn [in]
+                      (vector
+                       (second (first
+                                (filter (fn [[k v]] (.contains (name k) in)) sounds)))
+                       []))
+                    ins))
+        ]
+    (zipmap (keys pattern) (map s (vals pattern)))
+    )
+  )
 (defonce beat (atom {}))
 (swap! beat (fn [_]
-              (let [sounds (drum-kits :Kit6-Electro)
-                    key (-> sounds keys first name)
-                    prefix (.substring key 0 (inc (.indexOf key "-")))
-                    s (fn [& ins]
-                        (mapcat #(vector (sounds (keyword (str prefix % ".wav"))) []) ins))]
-                {2  (s "Tom02" "Kick01")
-                 4  (s "PdHat" "Kick02")
-                 4.25 (s "Tom05")
-                 5  (s "Tom03" "Tom04")
-                 6  (s "OpHat")
-                 7.75 (s "Snr01")
-                 8  (s "Snr02" "Clap02" "Tom05")
-                                        ;1 [dance-kick []]
-                 ;8.5 (s "Tom05")
-                 }
-                )
+              (build-from-kits [:Kit10-Vinyl]
+                               {
+                                1 ["Kick01" "ClHat01"]
+                                1.25 ["Kick04"]
+                                1.5 ["Perc04"]
+                                2 ["Snr02"]
+                                2.5 ["Perc03"]
+                                3 ["Perc02"]
+                                4 ["Snr02"]
+                                5 []
+                                }
+                               )
               ))
 
+(defonce beat2 (atom {}))
+(swap! beat2 (fn [_]
+               (build-from-kits [:Kit10-Vinyl]
+                                {
+                                 1 ["Kick01"]
+                                1.5 ["Perc03"]
+                                1.75 ["Perc02"]
+                                2 ["Kick03" "Snr02"]
+                                2.5 ["Crash-02"]
+                                3 ["Kick01"]
+                                3.5 ["HfHat02"]
+                                4 ["Kick03" "Snr02"]
+                                4.75 []
+                                 }
+                                )
+               ))
 
 (defonce electro-beat (atom {}))
 (swap! electro-beat
-       (fn [_] (gen-pattern 20
-                           (vals (drum-kits (keyword (choose
-                                                      (filter #(.contains (str %) "Electro") (keys drum-kits))))))
-                           )))
+       (fn [_]
+         (build-from-kits [:Kit10-Vinyl]
+                          {
+                           1 ["ClHat01"]
+                           1.25 ["ClHat02" "Perc01"]
+                           1.5 []
+                           ;1.75 []
+                           })
+         ))
+
+(defonce pulse-beat (atom []))
+(swap! pulse-beat (fn [_]
+                    (fn [b]
+                      (if (and (integer? b) (odd? b))
+                        [dance-kick [:amp 0.3]]
+                        )
+                      )
+                    ))
 
 
 
@@ -75,14 +114,18 @@
   (start-recorder (mapcat vals
                           (vals (group-samples (drum-kits :Kit6-Electro)))))
   (record-time-pattern 100)
+  (s/play 1 @pulse-beat)
   (def b1 (get-time-pattern))
-  (def beat-player (s/gets 8 0.25))
-  (def beat-player (s/gcs (latch:kr (env-gen:kr 8 16) (impulse:kr 1/3))))
-  (s/setsp beat-player 8)
-  (s/set-size beat-player 8)
-  (s/addp beat-player electro-beat)
-  (s/addp beat-player beat)
-  (s/addp beat-player electro-beat)
+  (def beat-player (s/get-s 2 0.25))
+  (s/set-sp beat-player 2)
+  (s/set-st beat-player 0.25)
+  (node-get-control beat-player :pattern-size)
+  (s/set-size beat-player 2)
+  (s/add-p beat-player electro-beat :electro)
+  (s/add-p beat-player beat :beat)
+  (s/add-p beat-player beat2)
+  (s/rm-p beat-player :beat)
+  (s/wrap-p beat-player electro-beat)
   (kill beat-player)
   (stop)
   (ctl beat-player :reset 1)

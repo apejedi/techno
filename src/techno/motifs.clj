@@ -70,7 +70,7 @@
                                        (chord :Eb4 :dim)
                                        (chord :F4 :major)
                                        (chord :G3 :minor)])]
-                    (mapcat #(vector sweet [% :amp 0.5 :dur 1])
+                    (mapcat #(vector sweet [% :amp 1 :dur 1])
                             notes)
                     ))))
 
@@ -80,10 +80,10 @@
   (sweet (choose (scale :Ab3 :major)))
   (s/play 1 @chords)
   (@get-motif)
-  (def note-player (s/gets 2))
-  (s/setsp note-player 2)
-  (s/rmp note-player get-motif)
-  (s/addp note-player chords)
+  (def note-player (s/get-s 1))
+  (s/set-sp note-player 2)
+  (s/add-p note-player get-motif)
+  (s/add-p note-player chords)
   (kill note-player)
   (organ :gate (env-gen (perc 2)))
   (kill organ)

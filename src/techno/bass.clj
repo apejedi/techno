@@ -57,6 +57,7 @@
        )
 
 (comment
+  (my-bass (note :C4))
   (def bass-player (s/gets 4))
   (s/setsp bass-player 4)
   (s/addp bass-player bass-line)
