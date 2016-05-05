@@ -39,28 +39,31 @@
 
 (defonce bass-line (atom []))
 (swap! bass-line
-       (fn [_]
-         (mapcat
-          #(repeat 2 [my-bass [(note %) :dur 0.6 :amp 0.05]])
-          [:Ab2 :C2 :G2 :D2 :Bb2]
-          )
-         )
        ;; (fn [_]
-       ;;   (let [dur 2 amp 0.05]
-       ;;     {2 [my-bass [(note :Ab2) dur amp]]
-       ;;      4 [my-bass [(note :C2) dur amp]]
-       ;;      6 [my-bass [(note :G2) dur amp]]
-       ;;      8 [my-bass [(note :D2) dur amp]]
-       ;;      10 [my-bass [(note :Bb2) dur amp]]
-       ;;      }
-       ;;     ))
+       ;;   (mapcat
+       ;;    #(repeat 2 [my-bass [(note %) :dur 0.6 :amp 0.05]])
+       ;;    [:Ab2 :C2 :G2 :D2 :Bb2]
+       ;;    )
+       ;;   )
+       (fn [_]
+         {
+          1 [bass [(midi->hz (note :C4)) 0.1]]
+          1.25 [bass [(midi->hz (note :D4)) 0.1]]
+          1.75 []
+          2 [bass [(midi->hz (note :D4)) 0.1]]
+          2.25 [ bass [(midi->hz (note :C4)) 0.1]]
+          2.75 []
+          }
+         )
        )
 
 (comment
-  (my-bass (note :C4))
-  (def bass-player (s/gets 4))
-  (s/setsp bass-player 4)
-  (s/addp bass-player bass-line)
+  (def beat (get-time-pattern))
+  (my-bass (note :D4) 0.4)
+  (def bass-player (s/get-s 2 0.25))
+  (s/set-sp bass-player 2)
+  (s/set-st bass-player 0.25)
+  (s/add-p bass-player bass-line)
   (s/rmp bass-player bass-fn)
   (s/addp bass-player get-motif)
   (s/rmp bass-player get-motif)

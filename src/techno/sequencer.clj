@@ -106,7 +106,8 @@
            (map? pattern) (pattern cur-beat)
            (sequential? pattern)
            (if (<= cur-beat (count pattern)) (nth pattern (dec cur-beat))))]
-     ;; (println cur-beat)
+     ;(println (System/currentTimeMillis))
+     ;;  (println cur-beat)
      ;; (if (> (count beat-actions) 0)
      ;;   (println "playing "
      ;;            (reduce (fn [a b] (str (to-str a) " " (to-str b) " ")) beat-actions)

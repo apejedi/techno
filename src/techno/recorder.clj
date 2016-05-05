@@ -92,6 +92,9 @@
 
   )
 
+  ;; (record-time-pattern)
+  ;; (s/play 1 @pulse-beat)
+  ;; (def b1 (get-time-pattern))
 
 (defn record-time-pattern []
   (create-console

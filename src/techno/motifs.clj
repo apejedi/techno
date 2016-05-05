@@ -70,7 +70,7 @@
                                        (chord :Eb4 :dim)
                                        (chord :F4 :major)
                                        (chord :G3 :minor)])]
-                    (mapcat #(vector sweet [% :amp 1 :dur 1])
+                    (mapcat #(vector sweet [% :amp 0.3 :dur 1])
                             notes)
                     ))))
 

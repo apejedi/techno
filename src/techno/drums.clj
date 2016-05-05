@@ -1,6 +1,7 @@
 (ns techno.drums
   (:use [overtone.core]
         [overtone.inst.drum]
+        [overtone.inst.synth]
         [techno.samples]
         [techno.recorder]
         )
@@ -46,8 +47,10 @@
         s (fn [ins]
             (mapcat (fn [in]
                       (vector
-                       (second (first
-                                (filter (fn [[k v]] (.contains (name k) in)) sounds)))
+                       (if (string? in)
+                         (second (first
+                                  (filter (fn [[k v]] (.contains (name k) in)) sounds)))
+                         in)
                        []))
                     ins))
         ]
@@ -65,27 +68,12 @@
                                 2.5 ["Perc03"]
                                 3 ["Perc02"]
                                 4 ["Snr02"]
-                                5 []
+                                4.75 []
                                 }
                                )
               ))
 
-(defonce beat2 (atom {}))
-(swap! beat2 (fn [_]
-               (build-from-kits [:Kit10-Vinyl]
-                                {
-                                 1 ["Kick01"]
-                                1.5 ["Perc03"]
-                                1.75 ["Perc02"]
-                                2 ["Kick03" "Snr02"]
-                                2.5 ["Crash-02"]
-                                3 ["Kick01"]
-                                3.5 ["HfHat02"]
-                                4 ["Kick03" "Snr02"]
-                                4.75 []
-                                 }
-                                )
-               ))
+
 
 (defonce electro-beat (atom {}))
 (swap! electro-beat
@@ -93,8 +81,8 @@
          (build-from-kits [:Kit10-Vinyl]
                           {
                            1 ["ClHat01"]
-                           1.25 ["ClHat02" "Perc01"]
-                           1.5 []
+                           1.25 ["Perc01"]
+                           1.5 ["ClHat01"]
                            ;1.75 []
                            })
          ))
@@ -112,22 +100,80 @@
 
 (comment
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :Kit6-Electro)))))
-  (record-time-pattern 100)
-  (s/play 1 @pulse-beat)
-  (def b1 (get-time-pattern))
+                          (vals (group-samples (drum-kits :Kit10-Vinyl)))))
   (def beat-player (s/get-s 2 0.25))
-  (s/set-sp beat-player 2)
+  (s/set-sp beat-player 1)
   (s/set-st beat-player 0.25)
   (node-get-control beat-player :pattern-size)
-  (s/set-size beat-player 2)
+  (s/set-size beat-player 1.5)
   (s/add-p beat-player electro-beat :electro)
   (s/add-p beat-player beat :beat)
-  (s/add-p beat-player beat2)
+
   (s/rm-p beat-player :beat)
   (s/wrap-p beat-player electro-beat)
   (kill beat-player)
   (stop)
   (ctl beat-player :reset 1)
   (start-recorder (vals (drum-kits :Kit7-Electro)))
+  )
+
+
+(defonce beats (atom {}))
+(swap! beats (fn [_]
+               {:one-two
+                (build-from-kits [:Kit10-Vinyl]
+                                 {
+                                  1 ["Kick01"]
+                                  2 ["Snr01"]
+                                  3 []
+                                  }
+                                 )
+                :three-beat (build-from-kits
+                             [:Kit10-Vinyl]
+                             {1 ["Kick01"]
+                              1.75 ["Snr01"]
+                              2.25 ["Kick01"]
+                              3 []
+                              })
+                :four-beat (build-from-kits
+                             [:Kit10-Vinyl]
+                             {1 ["Kick01"]
+                              1.5 ["ClHat01"]
+                              2 ["Snr02"]
+                              2.5 ["ClHat01"]
+                              2.75 []
+                              })
+                :three-four (build-from-kits
+                             [:Kit10-Vinyl]
+                             {1 ["Kick04"]
+                              1.75 ["Snr02"]
+                              2.25 ["Kick04"]
+                              2.75 ["Snr02"]
+                              })
+                :six-eight (build-from-kits
+                             [:Kit10-Vinyl]
+                             {1 ["Snr02"]
+                              1.75 ["Kick04"]
+                              2 ["Snr02"]
+                              2.25 ["Kick01"]
+                              2.75 []
+                              })
+                :bomba (build-from-kits
+                             [:Kit10-Vinyl]
+                             {1 ["Kick01" "Kick04"]
+                              1.5 ["Perc01"]
+                              1.75 ["Kick01"]
+                              2 ["Kick02"]
+                              2.25 ["Perc01"]
+                              2.5 ["Kick01"]
+                              2.75 []
+                              })
+                }
+               ))
+
+(loop [times []]
+  (if (>= (count times) 2)
+    (do (println (- (second times) (first times)))
+        (recur (rest times)))
+    )
   )
