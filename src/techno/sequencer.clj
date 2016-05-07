@@ -35,7 +35,7 @@
   )
 
 (defn- to-str [inst]
-  (if (and (coll? inst) (contains? inst :name))
+  (if (and (map? inst) (contains? inst :name))
     (:name inst)
     inst
     )
@@ -77,7 +77,7 @@
     (doseq [i (sort (keys pattern))]
       (print i " ")
       (doseq [[instrument args] (partition 2 (pattern i))]
-        (print "[" (.name instrument) args "]"))
+        (print "[" (to-str instrument) (to-str args) "]"))
       (println)
       )
     (println "}"))
@@ -86,7 +86,7 @@
     (doseq [i pattern]
       (print " [")
       (doseq [[instrument args] (partition 2 i)]
-        (print (.name instrument) args))
+        (print (to-str instrument) (to-str args)))
       (println "]")
       )
     (println "]")
@@ -98,16 +98,15 @@
 
 (defn play
   "Function to play instruments on the given beat"
-  ([cur-beat pattern] (play cur-beat pattern false))
-  ([cur-beat pattern wrap]
+  ([cur-beat pattern] (play cur-beat pattern cur-beat))
+  ([cur-beat pattern orig-beat]
    (let [beat-actions
          (cond
            (fn? pattern) (pattern cur-beat)
            (map? pattern) (pattern cur-beat)
-           (sequential? pattern)
-           (if (<= cur-beat (count pattern)) (nth pattern (dec cur-beat))))]
-     ;(println (System/currentTimeMillis))
-     ;;  (println cur-beat)
+           (and (sequential? pattern))
+           (if (<= orig-beat (count pattern)) (nth pattern (dec orig-beat))))]
+     ;; (println cur-beat)
      ;; (if (> (count beat-actions) 0)
      ;;   (println "playing "
      ;;            (reduce (fn [a b] (str (to-str a) " " (to-str b) " ")) beat-actions)
@@ -157,7 +156,7 @@
                          (wrap-beat beat size)
                          stepped-beat)]
         ;(println "playing " k " with beat " final-beat)
-        (play final-beat val)
+        (play final-beat val beat)
         ))
     )
   )
@@ -183,8 +182,12 @@
                      (max c
                           (cond
                             (map? val)  (apply max (keys val))
-                            (sequential? val) (count val)
-                            true (node-get-control sequencer :pattern-size)))
+                            (sequential? val) (+ 1 (* (- (count val) 1)
+                                                      (node-get-control sequencer :step)))
+                            true (if (node-get-control sequencer :pattern-size)
+                                   (node-get-control sequencer :pattern-size)
+                                   1)
+                            ))
                      ))
                  1
                  (vals (get @patterns (to-sc-id sequencer)))
@@ -385,9 +388,10 @@
 (defn- mod-p [sequencer pattern attr val]
   (swap! patterns (fn [p]
                      (let [id (to-sc-id sequencer)
-                           [key pat] (first
-                                      (filter (fn [[k v]]
-                                                (= (v :data)  pattern)) (p id)))]
+                           key (if (keyword? pattern) pattern
+                                   (first (first
+                                           (filter (fn [[k v]]
+                                                     (= (v :data)  pattern)) (p id)))))]
                        (if (not (nil? key))
                          (assoc-in p [id key attr] val)
                          p
@@ -400,12 +404,26 @@
    (mod-p sequencer pattern :wrap val)
    )
   )
-(defn delay-p
-  ([sequencer pattern] (delay-p sequencer pattern 1))
-  ([sequencer pattern val]
-   (mod-p sequencer pattern :delay val)
-   )
+
+
+(defn chord-p [in pitch type & args]
+  "returns a beat action to play a chord using the given instrument
+e.g. (chord-p inst :C4 :minor) -> [inst [note1] inst [note2] inst [note3]]"
+  (mapcat #(vector in (concat [(note %)] args))
+          (chord pitch type))
   )
+
+
+(defn build-rest-p [pattern]
+  (reduce (fn [res cur]
+            (if (= (first cur) :space)
+              (concat res (repeat (second cur) nil))
+              (conj (vec res) cur))
+            )
+          []
+          pattern)
+  )
+
 (defn set-size [sequencer size]
   (ctl sequencer :pattern-size size)
   )
