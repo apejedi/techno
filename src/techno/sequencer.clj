@@ -1,5 +1,6 @@
 (ns techno.sequencer
   (:use [overtone.core]
+        [overtone.sc.machinery.server.comms]
         [overtone.inst.drum]
         )
   )
@@ -13,6 +14,7 @@
 (defonce t-source-g (group "trigger sources"))
 (defonce t-synth-g (group "trigger generators" :after t-source-g))
 
+(declare sync-s)
 
 (def test-pattern
   (atom {
@@ -110,7 +112,7 @@
      ;; (if (> (count beat-actions) 0)
      ;;   (println "playing "
      ;;            (reduce (fn [a b] (str (to-str a) " " (to-str b) " ")) beat-actions)
-     ;;            " for beat " cur-beat))
+     ;;            " for beat " cur-beat " raw-beat" orig-beat))
      (dorun
       (for [[instrument args] (partition 2 beat-actions)]
         (if (not (nil? instrument))
@@ -140,12 +142,13 @@
     ;(println "orig " beat " stepped beat " stepped-beat)
     (doseq [[k p] (get @patterns (to-sc-id synth))]
       (let [val (get-val-if-ref (p :data))
-            wrap (p :wrap)
+            wrap (and (p :wrap) (not (fn? val)))
             size (cond
                    (map? val) (apply max (keys val))
                    (sequential? val) (count val)
                    true 1)
-            wrap-beat (fn [beat size]
+            wrap-beat (fn [beat size step]
+                        ;(println "beat " beat " size " size " step " step)
                         (let [s (+ 1 (/ (- size 1) step))
                               steps (cycle (range 1 (inc s)))
                               w (nth steps (dec beat))]
@@ -153,10 +156,13 @@
                           )
                         )
             final-beat (if (and wrap (> stepped-beat size))
-                         (wrap-beat beat size)
-                         stepped-beat)]
-        ;(println "playing " k " with beat " final-beat)
-        (play final-beat val beat)
+                         (wrap-beat beat size step)
+                         stepped-beat)
+            orig-beat (if (and wrap (> beat size))
+                         (wrap-beat beat size 1)
+                         beat)]
+        ;(println "playing " k " with beat " final-beat " orig " orig-beat " seq-beat " beat)
+        (play final-beat val orig-beat)
         ))
     )
   )
@@ -168,7 +174,7 @@
 (defsynth trigger-synth [listen-bus 3 uid 0 pattern-size 4 step 1 reset 0]
   (let [trigger (in:kr listen-bus)
         count   (stepper:kr trigger :min 1 :max (+ 1 (/ (- pattern-size 1) step))
-                                 :reset reset)]
+                                 :reset reset :resetval 0)]
     (send-trig:kr trigger uid count)
     )
   )
@@ -182,7 +188,7 @@
                      (max c
                           (cond
                             (map? val)  (apply max (keys val))
-                            (sequential? val) (+ 1 (* (- (count val) 1)
+                            (sequential? val) (inc (* (dec (count val))
                                                       (node-get-control sequencer :step)))
                             true (if (node-get-control sequencer :pattern-size)
                                    (node-get-control sequencer :pattern-size)
@@ -197,23 +203,27 @@
 
 (defn add-p
   "(add-p sequencer pattern) adds the given pattern to the patterns being played by the sequencer"
-  ([sequencer pattern] (add-p sequencer pattern (gensym "pat") false))
-  ([sequencer pattern key] (add-p sequencer pattern key false))
-  ([sequencer pattern key wrap]
+  ([sequencer pattern] (add-p sequencer pattern (gensym "pat") {:wrap true}))
+  ([sequencer pattern key] (add-p sequencer pattern key {:wrap true}))
+  ([sequencer pattern key attrs]
    (let [id (to-sc-id sequencer)
          cur-val (get @patterns id {})
-         watcher-key (keyword (gensym "pattern"))]
+         is-atom (instance? clojure.lang.Atom pattern)
+         watcher-key (if is-atom (keyword (gensym "pattern")))
+         attrs (if is-atom (merge attrs {:watcher watcher-key}) attrs)]
      (swap! patterns (fn [p]
+                       (if (and (contains? cur-val key) (contains? (get cur-val key) :watcher))
+                         (remove-watch (get-in cur-val [key :data]) (get-in cur-val [key :watcher])))
                        (assoc p id
-                              (assoc cur-val key {:data pattern :wrap wrap})
+                              (assoc cur-val key (merge {:data pattern} attrs))
                                         ;(conj cur-val pattern)
                               )
                        ))
      (update-pattern-size sequencer)
      (if (= (count (keys cur-val)) 0)
-         (ctl sequencer :reset 1)
+         (sync-s sequencer)
        )
-     (if (instance? clojure.lang.Atom pattern)
+     (if is-atom
        (do
          (add-watch pattern watcher-key (fn [& args] (update-pattern-size sequencer)))
          )
@@ -228,18 +238,20 @@
   (let [id (to-sc-id sequencer)
         cur-val (get @patterns id {})]
     (swap! patterns (fn [p]
-                      (assoc p id
-                             (if (keyword? pattern)
-                               (dissoc cur-val pattern)
-                               (into {}
-                                     (remove
-                                      (fn [[k v]]
-                                        (= (get-val-if-ref pattern) (get-val-if-ref (v :data)))
-                                        )
+                      (if (= pattern :all)
+                        (assoc p id {})
+                        (assoc p id
+                               (if (keyword? pattern)
+                                 (dissoc cur-val pattern)
+                                 (into {}
+                                       (remove
+                                        (fn [[k v]]
+                                          (= (get-val-if-ref pattern) (get-val-if-ref (v :data)))
+                                          )
                                         ;#(= (get-val-if-ref pattern) (get-val-if-ref %))
-                                      cur-val
-                                      )))
-                             )
+                                        cur-val
+                                        )))
+                               ))
                       ))
     (update-pattern-size sequencer)
     )
@@ -268,7 +280,9 @@
 
     (do-if sequence-handler remove-event-handler)
 
-    (do-if trigger-source kill)
+    (if (node-active? trigger-source)
+      (do-if trigger-source kill)
+      )
     (swap! trigger-sources (fn [sources]
                              (dissoc sources id)
                              ))
@@ -349,7 +363,17 @@
   )
 
 
-
+(defn sync-s [& sequencers]
+  "Synchronize given sequencers, meaning all will be reset to start their cycles at the same time"
+  (let [ids (map to-sc-id sequencers)
+        sizes (map #(node-get-control % :pattern-size) ids)
+        size (apply max sizes)]
+    (if size
+      (ctl ids :pattern-size size))
+    (ctl ids :reset 0)
+    (ctl ids :reset 1)
+    )
+  )
 
 
 (defn get-source [sequencer]
@@ -371,14 +395,18 @@
 
 
 (defn repl-p [sequencer replacement]
-  (swap! patterns (fn [p]
-                    (assoc p (to-sc-id sequencer) replacement)))
+  ([sequencer replacement]
+   (repl-p sequencer replacement nil)
+   )
+  ([sequencer replacement key]
+   (swap! patterns (fn [p]
+                     (assoc p (to-sc-id sequencer) replacement))))
   )
 
 (defn get-p
   ([] patterns)
   ([sequencer]
-   (get patterns (to-sc-id sequencer) []))
+   (keys (get patterns (to-sc-id sequencer) {})))
   )
 
 (defn set-sp [sequencer speed]
@@ -406,11 +434,24 @@
   )
 
 
-(defn chord-p [in pitch type & args]
+(defn chord-p [in pitch type & [args]]
   "returns a beat action to play a chord using the given instrument
 e.g. (chord-p inst :C4 :minor) -> [inst [note1] inst [note2] inst [note3]]"
-  (mapcat #(vector in (concat [(note %)] args))
+  (mapcat #(vector in (cons % (if (nil? args) [] args)))
           (chord pitch type))
+  )
+
+(defn arp-p [in notes & [args space reps]]
+  "build arpeggio (arp-p bass [60 62 66] [:amp 0.5] & space)"
+  (build-rest-p
+   (apply concat
+          (map #(vector [in (cons % (if (nil? args) [] args))]
+                        [:space (if (nil? space) 1 space)]
+                        )
+               (apply concat (repeat (if (nil? reps) 1 reps) notes))
+               )
+          )
+   )
   )
 
 

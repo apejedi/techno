@@ -2,6 +2,7 @@
   (:use [overtone.core]
         [overtone.inst.drum]
         [overtone.inst.synth]
+        [techno.core :as core]
         [techno.samples]
         [techno.recorder]
         )
@@ -31,17 +32,6 @@
     )
   )
 
-
-
-
-                                        ;Patterns
-
-(defonce drum-kit (atom {}))
-(swap! drum-kit (fn [_]
-                  (group-samples
-                   (drum-kits (keyword (choose (filter #(.contains (str %) "Electro") (keys drum-kits))))))
-                  ))
-
 (defn build-from-kits [kits pattern]
   (let [sounds (reduce #(merge %1 (drum-kits %2)) {} kits)
         s (fn [ins]
@@ -54,9 +44,18 @@
                        []))
                     ins))
         ]
-    (zipmap (keys pattern) (map s (vals pattern)))
+    (cond (map? pattern) (zipmap (keys pattern) (map s (vals pattern)))
+          (sequential? pattern) (map s pattern)
+          )
     )
   )
+
+
+                                        ;Patterns
+
+
+
+
 (defonce beat (atom {}))
 (swap! beat (fn [_]
               (build-from-kits [:Kit10-Vinyl]
@@ -66,56 +65,76 @@
                                 1.5 ["Perc04"]
                                 2 ["Snr02"]
                                 2.5 ["Perc03"]
-                                3 ["Perc02"]
+                                ;3 ["Perc02"]
                                 4 ["Snr02"]
                                 4.75 []
                                 }
+                              ;;  {1 ["Kick05" "Kick04"]
+                              ;; 1.5 ["Perc01"]
+                              ;; 1.75 ["Kick01"]
+                              ;; 2 ["Kick02"]
+                              ;; 2.25 ["Perc01"]
+                              ;; 2.5 ["Kick01"]
+                              ;; 2.75 []
+                              ;; }
                                )
               ))
 
 
+(defonce syncop (atom nil))
+(swap! syncop (fn [_]
+                (fn [b]
+                  (if (or (= (rand-int 3) 1) (integer? b))
+                    [(get-in drum-kits [:Kit8-Vinyl :CYCdh_VinylK1-Tamb.wav]) []]
+                    )
+                  )
+                ))
 
-(defonce electro-beat (atom {}))
-(swap! electro-beat
+(defonce electro (atom {}))
+(swap! electro
        (fn [_]
-         (build-from-kits [:Kit10-Vinyl]
+         (build-from-kits [:Kit10-Vinyl :Kit15-Electro]
                           {
-                           1 ["ClHat01"]
-                           1.25 ["Perc01"]
+                           1 ["Perc01"]
                            1.5 ["ClHat01"]
-                           ;1.75 []
                            })
          ))
 
 (defonce pulse-beat (atom []))
 (swap! pulse-beat (fn [_]
-                    (fn [b]
-                      (if (and (integer? b) (odd? b))
-                        [dance-kick [:amp 0.3]]
-                        )
-                      )
-                    ))
+                    (build-from-kits [:Kit10-Vinyl]
+                          {
+                           1 ["Perc02"]
+                           1.25 ["Perc03"]
+                           2 ["Perc04"]
+                           2.75 []
+                           }
+                          )))
 
 
 
 (comment
   (start-recorder (mapcat vals
                           (vals (group-samples (drum-kits :Kit10-Vinyl)))))
-  (def beat-player (s/get-s 2 0.25))
-  (s/set-sp beat-player 1)
-  (s/set-st beat-player 0.25)
-  (node-get-control beat-player :pattern-size)
-  (s/set-size beat-player 1.5)
-  (s/add-p beat-player electro-beat :electro)
-  (s/add-p beat-player beat :beat)
+  (def beat-player (s/get-s (/ 80 60) 0.25))
+  (s/set-sp core/player (/ 80 60))
+  (s/add-p core/player beat :main)
+  (s/add-p core/player electro :electro)
+  (s/add-p core/player pulse-beat :pulse)
+  (s/add-p core/player (:bomba @beats) :main)
+  (s/add-p core/player (:four-beat @beats) :main)
+  (s/add-p core/player syncop :syncop)
 
-  (s/rm-p beat-player :beat)
-  (s/wrap-p beat-player electro-beat)
-  (kill beat-player)
+  (s/rm-p core/player :syncop)
+  (s/rm-p core/player :main)
+  (s/wrap-p core/player :electro)
+
   (stop)
-  (ctl beat-player :reset 1)
-  (start-recorder (vals (drum-kits :Kit7-Electro)))
   )
+
+
+
+
 
 
 (defonce beats (atom {}))
