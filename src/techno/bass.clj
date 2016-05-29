@@ -45,15 +45,13 @@
 (defonce bass-line (atom []))
 (swap! bass-line
        (fn [_]
-         (let [root :C3
-               type :minor
-               prog (s/arp-p vintage-bass
-                             (map #(nth (scale root type) %) [3 6 2 1])
-                             [:amp 0.5] 3)]
-           prog)
-           ;(conj prog [:space 1])
-
-         )
+         (s/phrase-p
+          vintage-bass
+          [:E3 :D3 :C3 :B3 [:space 0]]
+          (double (/ 1 4))
+          0
+          [:dur 1]
+          ))
        )
 
 (defonce bass-pulse (atom []))
@@ -74,15 +72,19 @@
        )
 
 
+
+
 (comment
   (my-bass (choose (scale :C3 :major)) :amp 1)
   (bass (midi->hz (note :C3)))
   (stop)
-  (s/play 3 @bass-line)
+  (s/play 1 @bass-line)
   (vintage-bass (choose (scale :C3 :major)) 50)
   (overpad (note :D4) 0.6)
   (s/add-p core/player bass-pulse :bass)
   (s/add-p core/player bass-line :bass-line)
   (s/rm-p core/player :bass)
   (s/wrap-p core/player :bass)
-  (s/rmp bass-player get-motif))
+  (s/rmp bass-player get-motif)
+  (s/add-p melissa :bass)
+  )

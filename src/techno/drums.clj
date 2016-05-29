@@ -65,18 +65,10 @@
                                 1.5 ["Perc04"]
                                 2 ["Snr02"]
                                 2.5 ["Perc03"]
-                                ;3 ["Perc02"]
+                                ;3 ["OpHat"]
                                 4 ["Snr02"]
                                 4.75 []
                                 }
-                              ;;  {1 ["Kick05" "Kick04"]
-                              ;; 1.5 ["Perc01"]
-                              ;; 1.75 ["Kick01"]
-                              ;; 2 ["Kick02"]
-                              ;; 2.25 ["Perc01"]
-                              ;; 2.5 ["Kick01"]
-                              ;; 2.75 []
-                              ;; }
                                )
               ))
 
@@ -97,6 +89,7 @@
                           {
                            1 ["Perc01"]
                            1.5 ["ClHat01"]
+                           ;1.75 []
                            })
          ))
 
@@ -115,20 +108,36 @@
 
 (comment
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :Kit10-Vinyl)))))
+                          (vals (group-samples (drum-kits :Kit3-Acoustic)))))
   (def beat-player (s/get-s (/ 80 60) 0.25))
   (s/set-sp core/player (/ 80 60))
-  (s/add-p core/player beat :main)
   (s/add-p core/player electro :electro)
   (s/add-p core/player pulse-beat :pulse)
+
+  (do
+    (s/rm-p core/player :harmony)
+    (s/rm-p core/player :electro)
+    (s/rm-p core/player :motif)
+    ;(s/rm-p core/player :arp)
+    (s/rm-p core/player :bass-line)
+    )
+
+  (do
+    (s/add-p core/player techno.motifs/arpeggio :arp)
+    (s/add-p core/player (:four-beat @beats) :main)
+    )
+  (s/add-p core/player beat :main)
   (s/add-p core/player (:bomba @beats) :main)
-  (s/add-p core/player (:four-beat @beats) :main)
+  (s/add-p core/player (:six-eight @beats) :main)
   (s/add-p core/player syncop :syncop)
 
-  (s/rm-p core/player :syncop)
   (s/rm-p core/player :main)
-  (s/wrap-p core/player :electro)
+  (s/rm-p core/player :pulse)
+  (s/rm-p core/player :electro)
 
+  (s/add-p core/player scatter-pulse :pulse)
+  (s/add-p core/player scatter-main :main)
+  (s/add-p core/player (:melissa-b @beats) :main)
   (stop)
   )
 
@@ -187,12 +196,34 @@
                               2.5 ["Kick01"]
                               2.75 []
                               })
+                :melissa-b (build-from-kits
+                            [:Kit3-Acoustic]
+                            {1 ["SdSt-04"]
+                             1.25 ["SdSt-04"]
+                             1.5 ["Snr-06"]
+                             1.75 []
+                             })
                 }
                ))
 
-(loop [times []]
-  (if (>= (count times) 2)
-    (do (println (- (second times) (first times)))
-        (recur (rest times)))
-    )
-  )
+(def scatter-pulse
+  (build-from-kits
+   [:Kit3-Acoustic]
+   {1 ["Crash-01"]
+    }
+   ))
+(def scatter-main
+  (build-from-kits
+   [:Kit3-Acoustic]
+   {1 ["SdSt-05"]
+    1.25 ["SdSt-05"]
+    1.5 ["SdSt-05"]
+    1.75 ["SdSt-07" "SdSt-06"]
+    2 ["SdSt-05"]
+    2.25 ["SdSt-05"]
+    2.5 ["SdSt-07" "SdSt-06"]
+    2.75 ["SdSt-05"]
+    3 ["SdSt-05"]
+    3.25 ["SdSt-05"]
+    }
+   ))
