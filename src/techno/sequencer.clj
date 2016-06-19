@@ -3,6 +3,7 @@
         [overtone.sc.machinery.server.comms]
         [overtone.inst.drum]
         )
+  (:import (java.util.concurrent.atomic AtomicInteger))
   )
 
 
@@ -11,6 +12,7 @@
 (defonce ^:private trigger-sources (atom {}))
 (defonce ^:private trigger-buses (atom {}))
 (defonce ^:private sequence-buffers (atom {}))
+(defonce ^:private pattern-counters (atom {}))
 (defonce t-source-g (group "trigger sources"))
 (defonce t-synth-g (group "trigger generators" :after t-source-g))
 
@@ -48,6 +50,8 @@
     x
     )
   )
+
+
 (defsynth syncopation-synth [freq 1 uid 0]
     "A synth to randomly modulate the clock speed of a trigger synth"
     (let [trigger (dust:kr freq)]
@@ -130,39 +134,62 @@
             ))))))
   )
 
-(defn- handle-beat-trigger [synth beat step]
-  (let [
-        step-beat (fn [beat step]
+(defn- handle-beat-trigger [synth beat step one-shot]
+  (let [step-beat (fn [beat step]
                     (let [res (inc (* (dec beat) step))]
                       (cond (=  (mod res (int res)) 0.0)
-                           (int res)
+                            (int res)
                            true res)))
-        stepped-beat (step-beat beat step)]
-    ;(println "orig " beat " stepped beat " stepped-beat " time " (java.util.Date.))
+        stepped-beat (step-beat beat step)
+        seq-size (node-get-control synth :pattern-size)]
+    ;; (println "orig " beat " stepped beat " stepped-beat
+    ;;          ;" time " (java.util.Date.)
+    ;;          )
     (doseq [[k p] (get @patterns (to-sc-id synth))]
       (let [val (get-val-if-ref (p :data))
-            wrap (and (p :wrap) (not (fn? val)))
             size (cond
                    (map? val) (apply max (keys val))
                    (sequential? val) (count val)
                    true 1)
+            raw-size (if (sequential? val) size (+ 1 (/ (- size 1) step)))
+            min-wrap (get p :min-wrap 0)
+            wrap (and (p :wrap)
+                      (>= (- seq-size stepped-beat) min-wrap)
+                      (not (fn? val)))
+            ;; counter (get @pattern-counters k)
+            ;; meh (.compareAndSet counter 0 (int beat))
+            ;; final-beat (if wrap
+            ;;              (step-beat (.get counter) step)
+            ;;              stepped-beat)
+            ;; orig-beat (if wrap
+            ;;             (.get counter)
+            ;;             beat)
+            ;; next-beat (if (>= (.get counter) raw-size)
+            ;;             (.getAndSet counter 1)
+            ;;             (.incrementAndGet counter))
             wrap-beat (fn [beat size step]
-                        ;(println "beat " beat " size " size " step " step)
-                        (let [s (+ 1 (/ (- size 1) step))
-                              steps (cycle (range 1 (inc s)))
+                        (let [steps (cycle (range 1 (inc raw-size)))
                               w (nth steps (dec beat))]
-                          (step-beat w step)
-                          )
-                        )
+                          (step-beat w step)))
             final-beat (if (and wrap (> stepped-beat size))
                          (wrap-beat beat size step)
                          stepped-beat)
             orig-beat (if (and wrap (> beat size))
                          (wrap-beat beat size 1)
-                         beat)]
-        ;(println "playing " k " with beat " final-beat " orig " orig-beat " time " (.getTime (java.util.Date.)))
+                         beat)
+            ]
+        ;; (if (or (= k :main)
+        ;;          true
+        ;;         )
+        ;;   (println "playing " k " with beat " final-beat " orig " orig-beat
+        ;;            ;(.get counter) " size " size
+        ;;                                 ;" time " (.getTime (java.util.Date.))
+        ;;            ))
         (play final-beat val orig-beat)
         ))
+    (if (and one-shot (>= stepped-beat seq-size))
+      (kill synth)
+      )
     )
   )
 
@@ -174,8 +201,9 @@
 
 (defsynth trigger-synth [listen-bus 3 uid 0 pattern-size 4 step 1 reset 0]
   (let [trigger (in:kr listen-bus)
-        count   (stepper:kr trigger :min 1 :max (+ 1 (/ (- pattern-size 1) step))
-                                 :reset reset :resetval 0)]
+        count   (stepper:kr trigger :min 1
+                            :max (+ 1 (/ (- pattern-size 1) step))
+                            :reset reset :resetval 0)]
     (send-trig:kr trigger uid count)
     )
   )
@@ -183,24 +211,28 @@
 
 (defn- update-pattern-size [sequencer]
   (if (node-active? sequencer)
-    (ctl sequencer :pattern-size
-         (reduce (fn [c p]
-                   (let [val (get-val-if-ref (p :data))
-                         step (node-get-control sequencer :step)
-                         step (if (not (nil? step)) step 0.25)]
-                     (max c
-                          (cond
-                            (map? val)  (apply max (keys val))
-                            (sequential? val) (inc (* (dec (count val))
-                                                      step))
-                            true (if (node-get-control sequencer :pattern-size)
-                                   (node-get-control sequencer :pattern-size)
-                                   1)
-                            ))
-                     ))
-                 1
-                 (vals (get @patterns (to-sc-id sequencer)))
-                 )))
+    (let [step (node-get-control sequencer :step)
+          get-size (fn [p]
+                     (let [val (get-val-if-ref (p :data))]
+                       (cond
+                         (contains? p :size) (p :size)
+                         (map? val)  (apply max (keys val))
+                         (sequential? val) (inc (* (dec (count val)) step))
+                         true (if (number?
+                                   (node-get-control sequencer :pattern-size))
+                                (node-get-control sequencer :pattern-size)
+                                1)
+                         )
+                       ))
+          size (reduce (fn [c p]
+                         (let [val (get-val-if-ref (p :data))]
+                            (max c (get-size p))
+                           ))
+                       1
+                       (vals (get @patterns (to-sc-id sequencer))))]
+      (ctl sequencer :pattern-size size)
+      )
+    )
   )
 
 
@@ -216,17 +248,23 @@
            watcher-key (if is-atom (keyword (gensym "pattern")))
            attrs (if is-atom (merge attrs {:watcher watcher-key}) attrs)]
        (swap! patterns (fn [p]
-                         (if (and (contains? cur-val key) (contains? (get cur-val key) :watcher))
-                           (remove-watch (get-in cur-val [key :data]) (get-in cur-val [key :watcher])))
+                         (if (and (contains? cur-val key)
+                                  (contains? (get cur-val key) :watcher))
+                           (remove-watch (get-in cur-val [key :data])
+                                         (get-in cur-val [key :watcher])))
                          (assoc p id
                                 (assoc cur-val key (merge {:data pattern} attrs))
                                         ;(conj cur-val pattern)
                                 )
                          ))
+       (swap! pattern-counters
+              (fn [c]
+                (assoc c key (AtomicInteger. 0))
+                ))
        (update-pattern-size sequencer)
-       (if (= (count (keys cur-val)) 0)
-         (sync-s sequencer)
-         )
+       ;; (if (= (count (keys cur-val)) 0)
+       ;;   (sync-s sequencer)
+       ;;   )
        (if is-atom
          (do
            (add-watch pattern watcher-key (fn [& args] (update-pattern-size sequencer)))
@@ -262,6 +300,10 @@
                                         )))
                                ))
                       ))
+    (swap! pattern-counters
+           (fn [c]
+             (dissoc c pattern)
+             ))
     (update-pattern-size sequencer)
     )
   )
@@ -284,9 +326,13 @@
         sequence-handler (@sequencer-handlers id)
         sequence-buffer (@sequence-buffers id)
         do-if (fn [in action] (if (not (nil? in)) (apply action [in])))]
+    (doseq [k (keys (@patterns id))] (rm-p (in :node) k))
     (swap! patterns (fn [p] (dissoc p id)))
 
     (do-if sequence-handler remove-event-handler)
+    (swap! sequencer-handlers (fn [handlers]
+                             (dissoc handlers id)
+                             ))
 
     (if (node-active? trigger-source)
       (do-if trigger-source kill)
@@ -305,10 +351,11 @@
   )
 
 (defn- build-sequencer
-  ([source-synth bus] (build-sequencer source-synth bus 1))
-  ([source-synth bus step]
+  ([source-synth bus] (build-sequencer source-synth bus 1 false))
+  ([source-synth bus step one-shot]
    (let [uid (trig-id)
-         synth (trigger-synth [:tail t-synth-g] bus uid 4 step)
+         listen-to (if one-shot 3 bus)
+         synth (trigger-synth [:tail t-synth-g] listen-to uid 4 step)
          key (keyword (gensym "sequencer"))]
      (swap! trigger-buses (fn [buses]
                             (assoc buses (to-sc-id synth) bus)
@@ -318,7 +365,7 @@
                               ))
      (on-trigger synth uid
                  (fn [beat]
-                   (handle-beat-trigger synth beat (node-get-control source-synth :step))
+                   (handle-beat-trigger synth beat (node-get-control source-synth :step) one-shot)
                    ) key)
      (swap! sequencer-handlers (fn [handlers]
                                  (assoc handlers (to-sc-id synth) key)))
@@ -328,14 +375,16 @@
 
 (defn get-s
   "Get default sequencer which uses impulse as source"
-  ([] (get-s 2 1))
-  ([speed] (get-s speed 1))
-  ([clock-speed step]
+  ([] (get-s 2 0.25 false))
+  ([speed] (get-s speed 0.25 false))
+  ([speed step] (get-s speed step false))
+  ([clock-speed step one-shot]
    (let [trigger-bus (control-bus)]
      (build-sequencer
       (trigger-source [:tail t-source-g] trigger-bus clock-speed step)
       trigger-bus
-      step)))
+      step
+      one-shot)))
   )
 
 (defn g-cs [t-ugen]
@@ -422,7 +471,7 @@
   (ctl (get-source sequencer) :clock-speed speed)
   )
 
-(defn- mod-p [sequencer pattern attr val]
+(defn mod-p [sequencer pattern attr val]
   (swap! patterns (fn [p]
                      (let [id (to-sc-id sequencer)
                            key (if (keyword? pattern) pattern
@@ -450,14 +499,38 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
           notes)
   )
 
-(defn build-rest-p [pattern]
-  (vec (reduce (fn [res cur]
-                 (if (= (first cur) :space)
-                   (concat res (vec (repeat (second cur) nil)))
-                   (conj (vec res) cur))
-                 )
-               []
-               pattern))
+(defn build-rest-p [pattern & [step]]
+  (let [ pat (reduce (fn [res cur]
+                  (let [step (if step step 0.25)
+                        key (apply max (keys res))
+                        is-space (or (and (sequential? cur) (= (first cur) :space))
+                                     (and (keyword? cur) (re-find #"^\d" (name cur))))
+                        next-key (if is-space
+                                   (+ key (* step (if (sequential? cur) (second cur)
+                                                      (-> cur name Integer/parseInt))))
+                                   (+ step key))
+                        res (assoc res next-key (if is-space [] nil))]
+                    (if is-space
+                      res
+                      (assoc res key cur))
+                    ))
+                {1 nil}
+                pattern)
+        tail (apply max (keys pat))]
+    (if (nil? (get pat tail))
+      (dissoc pat tail)
+      pat)
+    )
+  ;; (vec (reduce (fn [res cur]
+  ;;                (if (or (and (sequential? cur) (= (first cur) :space)) (keyword? cur))
+  ;;                  (concat res (vec (repeat
+  ;;                                    (cond (sequential? cur) (second cur)
+  ;;                                          true (-> cur name Integer/parseInt))
+  ;;                                           nil)))
+  ;;                  (conj (vec res) cur))
+  ;;                )
+  ;;              []
+  ;;              pattern))
   )
 (defn arp-p [in notes & [args space reps]]
   "build arpeggio (arp-p bass [60 62 66] [:amp 0.5] & space)"
@@ -485,8 +558,8 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                        action
                        (vec block)))
           cur (first phrase)
-          is-note (or (keyword? cur) (number? cur))
-          is-space? #(and (sequential? %) (= (first %) :space))
+          is-note (or (and (keyword? cur) (nil? (re-find #"^\d" (name cur)))) (number? cur))
+          is-space? #(or (and (sequential? %) (= (first %) :space)) (and (keyword? %) (re-find #"^\d" (name %))))
           is-arg? #(and (sequential? %) (not (is-space? %)) (keyword? (first %)) (number? (second %)))
           is-arg (is-arg? cur)
           is-space (is-space? cur)
@@ -499,7 +572,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                    true nil)
           pattern (if (and (not (nil? action)) (> (count action) 0))
                     (assoc pattern beat action) pattern)
-          space  (cond is-space (second cur)
+          space  (cond is-space (if (sequential? cur) (second cur) (-> cur name Integer/parseInt))
                        (not (nil? space)) space
                        true 0)
           pattern (if (and (= (count (rest phrase)) 0) (> space 0))
@@ -518,6 +591,24 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     )
   )
 
+(defn start-s [synth]
+  (if (node-active? synth)
+    (ctl synth :listen-bus (get @trigger-buses (to-sc-id synth)))
+    )
+  )
+(defn play-p [& args]
+  "play pattern once for testing"
+  (let [s-args (filter number? args)
+        speed (if (first s-args) (first s-args) 1)
+        step (if (second s-args) (second s-args) 0.25)
+        s (get-s speed step true)
+        patterns (take-while #(not (number? %)) args)]
+    (ensure-node-active! s)
+    (doseq [p patterns]
+      (add-p s p))
+    (start-s s)
+    )
+  )
 
 (defn set-size [sequencer size]
   (ctl sequencer :pattern-size size)
@@ -526,9 +617,9 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
   (when (node-active? sequencer)
     (ctl (@trigger-sources (to-sc-id sequencer)) :step step)
     (ctl sequencer :step step)
+    (update-pattern-size sequencer)
     )
   )
-
 
 
 (defunk-env adsr-ng

@@ -50,7 +50,7 @@
           [:E3 :D3 :C3 :B3 [:space 0]]
           (double (/ 1 4))
           0
-          [:dur 1]
+          [:dur 1 :amp 0.3]
           ))
        )
 
@@ -58,11 +58,13 @@
 (swap! bass-pulse
        (fn [_]
          {
-          1 [bass [
+          1 [grit-bass [
                    ;(midi->hz (choose (scale :C3 :minor))) :amp 0.5 :t 0.6
-                   ;:amp 0.5
+                                        ;:amp 0.5
+                        :dur 1
+                        :amp 1
                     ]]
-          1.5 [bass [
+          1.5 [grit-bass [
                      ;:amp 0.5
                      ;(midi->hz (choose (scale :C3 :minor))) :amp 0.5 :t 0.6
                       ]]
@@ -85,6 +87,6 @@
   (s/add-p core/player bass-line :bass-line)
   (s/rm-p core/player :bass)
   (s/wrap-p core/player :bass)
-  (s/rmp bass-player get-motif)
+  (s/rm-p core/player :bass-line)
   (s/add-p melissa :bass)
   )

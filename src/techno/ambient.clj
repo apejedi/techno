@@ -23,6 +23,24 @@
     (out output sig)
     ))
 
+(defsynth klang-test [freq 440 amp 1 atk 0.1 dur 3]
+  (let [partials (map double
+                      ;[1]
+                      [(/ 1 2) (/ 2 3) 1 (/ 4 3) 2 (/ 5 2)]
+                      )
+        num (count partials)
+        sig (klang [(map
+                     #(* freq %)
+                     ;#(lin-exp (lf-noise1:kr 0.001) -1 1 (* freq %) (* freq % 2))
+                     partials)
+                    (repeat num (double (/ 1 num)))
+                    ])
+        env (env-gen (perc (* atk dur) (* (- 1 atk) dur)) :action FREE)
+        sig (* sig env amp)]
+    (out 0 [sig sig])
+    )
+  )
+
 
 (def marimba (atom nil))
 (swap! marimba
@@ -50,11 +68,18 @@
                (fn [b]
                  (let [rand #(.nextDouble (ThreadLocalRandom/current) %1 %2)
                        ;chord (map midi->hz (chord-degree (choose [:ii :iv :v :vi]) :A4 :minor))
-                       chord (map midi->hz (choose [[23 35 54 63 64]
-                                                    [45 52 54 59 61 64]
-                                                    [28 40 47 56 59 63]
-                                                    [42 52 57 61 63]]))]
-                   (if (and (integer? b) (= (rand-int 6) 0))
+                       chord
+                       (map midi->hz (chord-degree (choose [:i :ii :iii :iv :v]) :C4 :major))
+
+                       ;; (map #(midi->hz (note %))
+                       ;;            (choose
+                       ;;             [[:B0 :B1 :F#3 :Eb4 :E4]
+                       ;;              [:A2 :E3 :F#3 :B3 :C#4 :E4]
+                       ;;              [:E1 :E2 :B2 :Ab3 :B3 :Eb4]
+                       ;;              [:F#2 :E3 :A3 :C#4 :Eb4]]
+                       ;;             ))
+                       ]
+                   (if (and (integer? b) (= (rand-int 5) 0))
                        (s/chord-p bpfsaw2
                                   chord
                                   [:dur (rand 1.5 4.0)
@@ -65,10 +90,22 @@
                                    :atk (rand 2.0 2.5)
                                    :rel (rand 6.5 10.0)
                                    :ldb 6
-                                   :amp 0.5])
+                                   :amp 1])
                        ))
                  )))
+
+
+(def spooky-bells
+  (fn [b]
+    (if (and
+         (not (integer? b))
+         (= (rand-int 2) 0))
+      [klang-test [(midi->hz (choose (scale :C5 :major))) :amp (rand 0.6) :atk 0.0001]]
+      )
+    ))
 (comment
   (s/add-p core/player marimba :marimba)
   (s/add-p core/player drone :drone)
+  (s/add-p core/player spooky-bells :spooky)
+  (s/play 1 [(s/chord-p klang-test  (map midi->hz (chord-degree (choose [:i :ii :iii :iv :v]) :C4 :minor 2)))])
   )

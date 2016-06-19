@@ -1,13 +1,16 @@
 (ns techno.drums
   (:use [overtone.core]
-        [overtone.inst.drum]
         [overtone.inst.synth]
         [techno.core :as core]
         [techno.samples]
         [techno.recorder]
+        [techno.synths]
         )
-  (:require [techno.sequencer :as s])
+  (:require [techno.sequencer :as s]
+            [overtone.inst.drum :as d]
+            [clojure.string :as string])
   )
+
 
 
 (def drum-kits (create-sample-map "D:\\musicradar-drum-samples\\musicradar-drum-samples\\Drum Kits" true))
@@ -32,24 +35,46 @@
     )
   )
 
-(defn build-from-kits [kits pattern]
-  (let [sounds (reduce #(merge %1 (drum-kits %2)) {} kits)
-        s (fn [ins]
-            (mapcat (fn [in]
-                      (vector
-                       (if (string? in)
-                         (second (first
-                                  (filter (fn [[k v]] (.contains (name k) in)) sounds)))
-                         in)
-                       []))
-                    ins))
-        ]
-    (cond (map? pattern) (zipmap (keys pattern) (map s (vals pattern)))
-          (sequential? pattern) (map s pattern)
-          )
+(defn categorize-kit [kit]
+  (let [sounds (drum-kits kit)
+        types [:kicks  :snrs :cymbals :toms  :ophats :clhats :claps :fxs :hfhats]]
+    (reduce (fn [s c]
+              (assoc s c (into {}
+                               (map
+                                #(if (.contains (string/lower-case (name (first %)))
+                                                (apply str (butlast (name c))))
+                                   [(-> (re-seq
+                                         #"-([A-Za-z-\d]+)[^\dA-Za-z]?\..*$" (name (first %)))
+                                        first last keyword)
+                                    (second %)
+                                    ])
+                                sounds)))
+              )
+            {}
+            types)
     )
   )
 
+(defn build-from-kits [kits pattern]
+  (let [sounds (reduce #(merge %1 (drum-kits %2)) {} kits)
+        s (fn [ins]
+            (if (or (and (sequential? ins) (= (first ins) :space)) (keyword? ins))
+              ins
+              (mapcat (fn [in]
+                        (cond (sequential? in) in
+                              true (if
+                                       (string? in)
+                                     (vector
+                                      (second (first
+                                               (filter (fn [[k v]] (.contains (name k) in)) sounds)))
+                                      []))
+                              ))
+                      ins)))]
+    (cond (map? pattern) (zipmap (keys pattern) (map s (vals pattern)))
+          (sequential? pattern) (s/build-rest-p (map s pattern))
+          )
+    )
+  )
 
                                         ;Patterns
 
@@ -76,9 +101,10 @@
 (defonce syncop (atom nil))
 (swap! syncop (fn [_]
                 (fn [b]
-                  (if (or (= (rand-int 3) 1) (integer? b))
-                    [(get-in drum-kits [:Kit8-Vinyl :CYCdh_VinylK1-Tamb.wav]) []]
-                    )
+                  (let [kit (categorize-kit :Kit5-Electro)]
+                    (if (not (integer? b))
+                      [(choose (concat (vals (:toms kit)) (vals (:claps kit)) (vals (:hfhats kit)))) [:amp 1]]
+                      ))
                   )
                 ))
 
@@ -89,7 +115,8 @@
                           {
                            1 ["Perc01"]
                            1.5 ["ClHat01"]
-                           ;1.75 []
+                           ;; 2 ["Perc01"]
+                           ;; 2.25 []
                            })
          ))
 
@@ -104,6 +131,22 @@
                            }
                           )))
 
+(def categorized-kit (categorize-kit :Kit3-Acoustic))
+(def random-beat
+  (fn [b]
+    (let [sounds categorized-kit]
+      (cond (integer? b)
+            (cond (odd? b) [(-> (:kicks sounds) vals first) []]
+                  true [(-> (:kicks sounds) vals second) []])
+            ;true [(choose (concat (vals (:cymbals sounds)) (vals (:toms sounds)))) []]
+            (= (- b (int b)) 0.5)
+            [(choose (concat
+                      (vals (:hats sounds))
+                      (vals (:toms sounds)))) []]
+        )
+      )
+    )
+  )
 
 
 (comment
@@ -111,9 +154,9 @@
                           (vals (group-samples (drum-kits :Kit3-Acoustic)))))
   (def beat-player (s/get-s (/ 80 60) 0.25))
   (s/set-sp core/player (/ 80 60))
+  (s/set-size core/player 4.25)
   (s/add-p core/player electro :electro)
   (s/add-p core/player pulse-beat :pulse)
-
   (do
     (s/rm-p core/player :harmony)
     (s/rm-p core/player :electro)
@@ -128,32 +171,75 @@
     )
   (s/add-p core/player beat :main)
   (s/add-p core/player (:bomba @beats) :main)
-  (s/add-p core/player (:six-eight @beats) :main)
-  (s/add-p core/player syncop :syncop)
+  (s/add-p core/player (:four-beat @beats) :main)
+  (s/add-p core/player random-beat :syncop)
 
   (s/rm-p core/player :main)
-  (s/rm-p core/player :pulse)
-  (s/rm-p core/player :electro)
-
+  (s/rm-p core/player :pulse2)
+  (s/rm-p core/player :syncop)
   (s/add-p core/player scatter-pulse :pulse)
   (s/add-p core/player scatter-main :main)
-  (s/add-p core/player (:melissa-b @beats) :main)
-  (stop)
+  (s/add-p core/player melissa-b :main)
+  (s/add-p core/player untitled :main)
+  (s/add-p core/player untitled-b :switch)
+  (s/mod-p core/player :switch :min-wrap 2)
+  (s/play-p untitled-b 2)
   )
 
 
 
 
+(defn melissa-b [b]
+  (let [pat
+        (build-from-kits
+         [:Kit3-Acoustic]
+         {0 ["SdSt-04"]
+          0.25 ["SdSt-04"]
+          0.5 ["Snr-06"]
+          0.75 []
+          })]
+     (pat (- b (int b)))
+    )
+  )
 
+(def untitled (build-from-kits
+                [:Kit3-Acoustic]
+                {1 ["Kick-02"]
+                 1.125 ["Tom-01"]
+                 1.25 ["Tom-04"]
+                 ;; 1.375 ["Tom-04"]
+                 ;; 1.5 ["Tom-01"]
+                 ;; 1.625 ["Tom-04"]
+                 2 ["Rim-01"]
+                 3 ["Rim-01"]
+                 3.75 []
+                 ;; 2.75 ["Kick-02"]
+                 ;; 2.875 ["Tom-04"]
+                 ;; 3 ["Kick-02"]
+                 ;; 4 []
+                 }))
 
+(def untitled-b (atom nil))
+(swap! untitled-b
+       (fn [_]
+         (build-from-kits
+          [:Kit3-Acoustic]
+          {1 [[dance-kick []]]
+           1.75 ["SdSt-03"]
+           2.5 ["Snr-07"]
+           2.75 ["SdSt-03" "Snr-03"]
+           }
+          )
+         )
+       )
 (defonce beats (atom {}))
 (swap! beats (fn [_]
                {:one-two
-                (build-from-kits [:Kit10-Vinyl]
+                (build-from-kits [:Kit5-Electro]
                                  {
-                                  1 ["Kick01"]
-                                  2 ["Snr01"]
-                                  3 []
+                                  1 ["Kick02"]
+                                  2 ["Snr02"]
+                                  2.75 []
                                   }
                                  )
                 :three-beat (build-from-kits
@@ -196,13 +282,6 @@
                               2.5 ["Kick01"]
                               2.75 []
                               })
-                :melissa-b (build-from-kits
-                            [:Kit3-Acoustic]
-                            {1 ["SdSt-04"]
-                             1.25 ["SdSt-04"]
-                             1.5 ["Snr-06"]
-                             1.75 []
-                             })
                 }
                ))
 

@@ -2,59 +2,10 @@
   (:use [overtone.core]
         [overtone.inst.synth]
         [techno.core :as core]
-        [techno.sequencer :as s])
+        [techno.sequencer :as s]
+        [techno.synths])
   )
 
-(defsynth sweet [note 60 dur 1 amp 1 vib 0.02]
-  (let [freq (midicps note)
-        ratios [1 3/4 1/5 2/7 11/5 5/8]
-        freqs (map #(* % freq) ratios)
-        freqs (map #(vibrato:kr % 3 vib)
-                   freqs)
-        amps (map #(/ 1 %) (range 1 (inc (count ratios))))
-        sig (sin-osc freqs amps)
-        attack (* 0.2 dur)
-        sustain (* 0.4 dur)
-        release (* 0.4 dur)
-        env (env-gen (envelope [0 0.6 0.4 0] [attack sustain release]) :action 2)
-        sig (* sig env amp)]
-    (out:ar 0 sig)
-    (out:ar 1 sig)
-    )
-  )
-
-
-(defsynth bpfsaw [note 60 dur 1 atk 0.3 detune 0 rq 0.2 amp 1 pan 0]
-  (let [freq (midicps note)
-        env (env-gen (perc (* atk dur) (* (- dur atk) dur)) :action 2)
-        sig (sync-saw (+ freq (* detune freq)))
-        sig (* env (bpf sig freq rq) amp)
-        sig (balance2 sig sig pan)]
-    (out 0 sig)
-    (out 1 sig)
-    )
-  )
-
-
-(defsynth piano [note 60 amp 1 dur 1 vel 100 decay 0.8 release 0.8 hard 0.8 velhard 0.8 muffle 0.8 velmuff 0.8 velcurve 0.8 stereo 0.2 tune 0.5 random 0.1 stretch 0.1 sustain 0.1]
-  (let [freq (midicps note)
-        env (env-gen (perc (/ 1 vel) dur) :action 2)]
-    (out:ar [0 1] (* amp env (mda-piano freq 1 vel  decay  release  hard  velhard  muffle  velmuff  velcurve  stereo  tune  random  stretch  sustain)))
-    )
-  )
-
-(definst overpad2
-  [note 60 amp 0.7 attack 0.001 release 2]
-  (let [freq  (midicps note)
-        env   (env-gen (perc attack release) :action FREE)
-        f-env (+ freq (* 3 freq (env-gen (perc 0.012 (- release 0.1)))))
-        bfreq (/ freq 2)
-        sig   (apply +
-                     (concat (* 0.7 (sin-osc [bfreq (* 0.99 bfreq)]))
-                             (lpf (saw [freq (* freq 1.01)]) f-env)))
-        ;sig (allpass-n sig 0.1 0.25)
-        audio (* amp env sig)]
-    audio))
 
 (defonce motif (atom (fn [_])))
 (swap! motif (fn [_]
@@ -114,27 +65,29 @@
                ))
 (defonce chords (atom []))
 
-
-(swap! chords (fn [_]
-                (let [get-p (fn [d]
-                              (s/chord-p sweet
-                                         (chord-degree d :C4 :minor 4)
-                                         [:amp 0.2 :dur 1])
-                              )]
-                    {1 (get-p :vi)
+(swap! chords
+       (fn [_]
+         (let [get-p (fn [d]
+                       (s/chord-p sweet
+                                  (chord-degree d :C4 :minor 4)
+                                  [:amp 0.2 :dur 1 :coef 0.01])
+                       )
+               prog {1 (get-p :vi)
                      2 (get-p :v)
                      3 (get-p :iv)
                      4 (get-p :ii)
                      4.75 []
-                     })
-                ))
+                     }]
+           prog
+           )
+         ))
 
 (defonce arpeggio (atom nil))
 (swap! arpeggio (fn [_]
                   (let [root :C4
                         type :minor
-                        args [:coef 0.01 :amp 0.5 :atk 0.01 :dur 2]
-                        inst ks1]
+                        args [:coef 0.01 :amp 0.3 :atk 0.01 :dur 2]
+                        inst bpfsaw]
                     (concat (s/arp-p inst
                                      (chord-degree
                                       :v
@@ -151,17 +104,19 @@
 
 
 (def scatterbrain
-  (let [inst piano
-        args [:coef 0.001 :dur 2 :atk 0.01 :amp 0.7]
-        t [:dur 4]
+  (let [inst ks1
+        args [:coef 0.001 :dur 2 :atk 0.001 :amp 0.7]
+        t [:dur 2]
         s [:space 1]
         main [:C3 :A4 :E5 t s
-              :B3 :D4 :E5 t s
+              :B2 :D4 :E5 t s
               :A3 :F4 :C5 t s
-              :G3 :E4 :B4 t s]
+              :D5 :E5 :B4 t s
+              ;:G3 :E4 :B4 t s
+              ]
         switch [:F#3 :Eb4 :A4 t s
                 :E3 :E4 :G4 t s
-                :E3 :Eb4 :A4 t s
+                :E3 :Eb4 :A4 s
                 :B4 s]
         ;; main [:G4 :A4 :E5 t s
         ;;       :F#4 :A4 :D5 t s
@@ -182,7 +137,7 @@
       main
       main
       switch
-      switch2
+      ;switch2
       )
      (double (/ 1 4))
      0
@@ -192,17 +147,19 @@
 
 (def melissa
   (let [l [:dur 3]
+        a [:Ab2 l]
+        f [:F#2 l]
         main [:Eb3 :Bb4 :Eb3 :Bb4 l [:space 1] :Eb3 :Bb4]]
       (s/phrase-p
        ks1
-       (concat [:Ab2 l] main
-               [:Ab2 l] main
-               [:F#2 l] main
-               [:F#2 l] main
+       (concat a main
+               a main
+               f main
+               f main
                [:Bb4] [:C5 l])
        (double (/ 1 4))
        0
-       [:dur 2 :atk 0.001 :coef 0.01]
+       [:dur 2 :atk 0.001 :coef 0.01 :amp 0.5]
        )
     )
   )
@@ -210,12 +167,15 @@
 (def melissa-motif
   (s/phrase-p
    bpfsaw
-   [:C6 :Bb5 :G5 [:space 2] :F5 :Eb5 :F5 [:space 2] :Ab5 [:space 2]
-    :Bb5 :G5 :Bb5 [:space 2]
-    :C6 :Bb5 :F5 :Bb5]
+   [:C6 :Bb5 :G5 :2
+    :F5 :Eb5 :F5 :2
+    :Ab5 :2
+    :Bb5 :G5 :Bb5 :2
+    :C6 :Bb5 :F5 :Bb5 :3
+    ]
    (double (/ 1 4))
    1
-   [:dur 2 :atk 0.001]
+   [:dur 2 :atk 0.001 :amp 0.5]
    )
   )
 
@@ -224,51 +184,80 @@
        (fn [_]
          (let [root :A4
                type :major
-               a (chord-degree :ii root type 3)
-               b (chord-degree :iii root type 3)
-               c (chord-degree :iv root type 3)]
+               a [:A4 :A5 :A6 :C#4 :F#5]
+               b [:B4 :B5 :F#4]
+               c [:C#4 :C#5 :C#6 :F#4]
+               | [:space 0]]
              (s/phrase-p
               piano
-              [a b c a [:space 0] b [:space 0] c]
+              [a b c]
               (double (/ 1 4))
               1
-              [:dur 2]
+              [:dur 2 :amp 0.7]
               ))
          ))
 
 (comment
-  (piano (note :C#3))
-  (def f (simple-flute))
-  (ctl f :freq (midi->hz (choose (scale :G4 :major))))
-  (s/play 4 melissa)
-  (s/pp-pattern scatterbrain)
-  (s/set-sp core/player 1)
-  (overpad2 (choose (scale :Ab3 :major)))
-  (rise-fall-pad)
-  (doseq [i (chord :F#4 :minor)]
-    (piano i)
-    )
-  (doseq [i (chord :A4 :minor)]
-    (piano i)
-    )
-  (piano (note :A4))
-
   (s/add-p core/player scatterbrain :sc)
+  (s/add-p core/player ambient :background)
   (s/add-p core/player melissa :harmony)
-  (s/add-p core/player melissa-motif :motif)
+  (do
+    (s/add-p core/player melissa-motif :motif)
+    (s/add-p core/player techno.drums/melissa-b :main)
+    )
   (s/add-p core/player motif :motif)
   (s/add-p core/player coffee :harmony)
+  (s/add-p core/player untitled :harmony)
+  (s/add-p core/player untitled-f :motif)
+  (s/add-p core/player (fn [b]
+                         (if (or (integer? b) true)
+                           (s/chord-p ks1 (chord-degree
+                                           (choose [:i :iii :iv :v :vi])
+                                           :C4 :minor)
+                                      [:coef 0.01 :amp 0.3]))
+                         ) :motif)
 
-  (s/add-p core/player (s/arp-p ks1
-                                ;(map note [:D4 :F#4 :B4])
-                                (map note [:D4 :F#4 :Ab4])
-                                [:coef 0.01] 0) :chord)
   (s/rm-p core/player :motif)
-  (s/set-sp note-player 2)
   (s/add-p core/player chords :harmony)
   (s/add-p core/player arpeggio :arp)
-  (s/rm-p core/player :arp)
+  (s/rm-p core/player :harmony)
   (s/wrap-p core/player :harmony true)
-  (organ :gate (env-gen (perc 2)))
-  (kill organ)
+  (s/add-p core/player ted-guitar :guitar)
+  )
+
+
+(def untitled
+  (let [[c b d a] (map #(vector (note %) (- (note %) 4)) [:C4 :Bb3 :D4 :A3])
+        -- [:space 2]
+        | [:space 0]
+        phrase [c -- c -- c c
+                b -- b | b -- b  b  b
+                d -- d -- d  d
+                a -- a | a -- a  a  a]]
+    (s/phrase-p
+     piano
+     phrase
+     (double (/ 1 4))
+     1
+     [:dur 2 :amp 0.3]))
+  )
+(def untitled-f
+  (let []
+    (s/phrase-p
+     flute
+     [:D4 :Eb4 :F4 :G4 :F#4 :Ab4 :Bb4 [:space 3]]
+     (double (/ 1 4))
+     6
+     [:dur 1.5]
+     )
+    ))
+
+(def ted-guitar
+  (let [inst piano
+        args [:coef 0.01 :dur 2]]
+    {1 (s/chord-p inst (chord :G4 :m7) args)
+     2 (s/chord-p inst (chord :F#3 :M7) args)
+     2.5 []
+     }
+    )
   )
