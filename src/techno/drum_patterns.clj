@@ -46,10 +46,6 @@
   )
 
 
-(s/play-p (build-from-kits
-           [:Kit3-Acoustic]
-           [["Tom-01"] [[dub-kick [200]]]
-            ]) 2)
 (comment
   (s/play-p boc-beat 4)
   (s/set-st core/player (double (/ 1 8)))
