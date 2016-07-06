@@ -55,23 +55,26 @@
     )
   )
 
-(defn build-from-kits [kits pattern]
-  (let [sounds (reduce #(merge %1 (drum-kits %2)) {} kits)
+(defn build-from-kits [kits pattern & [step args]]
+  (let [sounds (reduce into [] (map #(drum-kits %) kits))
+        args (if args args [])
+        get-inst (fn [in]
+                   (cond (sequential? in) in
+                         true (if (string? in)
+                                (vector
+                                 (second (first
+                                          (filter
+                                           (fn [[k v]] (.contains (name k) in))
+                                           sounds
+                                           )))
+                                 args))
+                         ))
         s (fn [ins]
             (if (or (and (sequential? ins) (= (first ins) :space)) (keyword? ins))
               ins
-              (mapcat (fn [in]
-                        (cond (sequential? in) in
-                              true (if
-                                       (string? in)
-                                     (vector
-                                      (second (first
-                                               (filter (fn [[k v]] (.contains (name k) in)) sounds)))
-                                      []))
-                              ))
-                      ins)))]
+              (mapcat get-inst ins)))]
     (cond (map? pattern) (zipmap (keys pattern) (map s (vals pattern)))
-          (sequential? pattern) (s/build-rest-p (map s pattern))
+          (sequential? pattern) (s/build-rest-p (map s pattern) step)
           )
     )
   )
@@ -101,9 +104,14 @@
 (defonce syncop (atom nil))
 (swap! syncop (fn [_]
                 (fn [b]
-                  (let [kit (categorize-kit :Kit5-Electro)]
+                  (let [kit (categorize-kit :Kit15-Electro)]
                     (if (not (integer? b))
-                      [(choose (concat (vals (:toms kit)) (vals (:claps kit)) (vals (:hfhats kit)))) [:amp 1]]
+                      [(choose (concat
+                                ;(vals (:kicks kit))
+                                (vals (:claps kit))
+                                ;(vals (:snrs kit))
+                                )
+                               ) [:amp 0.4]]
                       ))
                   )
                 ))
@@ -152,7 +160,6 @@
 (comment
   (start-recorder (mapcat vals
                           (vals (group-samples (drum-kits :Kit3-Acoustic)))))
-  (def beat-player (s/get-s (/ 80 60) 0.25))
   (s/set-sp core/player (/ 80 60))
   (s/set-size core/player 4.25)
   (s/add-p core/player electro :electro)
@@ -164,7 +171,6 @@
     ;(s/rm-p core/player :arp)
     (s/rm-p core/player :bass-line)
     )
-
   (do
     (s/add-p core/player techno.motifs/arpeggio :arp)
     (s/add-p core/player (:four-beat @beats) :main)
@@ -172,10 +178,10 @@
   (s/add-p core/player beat :main)
   (s/add-p core/player (:bomba @beats) :main)
   (s/add-p core/player (:four-beat @beats) :main)
-  (s/add-p core/player random-beat :syncop)
+  (s/add-p core/player syncop :syncop)
 
   (s/rm-p core/player :main)
-  (s/rm-p core/player :pulse2)
+  (s/rm-p core/player :electro)
   (s/rm-p core/player :syncop)
   (s/add-p core/player scatter-pulse :pulse)
   (s/add-p core/player scatter-main :main)
@@ -225,9 +231,9 @@
          (build-from-kits
           [:Kit3-Acoustic]
           {1 [[dance-kick []]]
-           1.75 ["SdSt-03"]
-           2.5 ["Snr-07"]
-           2.75 ["SdSt-03" "Snr-03"]
+           1.5 ["SdSt-03"]
+           2 ["Snr-07"]
+           2.25 ["SdSt-03" "Snr-03"]
            }
           )
          )

@@ -13,6 +13,7 @@
 (defonce ^:private trigger-buses (atom {}))
 (defonce ^:private sequence-buffers (atom {}))
 (defonce ^:private pattern-counters (atom {}))
+(defonce ^:private sequencer-data (atom {}))
 (defonce t-source-g (group "trigger sources"))
 (defonce t-synth-g (group "trigger generators" :after t-source-g))
 
@@ -106,32 +107,44 @@
   "Function to play instruments on the given beat"
   ([cur-beat pattern] (play cur-beat pattern cur-beat))
   ([cur-beat pattern orig-beat]
-   (let [beat-actions
+   (let [data (get-val-if-ref (pattern :data))
+         beat-actions
          (cond
-           (fn? pattern) (pattern cur-beat)
-           (map? pattern) (pattern cur-beat)
-           (and (sequential? pattern))
-           (if (<= orig-beat (count pattern)) (nth pattern (dec orig-beat))))]
+           (fn? data) (data cur-beat)
+           (map? data) (data cur-beat)
+           (and (sequential? data))
+           (if (<= orig-beat (count data)) (nth data (dec orig-beat))))]
      ;; (println cur-beat)
      ;; (if (> (count beat-actions) 0)
      ;;   (println "playing "
      ;;            (reduce (fn [a b] (str (to-str a) " " (to-str b) " ")) beat-actions)
      ;;            " for beat " cur-beat " raw-beat" orig-beat))
-     (dorun
-      (for [[instrument args] (partition 2 beat-actions)]
-        (if (not (nil? instrument))
-          (let [inst (apply instrument args)]
-            (when (and (instance? overtone.studio.inst.Inst instrument) ;If instrument has a gate argument, set it to 0 after trigger
-                       (some #(= (:name %) "gate") (:params instrument)))
-              (at (+ (now)
-                     (* (if (>= (.indexOf args :dur) 0)
-                          (nth args (inc (.indexOf args :dur)))
-                          1
-                          ) 1000))
-                  (ctl inst :gate 0)
-                  )
-              )
-            ))))))
+     (loop [actions (partition 2 beat-actions) ret false]
+       (let [[instrument args] (first actions)
+             p (if (not (nil? instrument))
+                 (if (and (or (= (type instrument) overtone.studio.inst.Inst)
+                              (= (type instrument) overtone.sc.synth.Synth))
+                          (some #(= (:name %) "gate") (:params instrument)))
+                   (let [name (keyword (:name instrument))
+                         inst-node (get pattern name)]
+                     (if inst-node
+                       (do
+                         (apply ctl (concat [inst-node] (vec args)))
+                         false)
+                       (let [n (apply instrument args)]
+                         (assoc pattern name n)
+                         ))
+                     )
+                   (do (apply instrument args)
+                       false))
+                 )
+             ret (if (map? p) p ret)]
+         (if (> (count actions) 1)
+           (recur (rest actions) ret)
+           ret)
+         )
+       )
+     ))
   )
 
 (defn- handle-beat-trigger [synth beat step one-shot]
@@ -141,55 +154,62 @@
                             (int res)
                            true res)))
         stepped-beat (step-beat beat step)
-        seq-size (node-get-control synth :pattern-size)]
+        id (to-sc-id synth)
+        seq-size (get-in @sequencer-data [id :size])]
     ;; (println "orig " beat " stepped beat " stepped-beat
     ;;          ;" time " (java.util.Date.)
     ;;          )
-    (doseq [[k p] (get @patterns (to-sc-id synth))]
-      (let [val (get-val-if-ref (p :data))
-            size (cond
-                   (map? val) (apply max (keys val))
-                   (sequential? val) (count val)
-                   true 1)
-            raw-size (if (sequential? val) size (+ 1 (/ (- size 1) step)))
-            min-wrap (get p :min-wrap 0)
-            wrap (and (p :wrap)
-                      (>= (- seq-size stepped-beat) min-wrap)
-                      (not (fn? val)))
-            ;; counter (get @pattern-counters k)
-            ;; meh (.compareAndSet counter 0 (int beat))
-            ;; final-beat (if wrap
-            ;;              (step-beat (.get counter) step)
-            ;;              stepped-beat)
-            ;; orig-beat (if wrap
-            ;;             (.get counter)
-            ;;             beat)
-            ;; next-beat (if (>= (.get counter) raw-size)
-            ;;             (.getAndSet counter 1)
-            ;;             (.incrementAndGet counter))
-            wrap-beat (fn [beat size step]
-                        (let [steps (cycle (range 1 (inc raw-size)))
-                              w (nth steps (dec beat))]
-                          (step-beat w step)))
-            final-beat (if (and wrap (> stepped-beat size))
-                         (wrap-beat beat size step)
-                         stepped-beat)
-            orig-beat (if (and wrap (> beat size))
-                         (wrap-beat beat size 1)
-                         beat)
-            ]
-        ;; (if (or (= k :main)
-        ;;          true
-        ;;         )
-        ;;   (println "playing " k " with beat " final-beat " orig " orig-beat
-        ;;            ;(.get counter) " size " size
-        ;;                                 ;" time " (.getTime (java.util.Date.))
-        ;;            ))
-        (play final-beat val orig-beat)
+    (if (number? seq-size)
+      (doseq [[k p] (get @patterns id)]
+        (let [val (get-val-if-ref (p :data))
+              size (cond
+                     (map? val) (apply max (keys val))
+                     (sequential? val) (count val)
+                     true 1)
+              raw-size (if (sequential? val) size (+ 1 (/ (- size 1) step)))
+              min-wrap (get p :min-wrap 0)
+              wrap (and (p :wrap)
+                        (>= (- seq-size stepped-beat) min-wrap)
+                        (not (fn? val)))
+              ;; counter (get @pattern-counters k)
+              ;; meh (.compareAndSet counter 0 (int beat))
+              ;; final-beat (if wrap
+              ;;              (step-beat (.get counter) step)
+              ;;              stepped-beat)
+              ;; orig-beat (if wrap
+              ;;             (.get counter)
+              ;;             beat)
+              ;; next-beat (if (>= (.get counter) raw-size)
+              ;;             (.getAndSet counter 1)
+              ;;             (.incrementAndGet counter))
+              wrap-beat (fn [beat size step]
+                          (let [steps (cycle (range 1 (inc raw-size)))
+                                w (nth steps (dec beat))]
+                            (step-beat w step)))
+              final-beat (if (and wrap (> stepped-beat size))
+                           (wrap-beat beat size step)
+                           stepped-beat)
+              orig-beat (if (and wrap (> beat size))
+                          (wrap-beat beat size 1)
+                          beat)
+              new-p (play final-beat p orig-beat)]
+          (if (map? new-p)
+            (swap! patterns
+                   (fn [cur]
+                     (assoc-in cur [id k] new-p)
+                     )))
+          ;; (if (or (= k :main)
+          ;;          true
+          ;;         )
+          ;;   (println "playing " k " with beat " final-beat " orig " orig-beat
+          ;;            ;(.get counter) " size " size
+          ;;                                 ;" time " (.getTime (java.util.Date.))
+          ;;            ))
+          )))
+    (if (number? seq-size)
+      (if (and one-shot (>= stepped-beat seq-size))
+        (kill synth)
         ))
-    (if (and one-shot (>= stepped-beat seq-size))
-      (kill synth)
-      )
     )
   )
 
@@ -212,10 +232,12 @@
 (defn- update-pattern-size [sequencer]
   (if (node-active? sequencer)
     (let [step (node-get-control sequencer :step)
+          step (if step step 0.25)
           get-size (fn [p]
                      (let [val (get-val-if-ref (p :data))]
                        (cond
                          (contains? p :size) (p :size)
+                         (fn? val) 1
                          (map? val)  (apply max (keys val))
                          (sequential? val) (inc (* (dec (count val)) step))
                          true (if (number?
@@ -225,66 +247,40 @@
                          )
                        ))
           size (reduce (fn [c p]
-                         (let [val (get-val-if-ref (p :data))]
-                            (max c (get-size p))
+                         (let [val (get-val-if-ref (p :data))
+                               cur (get-size p)]
+                           (if (or (nil? c) (nil? cur))
+                             (println c cur val))
+                            (max c cur)
                            ))
                        1
-                       (vals (get @patterns (to-sc-id sequencer))))]
+                       (vals (get @patterns (to-sc-id sequencer))))
+          data (get @sequencer-data (to-sc-id sequencer) {})]
+      (swap! sequencer-data
+             (fn [seq-data]
+               (assoc seq-data (to-sc-id sequencer) (assoc data :size size))
+               ))
+
       (ctl sequencer :pattern-size size)
       )
     )
   )
 
-
-(defn add-p
-  "(add-p sequencer pattern) adds the given pattern to the patterns being played by the sequencer"
-  ([sequencer pattern] (add-p sequencer pattern (gensym "pat") {:wrap true}))
-  ([sequencer pattern key] (add-p sequencer pattern key {:wrap true}))
-  ([sequencer pattern key attrs]
-   (when (node-active? sequencer)
-     (let [id (to-sc-id sequencer)
-           cur-val (get @patterns id {})
-           is-atom (instance? clojure.lang.Atom pattern)
-           watcher-key (if is-atom (keyword (gensym "pattern")))
-           attrs (if is-atom (merge attrs {:watcher watcher-key}) attrs)]
-       (swap! patterns (fn [p]
-                         (if (and (contains? cur-val key)
-                                  (contains? (get cur-val key) :watcher))
-                           (remove-watch (get-in cur-val [key :data])
-                                         (get-in cur-val [key :watcher])))
-                         (assoc p id
-                                (assoc cur-val key (merge {:data pattern} attrs))
-                                        ;(conj cur-val pattern)
-                                )
-                         ))
-       (swap! pattern-counters
-              (fn [c]
-                (assoc c key (AtomicInteger. 0))
-                ))
-       (update-pattern-size sequencer)
-       ;; (if (= (count (keys cur-val)) 0)
-       ;;   (sync-s sequencer)
-       ;;   )
-       (if is-atom
-         (do
-           (add-watch pattern watcher-key (fn [& args] (update-pattern-size sequencer)))
-           )
-         )
-       )))
-  )
-
-
-
 (defn rm-p [sequencer pattern]
     "(rm-p sequencer pattern) stops the given pattern from being played"
   (let [id (to-sc-id sequencer)
         cur-val (get @patterns id {})
-        val (if (keyword? pattern)
+        val (if (or (keyword? pattern) (symbol? pattern))
               (get cur-val pattern)
               (first (filter #(= (get-val-if-ref pattern) (get-val-if-ref (% :data)))
                              (vals cur-val))))]
     (if  (and (not (nil? val)) (contains? val :watcher))
       (remove-watch (get val :data) (get val :watcher)))
+    (doseq [[k v] val]
+      (if (= (type v) overtone.sc.node.SynthNode)
+        (kill v)
+        )
+      )
     (swap! patterns (fn [p]
                       (if (= pattern :all)
                         (assoc p id {})
@@ -307,6 +303,45 @@
     (update-pattern-size sequencer)
     )
   )
+
+(defn add-p
+  "(add-p sequencer pattern) adds the given pattern to the patterns being played by the sequencer"
+  ([sequencer pattern] (add-p sequencer pattern (gensym "pat") {:wrap true}))
+  ([sequencer pattern key] (add-p sequencer pattern key {:wrap true}))
+  ([sequencer pattern key attrs]
+   (when (node-active? sequencer)
+     (let [id (to-sc-id sequencer)
+           cur-val (get @patterns id {})
+           is-atom (instance? clojure.lang.Atom pattern)
+           watcher-key (if is-atom (keyword (gensym "pattern")))
+           attrs (if is-atom (merge attrs {:watcher watcher-key}) attrs)]
+       (if (contains? cur-val key)
+         (rm-p sequencer key))
+       (swap! patterns (fn [p]
+                         ;; (if (and (contains? cur-val key)
+                         ;;          (contains? (get cur-val key) :watcher))
+                         ;;   (remove-watch (get-in cur-val [key :data])
+                         ;;                 (get-in cur-val [key :watcher])))
+                         (assoc p id
+                                (assoc cur-val key (merge {:data pattern} attrs))
+                                )
+                         ))
+       (swap! pattern-counters
+              (fn [c]
+                (assoc c key (AtomicInteger. 0))
+                ))
+       (update-pattern-size sequencer)
+       (if is-atom
+         (do
+           (add-watch pattern watcher-key (fn [& args] (update-pattern-size sequencer)))
+           )
+         )
+       )))
+  )
+
+
+
+
 
 (defmacro create-anon-synth [bus ugen & args]
   (if (= (type ugen) overtone.sc.machinery.ugen.sc_ugen.SCUGen)
@@ -500,23 +535,33 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
   )
 
 (defn build-rest-p [pattern & [step]]
-  (let [ pat (reduce (fn [res cur]
+  (let [to-int #(if (= (mod % (int %)) 0.0)
+                  (int %) %)
+        pat (reduce (fn [res cur]
                   (let [step (if step step 0.25)
                         key (apply max (keys res))
+                        key (to-int key)
+                        ;; prev (get res key)
+                        ;; key (if (= prev []) (- key step) key)
                         is-space (or (and (sequential? cur) (= (first cur) :space))
                                      (and (keyword? cur) (re-find #"^\d" (name cur))))
                         next-key (if is-space
                                    (+ key (* step (if (sequential? cur) (second cur)
                                                       (-> cur name Integer/parseInt))))
                                    (+ step key))
-                        res (assoc res next-key (if is-space [] nil))]
+                        next-key (to-int next-key)
+                        res (assoc res next-key (if (and is-space (> next-key key)) [] nil))]
                     (if is-space
                       res
                       (assoc res key cur))
                     ))
                 {1 nil}
                 pattern)
-        tail (apply max (keys pat))]
+        tail (apply max (keys pat))
+        prev (get pat tail)
+        pat (if (= prev []) (assoc (dissoc pat tail)
+                                   (to-int (- tail (if step step 0.25))) [])
+                pat)]
     (if (nil? (get pat tail))
       (dissoc pat tail)
       pat)
@@ -545,16 +590,65 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
        )
   )
 
+(defn merge-p [& patterns]
+  (reduce
+   (fn [res cur]
+     (reduce
+      (fn [p b]
+        (let [val (get p b)
+              to-add (get cur b)
+              new-val (if (sequential? val)
+                        (concat val to-add)
+                        to-add)]
+          (assoc p b new-val)))
+      res
+      (keys cur))
+     )
+   {}
+   patterns)
+  )
+
+(defn stretch-p [pattern & [new-size]]
+  (let [step (reduce (fn [s b]
+                       (min s (if (= (double (mod b (int b))) 0.0)
+                                b
+                                (mod b (int b))))) 1 (keys pattern))
+        tail (apply max (keys pattern))
+        quantize #(+ 1 (/ (- % 1) step))
+        new-map (zipmap (map quantize (keys pattern)) (vals pattern))
+        size (quantize tail)
+        new-size (quantize (if new-size new-size (* tail 2)))
+        beats (cycle (range 1 (inc size)))]
+    (reduce
+     (fn [p b]
+       (let [cur-beat (+ 1 (* (- b 1) step))
+             wrapped (double (nth beats (dec b)))
+             action (get new-map wrapped)]
+         (if (or action (= b new-size))
+           (assoc p cur-beat action)
+           p))
+       ) pattern (range (inc size) (inc new-size)))
+    )
+  )
+
 (defn phrase-p [inst phrase step & [space args]]
   (loop [phrase phrase beat 1 pattern {}]
     (let [args (if (not (nil? args)) args [])
-          get-note #(if (number? %) % (note %))
+          note-arg (if (or (instance? overtone.studio.inst.Inst inst)
+                              (instance? overtone.sc.synth.Synth inst))
+                     (if (some #(= (:name %) "freq") (:params inst))
+                       :freq
+                       :note))
+          get-note #(if (number? %) %
+                        (if (= note-arg :freq)
+                          (midi->hz (note %))
+                          (note %)))
           mk-action (fn [action block]
                       (reduce
                        (fn [a c]
                          (if (sequential? c)
                            (conj (vec (butlast a)) (into (last a) c))
-                           (conj a inst (conj args :note (get-note c)))))
+                           (conj a inst (conj args note-arg (get-note c)))))
                        action
                        (vec block)))
           cur (first phrase)
@@ -566,7 +660,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
           is-block (and (not is-note) (not is-space) (not is-arg))
           action (get pattern beat [])
           action (cond
-                   is-note (conj action inst (conj args :note (get-note cur)))
+                   is-note (conj action inst (conj args note-arg (get-note cur)))
                    is-arg (conj (vec (butlast action)) (into (last action) cur))
                    is-block (mk-action action cur)
                    true nil)
@@ -595,14 +689,27 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
   (if (node-active? synth)
     (ctl synth :listen-bus (get @trigger-buses (to-sc-id synth)))
     )
+  synth
   )
 (defn play-p [& args]
   "play pattern once for testing"
   (let [s-args (filter number? args)
         speed (if (first s-args) (first s-args) 1)
-        step (if (second s-args) (second s-args) 0.25)
-        s (get-s speed step true)
-        patterns (take-while #(not (number? %)) args)]
+        patterns (take-while #(not (number? %)) args)
+        sizes (mapcat
+               #(if (map? (get-val-if-ref %)) (keys (get-val-if-ref %))
+                    [1])
+               patterns)
+        step (reduce (fn [s b]
+                       (min s
+                            (loop [s 1.0 b b]
+                              (if (some #{(double (mod b (int b)))} (range 0.0 1 s))
+                                s
+                                (recur (/ s 2) b)))
+                            ))
+                     1
+                     sizes)
+        s (get-s speed step true)]
     (ensure-node-active! s)
     (doseq [p patterns]
       (add-p s p))

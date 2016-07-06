@@ -22,7 +22,47 @@
     )
   )
 
+(defsynth sc303 [out-bus 0 freq 440 wave 0 ctf 100 res 0.2 sus 0 dec 1.0 env 1000 gate 0 vol 0.2]
+  (let [v (Math/pow 10 -9)
+        vol-env (env-gen (envelope [v 1 1 v] [0.01 sus dec] :exponential) gate)
+        fil-env (env-gen (envelope [v 1 v] [0.01 dec] :exponential) gate)
+        waves [(saw (* freq vol-env)) (pulse (* freq vol-env) 0.5)]
+        ;; sig (rlpf:ar
+        ;;      (select:ar wave waves)
+        ;;      (* env fil-env)
+        ;;      res)
+        sig (rlpf:ar
+             (select:ar wave waves)
+             (+ ctf (* env fil-env))
+             res)
+        sig (* sig vol)]
+    (out:ar out-bus [sig sig])
+    )
+  )
 
+(defsynth organ
+        [note 60 dur 2 amp 0.1 gate 1]
+        (let [freq  (midicps note)
+              [a d s r] (map * (repeat 4 dur) [0.01 0.2 0.5 0.2])
+              waves (sin-osc [(* 0.5 freq)
+                              freq
+                              (* (/ 3 2) freq)
+                              (* 2 freq)
+                              (* freq 2 (/ 3 2))
+                              (* freq 2 2)
+                              (* freq 2 2 (/ 5 4))
+                              (* freq 2 2 (/ 3 2))
+                              (* freq 2 2 2)])
+              env   (env-gen
+                     (adsr-ng a d s r)
+                     ;(adsr a d s r)
+                     :gate gate
+                     :action FREE)
+              snd   (* env (apply + waves) amp)]
+          (out 0 snd)
+          (out 1 snd)
+          )
+        )
 (defsynth bpfsaw [note 60 dur 1 atk 0.3 detune 0 rq 0.2 amp 1 pan 0]
   (let [freq (midicps note)
         env (env-gen (perc (* atk dur) (* (- dur atk) dur)) :action 2)
@@ -34,8 +74,7 @@
     )
   )
 
-
-(defsynth flute [note 60  amp 0.5  attack 0.1  decay 0.3  sustain 0.4  release 0.2  gate 1  dur 3  output 0]
+(defsynth flute [note 60  amp 0.5  attack 0.1  decay 0.3  sustain 0.4  release 0.2 dur 3  output 0]
   (let [freq (midicps note)
         [a d s r] (map #(* dur %) [attack decay sustain release])
         env  (env-gen (adsr-ng a d s r) :action FREE)
@@ -89,7 +128,6 @@
     (out:ar 1 sig)
     )
   )
-
 ;; (defsynth voice [freq 220 type 0 vib 0 amp 1 lg 0.5 depth 4 atk 0.1 dur 2]
 ;;   (let [data [[[400 750 2400 2600 2900]  [1 0.28 0.08 0.1 0.01] [0.1 0.1 0.04 0.04 0.04]]
 ;;               [[800 1150 2900 3900 4950] (map dbamp [0 -6 -32 -20 -50]) (map dbamp [80 90 120 130 140])] ;sopranoA 1

@@ -10,50 +10,20 @@
 (defonce motif (atom (fn [_])))
 (swap! motif (fn [_]
                (fn [b]
-                 (let [n (choose (scale :C4 :minor))]
-                   (if (or (= (- b (int b)) 0.5) (= (rand-int 2) 1))
-                     [overpad [n :amp 0.2]
-                      piano [n :amp 0.1 :dur 3]
+                 (let [n1 (choose (scale :C5 :minor))
+                       n2 (choose (scale :C5 :minor))]
+                   (if (or (= (- b (int b)) 0.5)
+                           (= (rand-int 4) 1)
+                           ;true
+                        )
+                     [
+                      flute [n1 :amp 0.15 :dur 1]
+                      piano [n2 :amp 0.4 :dur 1]
+                      ;sweet [n2 :amp 0.2 :dur 1 :coef 0.001]
                       ])
                    )
                  )
-               ;; (let [notes (scale :C4 :minor)
-               ;;       inst piano
-               ;;       dur 1
-               ;;       amp 0.4]
-               ;;   {
-               ;;    1.5 [inst [(nth notes 7) :amp amp :dur dur]]
-               ;;    2.5 [inst [(nth notes 4) :amp amp :dur dur]]
-               ;;    3.5 [inst [(nth notes 2) :amp amp :dur dur]]
-               ;;    4.5 [inst [(nth notes 3) :amp amp :dur dur]]
-               ;;    4.75 []
-               ;;    })
                ))
-
-
-(defsynth organ
-        [note 60 dur 2 amp 0.1 gate 1]
-        (let [freq  (midicps note)
-              [a d s r] (map * (repeat 4 dur) [0.01 0.2 0.5 0.2])
-              waves (sin-osc [(* 0.5 freq)
-                              freq
-                              (* (/ 3 2) freq)
-                              (* 2 freq)
-                              (* freq 2 (/ 3 2))
-                              (* freq 2 2)
-                              (* freq 2 2 (/ 5 4))
-                              (* freq 2 2 (/ 3 2))
-                              (* freq 2 2 2)])
-              env   (env-gen
-                     ;(s/adsr-ng a d s r)
-                     (adsr a d s r)
-                     :gate gate
-                     :action FREE)
-              snd   (* env (apply + waves) amp)]
-          (out 0 snd)
-          (out 1 snd)
-          )
-        )
 
 (def ambient (fn [b]
                (let [n (choose (scale :C5 :minor))
@@ -70,7 +40,7 @@
          (let [get-p (fn [d]
                        (s/chord-p sweet
                                   (chord-degree d :C4 :minor 4)
-                                  [:amp 0.2 :dur 1 :coef 0.01])
+                                  [:amp 0.2 :dur 1 :coef 0.01 :attack 1 :release 2])
                        )
                prog {1 (get-p :vi)
                      2 (get-p :v)
@@ -86,22 +56,13 @@
 (swap! arpeggio (fn [_]
                   (let [root :C4
                         type :minor
-                        args [:coef 0.01 :amp 0.3 :atk 0.01 :dur 2]
-                        inst bpfsaw]
-                    (concat (s/arp-p inst
-                                     (chord-degree
-                                      :v
-                                      root type 4)
-                                     args 0 8)
-                            (s/arp-p inst
-                                     (chord-degree
-                                      :iv
-                                      root type 4)
-                                     args 0 8)
-                            )
+                        args [:coef 0.001 :amp 0.5 :atk 0.01 :dur 1]
+                        inst ks1
+                        v (flatten (repeat 8 (chord-degree :v root type 4)))
+                        i (flatten (repeat 8 (chord-degree :iv root type 4)))]
+                    (s/arp-p inst (concat v i) args 0)
                     )
                   ))
-
 
 (def scatterbrain
   (let [inst ks1
@@ -182,24 +143,40 @@
 (def coffee (atom nil))
 (swap! coffee
        (fn [_]
-         (let [root :A4
-               type :major
-               a [:A4 :A5 :A6 :C#4 :F#5]
-               b [:B4 :B5 :F#4]
-               c [:C#4 :C#5 :C#6 :F#4]
-               | [:space 0]]
+         (let []
              (s/phrase-p
               piano
-              [a b c]
+              [
+               [:F#5 :A5 :F#6]
+               [:F#5 :B6]
+               [:F#5 :C#6]
+               ;; [:F#4 :A4 :F#5] :F4
+               ;; [:Ab4 :B4 :Ab5] :F4
+               ;; [:A4 :C#4 :A5] :F4
+               ;; [:F4 :A4 :F5] :F4
+               ]
               (double (/ 1 4))
-              1
-              [:dur 2 :amp 0.7]
+              0
+              [:dur 2 :amp 0.7 :coef 0.01]
               ))
          ))
 
+(defn rnd-chord [b]
+  (if (or (and (integer? b) (odd? b)))
+    (s/chord-p overpad
+               ;(chord (choose [:B4 :F#5]) (choose [:m7 :M7 :m9 :m13]))
+               (chord-degree
+                (choose [:i :iv :v :vi])
+                :C4
+                (choose [:minor]))
+                [:coef 0.01 :amp 0.2 :dur 2 :attack 1 :release 3]
+                )))
 (comment
+  (doseq [n (rand-chord :B3 :M7 4 16)]
+    (piano n :dur 1)
+    )
   (s/add-p core/player scatterbrain :sc)
-  (s/add-p core/player ambient :background)
+  (s/add-p core/player ambient :harmony)
   (s/add-p core/player melissa :harmony)
   (do
     (s/add-p core/player melissa-motif :motif)
@@ -209,21 +186,51 @@
   (s/add-p core/player coffee :harmony)
   (s/add-p core/player untitled :harmony)
   (s/add-p core/player untitled-f :motif)
-  (s/add-p core/player (fn [b]
-                         (if (or (integer? b) true)
-                           (s/chord-p ks1 (chord-degree
-                                           (choose [:i :iii :iv :v :vi])
-                                           :C4 :minor)
-                                      [:coef 0.01 :amp 0.3]))
-                         ) :motif)
+  (s/add-p core/player rnd-chord :harmony)
 
-  (s/rm-p core/player :motif)
+  (s/add-p core/player acid :acid {:sc303 1001}
+           )
+  (s/play-p acid 2.5)
+  (ctl t :gate 0)
+  (ctl t :gate 1 :freq 100 :dec 4 :sus 1 :wave 0)
+
+
+  (s/rm-p core/player :random)
   (s/add-p core/player chords :harmony)
   (s/add-p core/player arpeggio :arp)
   (s/rm-p core/player :harmony)
   (s/wrap-p core/player :harmony true)
   (s/add-p core/player ted-guitar :guitar)
+  (s/add-p core/player x-naut :x-naut)
+  (s/add-p core/player
+           (let [l [:amp 0.5 :attack 1 :release 3]]
+             (s/phrase-p
+              overpad
+              [[:F4 :A4 :C5 :E4] :14
+               [:F4 :A4 :C5 :E4] :14
+               [:C4 l :E4 l :G4 l :B4] :17]
+              0.25
+              0
+              [:amp 0.5 :attack 1.3 :release 2.5]))
+           :motif
+           ;2
+           )
+  (s/rm-p core/player :motif2)
+  (s/play-p chords
+            arpeggio
+            1.2)
   )
+
+(def x-naut (atom nil))
+(swap! x-naut
+       (fn [_]
+         (s/merge-p
+          (s/phrase-p
+           overpad
+           [(chord :C4 :M7) :6
+            (chord :F3 :9sus4) :6]
+           0.25 0 [:amp 0.2 :attack 1 :release 3])
+          )))
 
 
 (def untitled
@@ -255,9 +262,63 @@
 (def ted-guitar
   (let [inst piano
         args [:coef 0.01 :dur 2]]
-    {1 (s/chord-p inst (chord :G4 :m7) args)
-     2 (s/chord-p inst (chord :F#3 :M7) args)
-     2.5 []
-     }
+    (s/phrase-p
+     inst
+     [(chord :G4 :m7)
+      (chord :F#3 :M7)]
+     0.25
+     2
+     args
+     )
+    )
+  )
+
+(def song-of-storms-h
+     (let [d (chord :D4 :minor)
+           e (chord :E4 :minor)
+           f (chord :F4 :major)]
+       (s/phrase-p
+        piano
+        [:B3 [:D4 :F4] [:D4 :F4] :1 :C4 [:E4 :G4] :1
+         :D4 [:F4 :A4] [:F4 :A4] :1 :C4 [:E4 :G4] :1]
+        ;; [d d d d e :2
+        ;;  f f f f e :2]
+        0.25
+        0
+        [:amp 0.5 :attack 0.5 :release 1])))
+(def song-of-storms-m
+     (let []
+       (s/phrase-p
+        piano
+        [:D5 :F5 :D6 :4 :D5 :F5 :D6 :4
+         :E6 :2 :F6 :E6 :F6 :E6 :C6 :A5 :4
+         :A5 :2 :D5 :2 :F5 :G5 :A5 :4
+         :A5 :2 :D5 :2 :F5 :G5 :E5 :4
+         ]
+        0.125
+        1
+        [:amp 0.5 :dur 3])))
+
+(def acid
+  (let [inst sc303
+        f #(vector [inst [:freq % :gate 1]]
+                   [inst [:gate 0]])
+        freqs [65.40639132515
+               77.78174593052
+               48.999429497719
+               73.416191979352
+               65.40639132515
+               65.40639132515
+               130.8127826503
+               65.40639132515
+               65.40639132515
+               32.703195662575
+               65.40639132515
+               65.40639132515
+               65.40639132515
+               32.703195662575
+               65.40639132515]]
+    (into [[sc303 [:freq 65.406395 :env 5000.0 :sus 0.0 :ctf 1294.8276 :res 1.0 :dec 1.4827586 :wave 1.0 :vol 0.2]]]
+          (mapcat f freqs))
     )
   )
