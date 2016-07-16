@@ -2,44 +2,10 @@
   (:import java.util.concurrent.ThreadLocalRandom)
   (:use [overtone.core]
         [techno.core :as core]
-        [techno.sequencer :as s]))
+        [techno.sequencer :as s]
+        [techno.synths]))
 
 
-(defsynth bpfsaw2 [freq 500 atk 2 sus 0 rel 3 c1 1 c2 -1
-		 detune 0.2 pan 0 cfhzmin 0.1 cfhzmax 0.3
-		cfmin 500 cfmax 2000 rqmin 0.1 rqmax 0.2
-                   lsf 200 ldb 0 amp 1 output 0]
-  (let [env (env-gen:kr (envelope [0 1 1 0] [atk sus rel] [c1 0 c2]) :action 2)
-        f (* freq (midiratio (* (lf-noise0:kr 0.5) detune)))
-        sig (saw [f f])
-        noise (lin-exp
-               (lf-noise1:kr
-                (lin-exp (lf-noise1:kr 4) -1 1 cfhzmin cfhzmax))
-               -1 1 cfmin cfmax)
-        sig (bpf sig noise (lin-exp (lf-noise1:kr 0.1) -1 1 rqmin rqmax))
-        sig (b-low-shelf sig lsf 0.5 ldb)
-        sig (balance2 (first sig) (second sig))
-        sig (* sig env amp)]
-    (out output sig)
-    ))
-
-(defsynth klang-test [freq 440 amp 1 atk 0.1 dur 3]
-  (let [partials (map double
-                      ;[1]
-                      [(/ 1 2) (/ 2 3) 1 (/ 4 3) 2 (/ 5 2)]
-                      )
-        num (count partials)
-        sig (klang [(map
-                     #(* freq %)
-                     ;#(lin-exp (lf-noise1:kr 0.001) -1 1 (* freq %) (* freq % 2))
-                     partials)
-                    (repeat num (double (/ 1 num)))
-                    ])
-        env (env-gen (perc (* atk dur) (* (- 1 atk) dur)) :action FREE)
-        sig (* sig env amp)]
-    (out 0 [sig sig])
-    )
-  )
 
 
 (def marimba (atom nil))
@@ -80,7 +46,7 @@
                                     [:F#2 :E3 :A3 :C#4 :Eb4]]
                                    ))
                        ]
-                   (if (and (integer? b) (= (rand-int 6) 0))
+                   (if (and (integer? b) (= (rand-int 2) 0))
                        (s/chord-p bpfsaw2
                                   chord
                                   [:dur (rand 1.5 4.0)

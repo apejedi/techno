@@ -109,7 +109,7 @@
                       [(choose (concat
                                 ;(vals (:kicks kit))
                                 (vals (:claps kit))
-                                ;(vals (:snrs kit))
+                                (vals (:snrs kit))
                                 )
                                ) [:amp 0.4]]
                       ))
@@ -189,7 +189,7 @@
   (s/add-p core/player untitled :main)
   (s/add-p core/player untitled-b :switch)
   (s/mod-p core/player :switch :min-wrap 2)
-  (s/play-p untitled-b 2)
+  (s/play-p untitled-b untitled 0.6)
   )
 
 

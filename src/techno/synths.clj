@@ -121,6 +121,7 @@
         dist (clip2 (* 2 (tanh (* 3 (distort (* 1.5 src))))) 0.8)
         eq (b-peak-eq dist 37.67 1 10.4)]
     (* amp eq)))
+
 (defsynth zap [freq1 5000 freq2 100 dur 0.1 amp 0.2]
   (let [freq (x-line freq1 freq2 dur :action 2)
         sig (* (lf-tri freq) amp)]
@@ -128,6 +129,84 @@
     (out:ar 1 sig)
     )
   )
+
+(defsynth bpfsaw2 [freq 500 atk 2 sus 0 rel 3 c1 1 c2 -1
+		 detune 0.2 pan 0 cfhzmin 0.1 cfhzmax 0.3
+		cfmin 500 cfmax 2000 rqmin 0.1 rqmax 0.2
+                   lsf 200 ldb 0 amp 1 output 0]
+  (let [env (env-gen:kr (envelope [0 1 1 0] [atk sus rel] [c1 0 c2]) :action 2)
+        f (* freq (midiratio (* (lf-noise0:kr 0.5) detune)))
+        sig (saw [f f])
+        noise (lin-exp
+               (lf-noise1:kr
+                (lin-exp (lf-noise1:kr 4) -1 1 cfhzmin cfhzmax))
+               -1 1 cfmin cfmax)
+        sig (bpf sig noise (lin-exp (lf-noise1:kr 0.1) -1 1 rqmin rqmax))
+        sig (b-low-shelf sig lsf 0.5 ldb)
+        sig (balance2 (first sig) (second sig))
+        sig (* sig env amp)]
+    (out output sig)
+    ))
+
+(defsynth klang-test [freq 440 amp 1 atk 0.1 dur 3]
+  (let [partials (map double
+                      ;[1]
+                      [(/ 1 2) (/ 2 3) 1 (/ 4 3) 2 (/ 5 2)]
+                      )
+        num (count partials)
+        sig (klang [(map
+                     #(* freq %)
+                     ;#(lin-exp (lf-noise1:kr 0.001) -1 1 (* freq %) (* freq % 2))
+                     partials)
+                    [0.2 0.1 0.4 0.1 0.1 0.1]
+                    (repeat num (double (/ 1 num)))
+                    ])
+        env (env-gen (perc (* atk dur) (* (- 1 atk) dur)) :action FREE)
+        sig (* sig env amp)]
+    (out 0 [sig sig])
+    )
+  )
+
+(defsynth sin-inst [note 60 dur 2 mul 2]
+  (let [
+        env (env-gen (envelope [0.1 1 0] [(* 0.01 dur) (* 1 dur)] :welch) :action 2)
+        ]
+    (out:ar [0 1] (* env
+                     (+
+                      (* (sin-osc (midicps note)) mul)
+                      (*  (sin-osc (midicps (+ 19 note))) 0.08 mul)
+                      (* (sin-osc (midicps (- note 12))) 0.04 mul)
+                      )
+                     0.5))
+    )
+  )
+
+(defsynth kick [freq      80
+                amp       0.8
+                mod-freq  5
+                mod-index 5
+                sustain   0.4
+                noise     0.025 :min 0.001 :max 1.0 :step 0.001]
+  (let [pitch-contour (line:kr (* 2 freq) freq 0.02)
+        drum (lpf (sin-osc pitch-contour (sin-osc mod-freq (/ mod-index 1.3))) 1000)
+        drum-env (env-gen (perc 0.005 sustain) :action FREE)
+        hit (hpf (* noise (white-noise)) 500)
+        hit (lpf hit (line 6000 500 0.03))
+        hit-env (env-gen (perc))]
+    (out:ar [0 1] (* amp (+ (* drum drum-env) (* hit hit-env)))))
+  )
+
+
+(defsynth whistle [freq1 200 freq2 300 dur 5 freq1-sus 0.4 freq2-sus 0.4 mod 10 amp 1]
+  (let [[a b c] [(* freq1-sus dur) (* (- 1 freq1-sus freq2-sus 0.1) dur) (* freq2-sus dur)]
+        env (env-gen:kr
+             (envelope [freq1 freq1 freq2 freq2 0]
+                       [a b c 1] :exponential) :action FREE)
+        osc-a (* amp 0.5 (sin-osc env))]
+    (out:ar [0 1] osc-a)
+    )
+  )
+
 ;; (defsynth voice [freq 220 type 0 vib 0 amp 1 lg 0.5 depth 4 atk 0.1 dur 2]
 ;;   (let [data [[[400 750 2400 2600 2900]  [1 0.28 0.08 0.1 0.01] [0.1 0.1 0.04 0.04 0.04]]
 ;;               [[800 1150 2900 3900 4950] (map dbamp [0 -6 -32 -20 -50]) (map dbamp [80 90 120 130 140])] ;sopranoA 1

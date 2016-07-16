@@ -1,7 +1,7 @@
 (ns techno.samples
   (:use [clojure.java.io]
         [overtone.sc.sample]
-        [clojure.string :as s]
+        [techno.sequencer :as s]
         )
   (:require [clojure.string :as string])
   )
@@ -22,7 +22,8 @@
 
                            (if (= nest true)
                              (update-in tree nested-path (fn [_] (sample disk-path)))
-                             (assoc tree (keyword (.getName listing)) (sample disk-path))
+                             (assoc tree (keyword (string/replace (string/replace (.getName listing) " " "") ":" ""))
+                                    (sample disk-path))
                              )
                            )
                          tree
@@ -43,6 +44,30 @@
                     inst (keyword sample)]
                 (assoc-in g [group inst] (samples inst))
                 )) {} sample-names)
+    )
+  )
+
+(defn build-from-samples [samples pattern & [step args]]
+  (let [sounds (reduce into [] samples)
+        args (if args args [])
+        get-inst (fn [in]
+                   (cond (sequential? in) in
+                         true (if (string? in)
+                                (vector
+                                 (second (first
+                                          (filter
+                                           (fn [[k v]] (.contains (name k) in))
+                                           sounds
+                                           )))
+                                 args))
+                         ))
+        s (fn [ins]
+            (if (or (and (sequential? ins) (= (first ins) :space)) (keyword? ins))
+              ins
+              (mapcat get-inst ins)))]
+    (cond (map? pattern) (zipmap (keys pattern) (map s (vals pattern)))
+          (sequential? pattern) (s/build-rest-p (map s pattern) step)
+          )
     )
   )
 

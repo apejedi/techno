@@ -59,12 +59,12 @@
 (swap! bass-pulse
        (fn [_]
          (s/phrase-p
-          bass
-          [[:C3 :Eb3] :1 :G2
-           :Ab3 :1 :Bb2 [:Eb4 :F2] :1]
+          my-bass
+          [[:C3 :E3] :4 :G2
+           :A3 :4 :B2 [:E2 :F2]]
           0.25
           0
-          [:amp 0.7])
+          [:amp 0.7 :t 1.5])
          )
        )
 
@@ -77,7 +77,7 @@
   (s/play-p bass-pulse 2)
   (vintage-bass (choose (scale :C3 :major)) 50)
   (s/add-p core/player bass-pulse :bass)
-  (s/add-p core/player bass-line :bass-line)
+  (s/add-p core/player bass-line :bass)
   (s/rm-p core/player :bass)
   (s/wrap-p core/player :bass)
   (s/rm-p core/player :bass)

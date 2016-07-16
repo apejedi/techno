@@ -4,10 +4,11 @@
         [techno.core :as core]
         [techno.synths]
         [overtone.inst.synth]
+        [techno.samples]
+        [techno.recorder]
         )
   )
 (defonce there-there (atom nil))
-
 (swap! there-there
        (fn [_]
          (build-from-kits
@@ -21,15 +22,7 @@
           )
          ))
 
-(def pulse
-  (build-from-kits
-   [:Kit3-Acoustic]
-   {1 [[zap []]]
-    1.75 [[zap []]]
-    3.5 [[zap []]]
-    4.25 []
-    }
-   ))
+
 
 (def boc-beat
   (build-from-kits
@@ -49,15 +42,15 @@
 (def t (atom nil))
 (swap! t
        (fn [_]
-         (let []
+         (let [a [:amp 0.4]]
            (build-from-kits
             [:Kit3-Acoustic]
             [["SdSt-03"] :2
-             ["SdSt-06"] ["SdSt-07"] :1 ["SdSt-03" "Snr-04"] :1
-             ["Snr-03 SdSt-03"] :1
-             ["SdSt-05" "Snr-09"] :1
-             ["Snr-04" "SdSt-07"] :3]
-            0.25))
+             ["SdSt-06"] ["SdSt-07"] :1 ["SdSt-03" "Snr-04"] :1 ;:3
+             ;; ["SdSt-05" "Snr-09"] :1
+             ;; ["Snr-04" "SdSt-07"] :3
+             ]
+            0.25 [:amp 0.4]))
          ))
 
 
@@ -71,17 +64,25 @@
   (s/add-p core/player boc-beat :main)
   (s/add-p core/player lazer :pulse)
   (s/add-p core/player untitled-b :switch)
-  (s/play-p t 2)
+  (s/play-p t there-there untitled-b 2)
   (s/add-p core/player t :t)
 
-
-  (s/add-p core/player impeach-the-president :main3)
-  (s/add-p core/player funky-drummer :main3)
+  (s/add-p core/player techno1 :main3)
+  (s/add-p core/player funky-drummer :main)
   (s/add-p core/player son-clave :main)
-  (s/add-p core/player
-           [[(get-in drum-kits [:Kit3-Acoustic :CyCdh_K3ClHat-02.wav]) []]] :hat)
-  (s/rm-p core/player :main3)
+  (s/add-p
+   core/player
+           :main
+   )
+
+  (s/rm-p core/player :main2)
   (s/wrap-p core/player :pulse false)
+  (s/add-p core/player
+   (build-from-kits
+    [:Kit10-Vinyl]
+    [[[kick [:sustain 1 :noise 0.5 :amp 0.2]]] :7]
+    0.25) ;2
+    :main2)
   )
 
 (def funky-drummer

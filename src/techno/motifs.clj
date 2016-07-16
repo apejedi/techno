@@ -13,13 +13,13 @@
                  (let [n1 (choose (scale :C5 :minor))
                        n2 (choose (scale :C5 :minor))]
                    (if (or (= (- b (int b)) 0.5)
-                           (= (rand-int 4) 1)
+                           (= (rand-int 2) 1)
                            ;true
                         )
                      [
-                      flute [n1 :amp 0.15 :dur 1]
+                      ;overpad [n1 :amp 0.3 :dur 2 :attack 0.1 :release 0.3]
                       piano [n2 :amp 0.4 :dur 1]
-                      ;sweet [n2 :amp 0.2 :dur 1 :coef 0.001]
+                      flute [n2 :amp 0.2 :dur 1 :coef 0.001]
                       ])
                    )
                  )
@@ -56,8 +56,8 @@
 (swap! arpeggio (fn [_]
                   (let [root :C4
                         type :minor
-                        args [:coef 0.001 :amp 0.5 :atk 0.01 :dur 1]
-                        inst ks1
+                        args [:coef 0.001 :amp 0.4 :atk 0.01 :dur 1]
+                        inst bpfsaw
                         v (flatten (repeat 8 (chord-degree :v root type 4)))
                         i (flatten (repeat 8 (chord-degree :iv root type 4)))]
                     (s/arp-p inst (concat v i) args 0)
@@ -162,19 +162,16 @@
          ))
 
 (defn rnd-chord [b]
-  (if (or (and (integer? b) (odd? b)))
+  (if (and (= (mod b (int b)) 0.25))
     (s/chord-p overpad
-               ;(chord (choose [:B4 :F#5]) (choose [:m7 :M7 :m9 :m13]))
                (chord-degree
                 (choose [:i :iv :v :vi])
                 :C4
-                (choose [:minor]))
-                [:coef 0.01 :amp 0.2 :dur 2 :attack 1 :release 3]
-                )))
+                (choose [:minor]) 4)
+                [:coef 0.01 :amp 0.2 :dur 2 :attack 3 :release 3]
+                )
+    ))
 (comment
-  (doseq [n (rand-chord :B3 :M7 4 16)]
-    (piano n :dur 1)
-    )
   (s/add-p core/player scatterbrain :sc)
   (s/add-p core/player ambient :harmony)
   (s/add-p core/player melissa :harmony)
@@ -188,36 +185,53 @@
   (s/add-p core/player untitled-f :motif)
   (s/add-p core/player rnd-chord :harmony)
 
-  (s/add-p core/player acid :acid {:sc303 1001}
-           )
-  (s/play-p acid 2.5)
+  (s/play-p acid ;core/player acid :acid ;{:sc303 1001}
+            5)
   (ctl t :gate 0)
   (ctl t :gate 1 :freq 100 :dec 4 :sus 1 :wave 0)
 
-
-  (s/rm-p core/player :random)
+  (s/rm-p core/player :arp)
   (s/add-p core/player chords :harmony)
   (s/add-p core/player arpeggio :arp)
   (s/rm-p core/player :harmony)
   (s/wrap-p core/player :harmony true)
   (s/add-p core/player ted-guitar :guitar)
   (s/add-p core/player x-naut :x-naut)
+
+  (s/play-p
+   ;core/player
+   (let [m [:C#4 :F4 :C#5 :1
+            :Bb3 :B3 :C#4 :1]
+         n [:Bb3 :1 :B3 :1 :B3 :1]
+         n1 (into [:C#5] n)
+         n2 (into [:Eb5] n)]
+     (s/phrase-p
+      piano
+      (concat
+       ;m m m m
+       n n n
+       n1 n1 n2 n2 n1 n1)
+      0.25 0 [:coef 0.001 :amp 0.6 :dur 1]))
+                                        1.6
+   ;:motif
+   )
+
   (s/add-p core/player
-           (let [l [:amp 0.5 :attack 1 :release 3]]
-             (s/phrase-p
-              overpad
-              [[:F4 :A4 :C5 :E4] :14
-               [:F4 :A4 :C5 :E4] :14
-               [:C4 l :E4 l :G4 l :B4] :17]
-              0.25
-              0
-              [:amp 0.5 :attack 1.3 :release 2.5]))
-           :motif
-           ;2
+           (s/phrase-p
+            overpad
+            [(chord :C4 :m7) (chord :G4 :m7) (chord :F4 :M7) :4
+             ]
+            0.25
+            8
+            [:attack 1 :release 4 :amp 0.3])
+
+           :harmony
+                                        ;2
            )
-  (s/rm-p core/player :motif2)
-  (s/play-p chords
-            arpeggio
+
+  (s/rm-p core/player :harmony)
+  (s/play-p song-of-storms-h
+            song-of-storms-m
             1.2)
   )
 
@@ -278,26 +292,26 @@
            e (chord :E4 :minor)
            f (chord :F4 :major)]
        (s/phrase-p
-        piano
-        [:B3 [:D4 :F4] [:D4 :F4] :1 :C4 [:E4 :G4] :1
-         :D4 [:F4 :A4] [:F4 :A4] :1 :C4 [:E4 :G4] :1]
+        bpfsaw
+        [:B3 [:D4 :F4] [:D4 :F4] :C4 [:E4 :G4] :2
+         :D4 [:F4 :A4] [:F4 :A4] :C4 [:E4 :G4] :2]
         ;; [d d d d e :2
         ;;  f f f f e :2]
         0.25
-        0
-        [:amp 0.5 :attack 0.5 :release 1])))
+        1
+        [:amp 1 :attack 0.5 :release 1 :atk 0.01])))
 (def song-of-storms-m
      (let []
        (s/phrase-p
-        piano
-        [:D5 :F5 :D6 :4 :D5 :F5 :D6 :4
-         :E6 :2 :F6 :E6 :F6 :E6 :C6 :A5 :4
-         :A5 :2 :D5 :2 :F5 :G5 :A5 :4
-         :A5 :2 :D5 :2 :F5 :G5 :E5 :4
+        flute
+        [:D5 :F5 :D6 :5 :D5 :F5 :D6 :5
+         :E6 :3 :F6 :E6 :F6 :E6 :C6 :A5 :5
+         :A5 :3 :D5 :3 :F5 :G5 :A5 :5
+         :A5 :3 :D5 :3 :F5 :G5 :E5 :5
          ]
         0.125
         1
-        [:amp 0.5 :dur 3])))
+        [:amp 0.2 :dur 0.6 :attack 0.01])))
 
 (def acid
   (let [inst sc303
@@ -318,7 +332,7 @@
                65.40639132515
                32.703195662575
                65.40639132515]]
-    (into [[sc303 [:freq 65.406395 :env 5000.0 :sus 0.0 :ctf 1294.8276 :res 1.0 :dec 1.4827586 :wave 1.0 :vol 0.2]]]
+    (into [[sc303 [:freq 65.406395 :env 5000.0 :sus 2 :ctf 1294.8276 :res 1.0 :dec 1.4827586 :wave 1.0 :vol 0.2]]]
           (mapcat f freqs))
     )
   )
