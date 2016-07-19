@@ -192,9 +192,11 @@
         drum-env (env-gen (perc 0.005 sustain) :action FREE)
         hit (hpf (* noise (white-noise)) 500)
         hit (lpf hit (line 6000 500 0.03))
-        hit-env (env-gen (perc))]
-    (out:ar [0 1] (* amp (+ (* drum drum-env) (* hit hit-env)))))
+        hit-env (env-gen (perc))
+        snd (* amp (+ (* drum drum-env) (* hit hit-env)))]
+    (out:ar [0 1] snd))
   )
+
 
 
 (defsynth whistle [freq1 200 freq2 300 dur 5 freq1-sus 0.4 freq2-sus 0.4 mod 10 amp 1]
@@ -206,6 +208,44 @@
     (out:ar [0 1] osc-a)
     )
   )
+
+(defsynth reverb-test [freq 440 max-delay 0.2 delay-time 0.2 decay 1]
+  (let [osc (klang [(map #(* freq %) [1 2 6]) [0.6 0.2 0.2]])
+        env (env-gen (perc))
+        env2 (env-gen (perc 0.1 decay) :action FREE)
+        snd (* env osc 0.5)
+        snd2 (comb-n snd max-delay delay-time decay)
+        snd2 (* snd2 0.4 env2)]
+    (out [0 1] (+ snd snd2))
+    )
+  )
+
+(defsynth plk-bass [note 42 out-bus 0 dur 1 amp 1]
+  (let [freq (midicps note)
+        subfreq (/ freq 2)
+        subenv (env-gen (perc 0 dur) :action FREE)
+        env (env-gen (perc 0 (/ dur 2)))
+        plk (* (pluck (pink-noise) 1 0.2 (/ 1 subfreq)) subenv 2)
+        tri (* (var-saw freq) env)
+        sin (* (sin-osc freq) env)
+        sub (tanh (* (sum (sin-osc [subfreq (- subfreq 2) (+ subfreq 2)])) subenv))
+        click (* (sum (rlpf (impulse:ar 0) [2000 8000] 1)) 1000)
+        sig (+ plk tri sub click)
+        sig (rlpf sig (x-line (* freq 100) (* freq 10) 0.15))
+        sig (+ sig (* (moog-ff sig (* freq 20) 2.5) 0.1))
+        sig (b-peak-eq sig 400 0.5 -9)
+        sig (b-peak-eq sig 2000 0.5 6)
+        sig (b-hi-shelf sig 8000 1 3)
+        sig (b-peak-eq sig 200 1 3)
+        sig (* sig (x-line 1 0.6 0.1))
+        sig (tanh sig)
+        sig (+ sig (rlpf sig (x-line (* freq 100) (* freq 10) 0.15)) sin sub)
+        sig (tanh (/ sig 2.3))
+        sig (* (moog-ff sig (x-line (* freq 150) (* freq 30) 0.1) 0.1) amp)]
+    (out [0 1] sig)
+   )
+  )
+(plk-bass :dur 3)
 
 ;; (defsynth voice [freq 220 type 0 vib 0 amp 1 lg 0.5 depth 4 atk 0.1 dur 2]
 ;;   (let [data [[[400 750 2400 2600 2900]  [1 0.28 0.08 0.1 0.01] [0.1 0.1 0.04 0.04 0.04]]

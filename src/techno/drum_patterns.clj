@@ -64,15 +64,17 @@
   (s/add-p core/player boc-beat :main)
   (s/add-p core/player lazer :pulse)
   (s/add-p core/player untitled-b :switch)
-  (s/play-p t there-there untitled-b 2)
+  (s/play-p funky-drummer son-clave techno1 2)
   (s/add-p core/player t :t)
 
   (s/add-p core/player techno1 :main3)
   (s/add-p core/player funky-drummer :main)
   (s/add-p core/player son-clave :main)
-  (s/add-p
-   core/player
-           :main
+  (s/play-p
+   (build-from-kits
+    [:Kit3-Acoustic]
+    ["SdSt-07" "SdSt"]
+    )
    )
 
   (s/rm-p core/player :main2)
