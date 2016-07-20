@@ -195,18 +195,6 @@
 
 
 
-(defn melissa-b [b]
-  (let [pat
-        (build-from-kits
-         [:Kit3-Acoustic]
-         {0 ["SdSt-04"]
-          0.25 ["SdSt-04"]
-          0.5 ["Snr-06"]
-          0.75 []
-          })]
-     (pat (- b (int b)))
-    )
-  )
 
 (def untitled (build-from-kits
                 [:Kit3-Acoustic]

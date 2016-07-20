@@ -1,6 +1,6 @@
 (ns techno.bass
   (:use [overtone.core]
-        [overtone.inst.synth]
+        [techno.synths]
         [techno.core :as core]
         [techno.sequencer :as s]
         [techno.motifs]
@@ -59,9 +59,8 @@
 (swap! bass-pulse
        (fn [_]
          (s/phrase-p
-          my-bass
-          [[:C3 :E3] :4 :G2
-           :A3 :4 :B2 [:E2 :F2]]
+          plk-bass
+          [:C3 :1 :D2 :F#3]
           0.25
           0
           [:amp 0.7 :t 1.5])

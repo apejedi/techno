@@ -70,19 +70,14 @@
   (s/add-p core/player techno1 :main3)
   (s/add-p core/player funky-drummer :main)
   (s/add-p core/player son-clave :main)
-  (s/play-p
-   (build-from-kits
-    [:Kit3-Acoustic]
-    ["SdSt-07" "SdSt"]
-    )
-   )
+
 
   (s/rm-p core/player :main2)
   (s/wrap-p core/player :pulse false)
   (s/add-p core/player
    (build-from-kits
-    [:Kit10-Vinyl]
-    [[[kick [:sustain 1 :noise 0.5 :amp 0.2]]] :7]
+    [:Kit3-Acoustic]
+    [[[kick [:sustain 1 :noise 1 :amp 0.5]] "SdSt-07"]]
     0.25) ;2
     :main2)
   )

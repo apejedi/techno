@@ -106,39 +106,6 @@
      )
     ))
 
-(def melissa
-  (let [l [:dur 3]
-        a [:Ab2 l]
-        f [:F#2 l]
-        main [:Eb3 :Bb4 :Eb3 :Bb4 l [:space 1] :Eb3 :Bb4]]
-      (s/phrase-p
-       ks1
-       (concat a main
-               a main
-               f main
-               f main
-               [:Bb4] [:C5 l])
-       (double (/ 1 4))
-       0
-       [:dur 2 :atk 0.001 :coef 0.01 :amp 0.5]
-       )
-    )
-  )
-
-(def melissa-motif
-  (s/phrase-p
-   bpfsaw
-   [:C6 :Bb5 :G5 :2
-    :F5 :Eb5 :F5 :2
-    :Ab5 :2
-    :Bb5 :G5 :Bb5 :2
-    :C6 :Bb5 :F5 :Bb5 :3
-    ]
-   (double (/ 1 4))
-   1
-   [:dur 2 :atk 0.001 :amp 0.5]
-   )
-  )
 
 (def coffee (atom nil))
 (swap! coffee
@@ -235,16 +202,7 @@
             1.2)
   )
 
-(def x-naut (atom nil))
-(swap! x-naut
-       (fn [_]
-         (s/merge-p
-          (s/phrase-p
-           overpad
-           [(chord :C4 :M7) :6
-            (chord :F3 :9sus4) :6]
-           0.25 0 [:amp 0.2 :attack 1 :release 3])
-          )))
+
 
 
 (def untitled

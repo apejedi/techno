@@ -90,8 +90,10 @@
 
 (defsynth piano [note 60 amp 1 dur 1 vel 100 decay 0.8 release 0.8 hard 0.8 velhard 0.8 muffle 0.8 velmuff 0.8 velcurve 0.8 stereo 0.2 tune 0.5 random 0.1 stretch 0.1 sustain 0.1]
   (let [freq (midicps note)
-        env (env-gen (perc (/ 1 vel) dur) :action 2)]
-    (out:ar [0 1] (* amp env (mda-piano freq 1 vel  decay  release  hard  velhard  muffle  velmuff  velcurve  stereo  tune  random  stretch  sustain)))
+        env (env-gen (perc (/ 1 vel) dur) :action 2)
+        snd (* amp env (mda-piano freq 1 vel  decay  release  hard  velhard  muffle  velmuff  velcurve  stereo  tune  random  stretch  sustain))
+        snd2 (comb-n snd 0.2 0.2 dur)]
+    (out:ar [0 1] snd)
     )
   )
 
@@ -167,19 +169,17 @@
     )
   )
 
-(defsynth sin-inst [note 60 dur 2 mul 2]
-  (let [
-        env (env-gen (envelope [0.1 1 0] [(* 0.01 dur) (* 1 dur)] :welch) :action 2)
-        ]
+(defsynth sin-inst [note 60 dur 2 amp 1]
+  (let [env (env-gen (envelope [0.1 1 0] [(* 0.01 dur) (* 1 dur)] :welch) :action 2)]
     (out:ar [0 1] (* env
                      (+
-                      (* (sin-osc (midicps note)) mul)
-                      (*  (sin-osc (midicps (+ 19 note))) 0.08 mul)
-                      (* (sin-osc (midicps (- note 12))) 0.04 mul)
+                      (* (sin-osc (midicps note)))
+                      (*  (sin-osc (midicps (+ 19 note))) 0.08)
+                      (* (sin-osc (midicps (- note 12))) 0.04)
                       )
-                     0.5))
-    )
+                      amp)))
   )
+
 
 (defsynth kick [freq      80
                 amp       0.8
@@ -245,7 +245,6 @@
     (out [0 1] sig)
    )
   )
-(plk-bass :dur 3)
 
 ;; (defsynth voice [freq 220 type 0 vib 0 amp 1 lg 0.5 depth 4 atk 0.1 dur 2]
 ;;   (let [data [[[400 750 2400 2600 2900]  [1 0.28 0.08 0.1 0.01] [0.1 0.1 0.04 0.04 0.04]]

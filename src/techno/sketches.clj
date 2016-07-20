@@ -9,11 +9,11 @@
 
 (comment
   (let [n 1
-        comps (into [] arpeggi)]
+        comps (into [] on)]
     (s/add-p core/player (second (nth comps n))  (first (nth comps n)))
     )
-  (let [comp on]
-    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c :d :e]))) 2))
+  (let [comp minipops]
+    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c]))) 2))
     )
   )
 (def mystery
@@ -28,10 +28,7 @@
      0.25
      0
      [:coef 0.01]))
-   :b (fn [b]
-    (if (= (rand-int 3) 0)
-      [overpad [(choose (map note [:A5 :Bb5 :F5 :G5])) :attack 1]])
-    )}
+   }
   )
 
 (def arpeggi
@@ -128,8 +125,12 @@
             [:F4 :G4] a [:F4 :G4] a [:F4 :G4] a :3]
            0.25 0 [:delay-time 0.4 :decay 7]))
    :b (s/phrase-p
+       piano
+       [:E4 :3 :A4 :3 :G4 :7]
+       0.25 0 [:attack 2 :release 1 :amp 0.4 :muffle 2])
+   :c (s/phrase-p
        overpad
-       [:D4 :4 :A4 :3 :G4 :3]
+       [[:D4 :F4 :A4] :4 [:F4 :A4 :C5]]
        0.25 0 [:attack 2 :release 1])
    }
   )
@@ -141,4 +142,115 @@
        0.25
        0
        [:dur 1 :amp 0.8]))
+  )
+(def melissa
+  {:a (let [l [:dur 3]
+         a [:Ab2 l]
+         f [:F#2 l]
+         main [:Eb3 :Bb4 :Eb3 :Bb4 l [:space 1] :Eb3 :Bb4]]
+     (s/phrase-p
+      ks1
+      (concat a main
+              a main
+              f main
+              f main
+              [:Bb4] [:C5 l])
+      (double (/ 1 4))
+      0
+      [:dur 2 :atk 0.001 :coef 0.01 :amp 0.5]
+      )
+     )
+   :b (s/phrase-p
+       bpfsaw
+       [:C6 :Bb5 :G5 :2
+        :F5 :Eb5 :F5 :2
+        :Ab5 :2
+        :Bb5 :G5 :Bb5 :2
+        :C6 :Bb5 :F5 :Bb5 :3
+        ]
+       (double (/ 1 4))
+       1
+       [:dur 2 :atk 0.001 :amp 0.5]
+       )
+   :c (fn [b] (let [pat
+                   (build-from-kits
+                    [:Kit3-Acoustic]
+                    {0 ["SdSt-04"]
+                     0.25 ["SdSt-04"]
+                     0.5 ["Snr-06"]
+                     0.75 []
+                     })]
+               (pat (- b (int b)))
+               ))
+   }
+  )
+
+(def track1
+  {:a (let [get-p (fn [d]
+                    (s/chord-p
+                     sweet
+                     (chord-degree d :C4 :minor 4)
+                     [:amp 0.2 :dur 1 :coef 0.01 :attack 1 :release 2]))
+            prog {1 (get-p :vi)
+                  2 (get-p :v)
+                  3 (get-p :iv)
+                  4 (get-p :ii)
+                  4.75 []
+                  }]
+        prog
+        )
+   :b (let [root :C4
+            type :minor
+            args [:coef 0.001 :amp 0.4 :atk 0.01 :dur 1]
+            inst bpfsaw
+            v (flatten (repeat 8 (chord-degree :v root type 4)))
+            i (flatten (repeat 8 (chord-degree :iv root type 4)))]
+        (s/arp-p inst (concat v i) args 0)
+        )
+   :c (fn [b]
+        (let [n1 (choose (scale :C5 :minor))
+              n2 (choose (scale :C5 :minor))]
+          (if (or (= (- b (int b)) 0.5)
+                  (= (rand-int 2) 1)
+                                        ;true
+                  )
+            [
+                                        ;overpad [n1 :amp 0.3 :dur 2 :attack 0.1 :release 0.3]
+             piano [n2 :amp 0.4 :dur 1]
+             flute [n2 :amp 0.2 :dur 1 :coef 0.001]
+             ])
+          )
+        )
+   :main1 beat
+   :main2 (:bomba @beats)
+   :main3 (:four-beat @beats)
+   })
+(def x-naut
+  {:a (let [a [:Eb5 :G5 :Bb5 :D6 :Bb5 :Eb5]
+            b [:Eb5 :G5 :Ab5 :C6 :Ab5 :Eb5]
+            c [:Eb5 :Eb5 :F5 :F5 :G5 :G5 :G5 :G5 [:dur 0.2] :1 :G5 :G5 :G5]]
+             (s/merge-p
+              (s/phrase-p
+               sin-inst
+               (concat a a a a a
+                       b b b b b
+                       a a c)
+               0.25 0 [:attack 0.1 :release 0.1 :dur 0.1])
+              ))
+   ;; :b (s/phrase-p
+   ;;     overpad
+   ;;     [(chord :D4 :minor) :16 [:C4 :E4 :A4] :16]
+   ;;     0.25 0 [:attack 2 :release 3])
+   }
+  )
+
+(def minipops
+  {:a (s/phrase-p
+       piano
+       [:Ab4 :Ab4 :A4 :E4 :E4 :3
+        :E4 :E4 :F4 :G4 :G4 :3
+        :G4 :G4 :2 :G4 :0 :F4 :0 :D4 :0 :D4 :2
+        :D4 :D4 :A4 :E4 :E4]
+       0.25 1 [:dur 3])
+   }
   )
