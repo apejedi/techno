@@ -16,19 +16,8 @@
     )
   )
 
-(defsynth my-bass [note 35 dur 2 amp 0.4]
-  (let [freq (midicps note)
-        modulator (* freq 2)
-        sig (pm-osc freq modulator 12)
-        sig (lpf sig freq)
-        env-args [0.01 0.5 0.2 0.2]
-        env (env-gen (apply s/adsr-ng (map * env-args (repeat 4 dur))) :action 2)]
-    (out:ar 0 (* sig env amp))
-    (out:ar 1 (* sig env amp))
-    )
-  )
 
-(defsynth grit-bass [note 35 dur 2 amp 0.4]
+(defsynth my-bass [note 35 dur 2 amp 0.4]
   (let [freq (midicps note)
         modulator (* freq 1.5)
         sig (rlpf (pm-osc freq modulator 10) freq)
@@ -47,7 +36,7 @@
 (swap! bass-line
        (fn [_]
          (s/phrase-p
-          grit-bass
+          my-bass
           [:G3 :A3 :C3]
           0.25
           3
@@ -58,19 +47,19 @@
 (defonce bass-pulse (atom []))
 (swap! bass-pulse
        (fn [_]
-         (s/phrase-p
-          plk-bass
-          [:C3 :1 :D2 :F#3]
-          0.25
-          0
-          [:amp 0.7 :t 1.5])
+         (let [n :F3]
+             (s/phrase-p
+              plk-bass
+              [n n n n n :1 n n :8]
+              0.25
+              0
+              [:amp 0.7 :t 1.5]))
          )
        )
 
 
 
 (comment
-  (my-bass (choose (scale :C3 :major)) :amp 1)
   (bass (midi->hz (note :C3)))
   (stop)
   (s/play-p bass-pulse 2)

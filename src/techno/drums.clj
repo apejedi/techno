@@ -7,7 +7,6 @@
         [techno.synths]
         )
   (:require [techno.sequencer :as s]
-            [overtone.inst.drum :as d]
             [clojure.string :as string])
   )
 

@@ -8,26 +8,28 @@
         [techno.drums]))
 
 (comment
-  (let [n 1
-        comps (into [] on)]
-    (s/add-p core/player (second (nth comps n))  (first (nth comps n)))
+  (let [parts [:a :b :c]
+        comp tekno]
+    (doseq [p parts]
+      (s/add-p core/player (comp p) p)
+      )
     )
-  (let [comp minipops]
-    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c]))) 2))
+  (let [comp greenhill]
+    (apply s/play-p (conj (vec (vals (select-keys comp [:c]))) 2))
     )
   )
 (def mystery
   {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
-        b (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:Bb4])
-        c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
-        d (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:Bb4])]
-    (s/phrase-p
-     piano
-     [a b a b a b a b a b
-      c d c d c d c d c d c d]
-     0.25
-     0
-     [:coef 0.01]))
+            b (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:Bb4])
+            c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
+            d (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:Bb4])]
+        (s/phrase-p
+         piano
+         [a b a b a b a b a b
+          c d c d c d c d c d c d]
+         0.25
+         0
+         [:coef 0.01]))
    }
   )
 
@@ -36,11 +38,11 @@
        ks1
        [:G4 :A4 :C#5 :B4 :A4 :G4 :D5]
        0.25
-       0 [:atk 0.001 :amp 0.6 :coef 0.01])
+       0 [:atk 0.001 :amp 0.6 :coef 0.01 :dur 1])
    :b (let [a [:D5 :G4 :E4]
-        b [:E5 :A4 :F#4]
-        c [:A5 :D5 :B4]
-        d [:F#5 :D5 :B4]]
+            b [:E5 :A4 :F#4]
+            c [:A5 :D5 :B4]
+            d [:F#5 :D5 :B4]]
         (s/phrase-p
          klang-test
          (concat a a a a a a
@@ -55,7 +57,19 @@
    :d (let [d :D4 e :E4 a :A4 g :G4 f :F#4]
         (s/phrase-p
          bpfsaw
-         [d d d d e e e e a a a a g g g g f f f f] 0.25 0 [:dur 1.5 :amp 0.5]))
+         [d d d d e e e e a a a a g g g g f f f f]
+         0.25 0 [:dur 1.5 :amp 0.5 :attack 0.5 :release 1]))
+   :e (fn [b]
+        (get
+         {10 (s/chord-p bpfsaw [:G4 :A4 :D5] [:dur 2])
+          12 (s/chord-p bpfsaw [:G4 :A4 :C#5] [:dur 2])
+          14 (s/chord-p bpfsaw [:G4 :A4 :B4] [:dur 2])
+          } b)
+        ;; (s/phrase-p
+        ;;  flute
+        ;;  [[:G4 :A4 :D5] [:G4 :A4 :C#5] [:G4 :A4 :B4]]
+        ;;  0.25 9 [:dur 3])
+        )
    }
   )
 (def r-prog
@@ -117,13 +131,14 @@
   )
 
 (def on
-  {:a (let [a [:delay-time 0.7 :decay 8]]
+  {:a (let [a [:delay-time 0.7 :decay 8 :amp 0.3]]
           (s/phrase-p
            reverb-test
-           [:D5 :2 :C5 :2 :A4 :3
-            [:G4 :D4] :1 [:A4 :E4] :C5
-            [:F4 :G4] a [:F4 :G4] a [:F4 :G4] a :3]
-           0.25 0 [:delay-time 0.4 :decay 7]))
+           [:Eb5 :2 :C#5 :2 :Bb4 :3
+            :Ab4 :1 :Bb4 :Ab4
+            :Bb4 :1 :C#5 :1
+            :F#4 a :F#4 a :F#4 a :3]
+           0.25 0 [:delay-time 0.5 :decay 7 :amp 0.3]))
    :b (s/phrase-p
        piano
        [:E4 :3 :A4 :3 :G4 :7]
@@ -252,5 +267,45 @@
         :G4 :G4 :2 :G4 :0 :F4 :0 :D4 :0 :D4 :2
         :D4 :D4 :A4 :E4 :E4]
        0.25 1 [:dur 3])
+   }
+  )
+
+(def greenhill
+  {:a  (s/phrase-p
+        sin-inst
+        [:A4 :F4 :A4
+         :B4 :G4 :B4
+         :C5 :A4 :C5
+         :D5 [:dur 0.6]]
+        0.25 0 [:dur 0.3])
+   :b (s/phrase-p
+       bing
+       [:C6 :B5 :A5 :G5]
+       0.25 1 [:attack 0.05 :decay 0.4 :amp 0.2])
+   :c (let [b [:C4 :E4 :B4 [:coef 0.001]]
+            a [:C4 :G4 :A4 :F4]
+            c [:F4 :A4 :C5]
+            d [:D4 :E4 :A4]]
+          (s/phrase-p
+           ks1
+           [b a b a b :2 a :2 c b a]
+           0.25 4 [:coef 0.08 :amp 0.4]))
+   }
+  )
+
+(def tekno
+  {:a (let [n :F3]
+        (s/phrase-p
+         plk-bass
+         [n n n n n :1 n n :8]
+         0.25 0 [:amp 0.7 :t 1.5]))
+   :b (build-from-kits
+       [:Kit3-Acoustic]
+       [["Kick"] :3 [[kick [:sustain 1 :noise 1 :amp 0.5]] "SdSt-07"] :3]
+       0.25)
+   :c (s/phrase-p
+       overpad
+       [:D4 :Bb4 :A4 :Bb4 [:release 3] :25 :C4 :Ab4 :G4 :Ab4 [:release 3] :25]
+       0.25 1 [:amp 0.4])
    }
   )

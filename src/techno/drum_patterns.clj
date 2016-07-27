@@ -64,22 +64,15 @@
   (s/add-p core/player boc-beat :main)
   (s/add-p core/player lazer :pulse)
   (s/add-p core/player untitled-b :switch)
-  (s/play-p funky-drummer son-clave techno1 2)
   (s/add-p core/player t :t)
 
   (s/add-p core/player techno1 :main3)
   (s/add-p core/player funky-drummer :main)
   (s/add-p core/player son-clave :main)
-
+  (s/play-p impeach-the-president 2)
 
   (s/rm-p core/player :main2)
   (s/wrap-p core/player :pulse false)
-  (s/add-p core/player
-   (build-from-kits
-    [:Kit3-Acoustic]
-    [[[kick [:sustain 1 :noise 1 :amp 0.5]] "SdSt-07"]]
-    0.25) ;2
-    :main2)
   )
 
 (def funky-drummer
@@ -92,7 +85,8 @@
      0.25 [:amp 0.5])))
 
 (def techno1
-  (let [k "Kick-03" s "Snr-04" c "ClHat-04" o "OpHat-01"]
+  (let [k [kick [:sustain 1 :noise 1 :amp 0.5]] ;"Kick-03"
+        s "Snr-04" c "ClHat-04" o "OpHat-01"]
     (build-from-kits
      [:Kit3-Acoustic]
      [[k] :1 [o] :1 [k s] :1 [o] :1

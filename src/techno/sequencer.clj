@@ -368,6 +368,7 @@
     (swap! sequencer-handlers (fn [handlers]
                              (dissoc handlers id)
                              ))
+    (swap! sequencer-data (fn [data] (dissoc data id)))
 
     (if (node-active? trigger-source)
       (do-if trigger-source kill)
@@ -530,8 +531,22 @@
 (defn chord-p [in notes & [args]]
   "returns a beat action to play a chord using the given instrument
 e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3]]"
-  (mapcat #(vector in (cons % (if (nil? args) [] args)))
-          notes)
+
+  (let [note-arg (if (or (instance? overtone.studio.inst.Inst in)
+                         (instance? overtone.sc.synth.Synth in))
+                     (if (some #(= (:name %) "freq") (:params in))
+                       :freq
+                       :note)
+                     :note)
+        get-note #(if (number? %) %
+                      (if (= note-arg :freq)
+                        (midi->hz (note %))
+                        (note %)))
+        notes (map get-note notes)
+        args (if (nil? args) [] args)]
+    (mapcat #(vector in (cons note-arg (cons % args)))
+            notes)
+    )
   )
 
 (defn build-rest-p [pattern & [step]]

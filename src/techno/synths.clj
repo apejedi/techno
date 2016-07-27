@@ -245,6 +245,26 @@
     (out [0 1] sig)
    )
   )
+(defsynth bing [note   72 attack 0.02 decay  0.3 amp 1]
+  (let [snd (sin-osc (midicps note))
+        env (env-gen (perc attack decay) :action FREE)]
+    (out [0 1] (* 0.8 env snd amp))))
+
+
+(defsynth chicago-pad [freq 440 cutoff 500 amp 1 dur 10]
+  (let [freq (+ freq (sin-osc:kr 0.1) 20)
+        freqs (map #(* freq %) [(/ 3 2) (/ 6 5) 1])
+        snd (mix (* 0.3 (saw freqs)))
+        snd (rlpf snd (+ 5000 (* 100 (sin-osc:kr 0.1))) 0.1)
+        snd (* 0.2 (g-verb snd 40 10 0.6 0.6 -3 -9 -11))
+        snd (moog-ff snd (+ cutoff (* (sin-osc:kr 0.08) (/ cutoff 10))) 3 0)
+        snd (delay-c snd 1.5 1)
+        snd (* snd (env-gen:kr (adsr-ng (* 0.1 dur) (* 0.1 dur) (* 0.6 dur) (* 0.2 dur)) :action 2))
+        snd (* amp (allpass-c snd 0.5 0.05 0.3))
+        ]
+    (out [0 1] snd)
+    )
+  )
 
 ;; (defsynth voice [freq 220 type 0 vib 0 amp 1 lg 0.5 depth 4 atk 0.1 dur 2]
 ;;   (let [data [[[400 750 2400 2600 2900]  [1 0.28 0.08 0.1 0.01] [0.1 0.1 0.04 0.04 0.04]]

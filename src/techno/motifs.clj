@@ -164,7 +164,7 @@
   (s/wrap-p core/player :harmony true)
   (s/add-p core/player ted-guitar :guitar)
   (s/add-p core/player x-naut :x-naut)
-
+  (s/add-p core/player [(s/chord-p overpad [:F#4 :C#5 :Eb5 :Bb4] [:attack 1 :release 3]) nil nil nil nil nil])
   (s/play-p
    ;core/player
    (let [m [:C#4 :F4 :C#5 :1
@@ -186,16 +186,14 @@
   (s/add-p core/player
            (s/phrase-p
             overpad
-            [(chord :C4 :m7) (chord :G4 :m7) (chord :F4 :M7) :4
+            [(chord :C4 :7sus2) (chord :G4 :5) (chord :F4 :6) (chord :C4 :M)
              ]
             0.25
-            8
-            [:attack 1 :release 4 :amp 0.3])
-
+            3
+            [:attack 0.5 :release 1 :dur 3 :amp 0.3 :coef 0.01])
            :harmony
-                                        ;2
+           ;2
            )
-
   (s/rm-p core/player :harmony)
   (s/play-p song-of-storms-h
             song-of-storms-m

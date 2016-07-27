@@ -64,11 +64,15 @@
 
 (def spooky-bells
   (fn [b]
-    (if (and
-         (or (integer? b))
-         (= (rand-int 4) 0))
-      [klang-test [(midi->hz (choose (scale :C5 :minor))) :amp (rand 0.3) :atk 0.0001]]
-      )
+    (let [n (midi->hz (note (choose [:B5 :B4 :F#3 :Eb4 :E4
+                                     :A4 :E5 :F#4 :B5 :C#4 :E4
+                                     :E5 :E4 :B5 :Ab4 :B4 :Eb4
+                                     :F#5 :E4 :A4 :C#4 :Eb4])))]
+      (if (and
+           (or (integer? b))
+           (= (rand-int 3) 0))
+        [klang-test [n :amp (rand 0.6) :atk 0.01]]
+        ))
     ))
 (comment
   (s/add-p core/player marimba :marimba)
