@@ -69,7 +69,7 @@
   (s/add-p core/player techno1 :main3)
   (s/add-p core/player funky-drummer :main)
   (s/add-p core/player son-clave :main)
-  (s/play-p impeach-the-president 2)
+  (s/play-p impeach-the-president 3)
 
   (s/rm-p core/player :main2)
   (s/wrap-p core/player :pulse false)

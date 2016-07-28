@@ -14,8 +14,8 @@
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp greenhill]
-    (apply s/play-p (conj (vec (vals (select-keys comp [:c]))) 2))
+  (let [comp on]
+    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c :d :e]))) 2))
     )
   )
 (def mystery
@@ -83,25 +83,25 @@
             pattern [a a a b b a a b b a a a
                      c c c d d c c d d c c c
                      e e e f f f f f]
-            ;pattern (map #(map midi->hz %) pattern)
+            pattern (map #(map midi->hz %) pattern)
             ]
      (s/phrase-p
-      ks1
+      klang-test
       pattern
-      0.25 0 [:coef 0.01 :atk 0.5 :dur 0.5])
+      0.25 0 [:coef 0.01 :atk 0.01 :dur 0.5])
      )})
 
 (def scatterbrain
   {:a (s/phrase-p
-    piano
-    [:A3 :A4 :E5 :1
-     :G3 :G4 :D5 :1
-     :F3 :F4 :C5 :1
-     :E3 :E4 :B4 :1
-     :E3 :E4 :A4 :1
-     :E3 :E4 :G4 :1
-     :E3 :E4 :A4 :1 :B4]
-    0.25 0)}
+       bpfsaw
+       [:A3 :A4 :E5 :1
+        :G3 :G4 :D5 :1
+        :F3 :F4 :C5 :1
+        :E3 :E4 :B4 :1
+        :E3 :E4 :A4 :1
+        :E3 :E4 :G4 :1
+        :E3 :E4 :A4 :1 :B4]
+       0.25 0 [:atk 0.01])}
   )
 
 (def track2
@@ -127,7 +127,7 @@
             [:Kit3-Acoustic]
             [["SdSt-03"] :2
              ["SdSt-06"] ["SdSt-07"] :1 ["SdSt-03" "Snr-04"] :1]
-            0.25 [:amp 0.4]))}
+            0.25 [:amp 0.6]))}
   )
 
 (def on
@@ -139,14 +139,6 @@
             :Bb4 :1 :C#5 :1
             :F#4 a :F#4 a :F#4 a :3]
            0.25 0 [:delay-time 0.5 :decay 7 :amp 0.3]))
-   :b (s/phrase-p
-       piano
-       [:E4 :3 :A4 :3 :G4 :7]
-       0.25 0 [:attack 2 :release 1 :amp 0.4 :muffle 2])
-   :c (s/phrase-p
-       overpad
-       [[:D4 :F4 :A4] :4 [:F4 :A4 :C5]]
-       0.25 0 [:attack 2 :release 1])
    }
   )
 (def bass-line
@@ -217,7 +209,7 @@
    :b (let [root :C4
             type :minor
             args [:coef 0.001 :amp 0.4 :atk 0.01 :dur 1]
-            inst bpfsaw
+            inst ks1
             v (flatten (repeat 8 (chord-degree :v root type 4)))
             i (flatten (repeat 8 (chord-degree :iv root type 4)))]
         (s/arp-p inst (concat v i) args 0)
@@ -305,7 +297,7 @@
        0.25)
    :c (s/phrase-p
        overpad
-       [:D4 :Bb4 :A4 :Bb4 [:release 3] :25 :C4 :Ab4 :G4 :Ab4 [:release 3] :25]
+       [:C4 :Ab4 :G4 :Ab4 [:release 3] :25 :C4 :G4 :F4 :G4 [:release 3] :25]
        0.25 1 [:amp 0.4])
    }
   )

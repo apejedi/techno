@@ -648,12 +648,12 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
 
 (defn phrase-p [inst phrase step & [space args]]
   (loop [phrase phrase beat 1 pattern {}]
-    (let [args (if (not (nil? args)) args [])
+    (let [args (vec (if (not (nil? args)) args []))
           note-arg (if (or (instance? overtone.studio.inst.Inst inst)
                               (instance? overtone.sc.synth.Synth inst))
-                     (if (some #(= (:name %) "freq") (:params inst))
-                       :freq
-                       :note))
+                     (cond (some #(= (:name %) "freq") (:params inst)) :freq
+                           (some #(= (:name %) "note") (:params inst)) :note
+                           true false))
           get-note #(if (number? %) %
                         (if (= note-arg :freq)
                           (midi->hz (note %))
@@ -663,7 +663,8 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                        (fn [a c]
                          (if (sequential? c)
                            (conj (vec (butlast a)) (into (last a) c))
-                           (conj a inst (conj args note-arg (get-note c)))))
+                           (conj a inst (if note-arg (conj args note-arg (get-note c))
+                                            (conj args (get-note c))))))
                        action
                        (vec block)))
           cur (first phrase)
@@ -675,7 +676,9 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
           is-block (and (not is-note) (not is-space) (not is-arg))
           action (get pattern beat [])
           action (cond
-                   is-note (conj action inst (conj args note-arg (get-note cur)))
+                   is-note (conj action inst (if note-arg
+                                               (conj args note-arg (get-note cur))
+                                               (conj args (get-note cur))))
                    is-arg (conj (vec (butlast action)) (into (last action) cur))
                    is-block (mk-action action cur)
                    true nil)
