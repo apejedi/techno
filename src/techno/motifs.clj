@@ -129,13 +129,13 @@
          ))
 
 (defn rnd-chord [b]
-  (if (and (= (mod b (int b)) 0.25))
+  (if (and (= (mod b (int b)) 0))
     (s/chord-p overpad
                (chord-degree
                 (choose [:i :iv :v :vi])
                 :C4
                 (choose [:minor]) 4)
-                [:coef 0.01 :amp 0.2 :dur 2 :attack 3 :release 3]
+                [:coef 0.01 :amp 0.2 :dur 2 :attack 0.9 :release 2]
                 )
     ))
 (comment
@@ -165,39 +165,25 @@
   (s/add-p core/player ted-guitar :guitar)
   (s/add-p core/player x-naut :x-naut)
   (s/add-p core/player [(s/chord-p overpad [:F#4 :C#5 :Eb5 :Bb4] [:attack 1 :release 3]) nil nil nil nil nil])
-  (s/play-p
-   ;core/player
-   (let [m [:C#4 :F4 :C#5 :1
-            :Bb3 :B3 :C#4 :1]
-         n [:Bb3 :1 :B3 :1 :B3 :1]
-         n1 (into [:C#5] n)
-         n2 (into [:Eb5] n)]
-     (s/phrase-p
-      piano
-      (concat
-       ;m m m m
-       n n n
-       n1 n1 n2 n2 n1 n1)
-      0.25 0 [:coef 0.001 :amp 0.6 :dur 1]))
-                                        1.6
-   ;:motif
-   )
 
-  (s/add-p core/player
-           (s/phrase-p
-            overpad
-            [(chord :C4 :7sus2) (chord :G4 :5) (chord :F4 :6) (chord :C4 :M)
-             ]
-            0.25
-            3
-            [:attack 0.5 :release 1 :dur 3 :amp 0.3 :coef 0.01])
-           :harmony
-           ;2
-           )
+  (s/add-p
+   core/player
+   (let [root :D4
+         n 3
+         [a b c d e] (map #(chord-degree % :C4 :minor) [:i :ii :iii :iv :v])
+                                        ;[a b c] [(map midi->hz a) (map midi->hz b) (map midi->hz c)]
+         ]
+     (s/m-phrase
+      {:refresh 0.6 :sputter 0.5 :sputter-amt 0.25 :reverse 0}
+      bing
+      [b d c e a]
+      0.25 2
+      [:decay 2 :release 1 :dur 2 :amp 0.3 :coef 0.01]))
+                                        :harmony
+   ;1
+   )
+  (kill trigger-synth)
   (s/rm-p core/player :harmony)
-  (s/play-p song-of-storms-h
-            song-of-storms-m
-            1.2)
   )
 
 
@@ -243,31 +229,7 @@
     )
   )
 
-(def song-of-storms-h
-     (let [d (chord :D4 :minor)
-           e (chord :E4 :minor)
-           f (chord :F4 :major)]
-       (s/phrase-p
-        bpfsaw
-        [:B3 [:D4 :F4] [:D4 :F4] :C4 [:E4 :G4] :2
-         :D4 [:F4 :A4] [:F4 :A4] :C4 [:E4 :G4] :2]
-        ;; [d d d d e :2
-        ;;  f f f f e :2]
-        0.25
-        1
-        [:amp 1 :attack 0.5 :release 1 :atk 0.01])))
-(def song-of-storms-m
-     (let []
-       (s/phrase-p
-        flute
-        [:D5 :F5 :D6 :5 :D5 :F5 :D6 :5
-         :E6 :3 :F6 :E6 :F6 :E6 :C6 :A5 :5
-         :A5 :3 :D5 :3 :F5 :G5 :A5 :5
-         :A5 :3 :D5 :3 :F5 :G5 :E5 :5
-         ]
-        0.125
-        1
-        [:amp 0.2 :dur 0.6 :attack 0.01])))
+
 
 (def acid
   (let [inst sc303

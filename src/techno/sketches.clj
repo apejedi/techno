@@ -8,14 +8,18 @@
         [techno.drums]))
 
 (comment
-  (let [parts [:a :b :c]
-        comp tekno]
+  (let [parts [:f]
+        rm []
+        comp pings]
+    (doseq [p rm]
+      (s/rm-p core/player p)
+      )
     (doseq [p parts]
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp on]
-    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c :d :e]))) 2))
+  (let [comp track1]
+    (apply s/play-p (conj (vec (vals (select-keys comp [:c]))) 1.2))
     )
   )
 (def mystery
@@ -51,9 +55,9 @@
                  d d d d d d)
          0.25 0 [:coef 0.01 :amp 0.8 :atk 0.01 :dur 2]))
    :c (s/phrase-p
-       flute
+       bpfsaw
        [:F#5 :G5 :A5 :4]
-       0.25 1 [:dur 0.7 :amp 0.2])
+       0.25 1 [:dur 0.7 :atk 0.01 :amp 0.2])
    :d (let [d :D4 e :E4 a :A4 g :G4 f :F#4]
         (s/phrase-p
          bpfsaw
@@ -61,9 +65,9 @@
          0.25 0 [:dur 1.5 :amp 0.5 :attack 0.5 :release 1]))
    :e (fn [b]
         (get
-         {10 (s/chord-p bpfsaw [:G4 :A4 :D5] [:dur 2])
-          12 (s/chord-p bpfsaw [:G4 :A4 :C#5] [:dur 2])
-          14 (s/chord-p bpfsaw [:G4 :A4 :B4] [:dur 2])
+         {10 (s/chord-p flute [:G4 :A4 :D5] [:dur 2])
+          12 (s/chord-p flute [:G4 :A4 :C#5] [:dur 2])
+          14 (s/chord-p flute [:G4 :A4 :B4] [:dur 2])
           } b)
         ;; (s/phrase-p
         ;;  flute
@@ -214,22 +218,27 @@
             i (flatten (repeat 8 (chord-degree :iv root type 4)))]
         (s/arp-p inst (concat v i) args 0)
         )
-   :c (fn [b]
-        (let [n1 (choose (scale :C5 :minor))
-              n2 (choose (scale :C5 :minor))]
-          (if (or (= (- b (int b)) 0.5)
-                  (= (rand-int 2) 1)
-                                        ;true
-                  )
-            [
-                                        ;overpad [n1 :amp 0.3 :dur 2 :attack 0.1 :release 0.3]
-             piano [n2 :amp 0.4 :dur 1]
-             flute [n2 :amp 0.2 :dur 1 :coef 0.001]
-             ])
-          )
-        )
+   :c (s/phrase-p
+       piano
+       [:G4 :Ab4 :G4 :2 :G4 :Ab4 :Bb4 :F4]
+       0.25 0 [:dur 1]
+       {:refresh 0.4 :reverse 0.7 :sputter 0.4 :sputter-amt 0.5}
+       )
+   :d (build-from-kits [:Kit10-Vinyl :Kit15-Electro]
+                       {
+                        1 ["Perc01"]
+                        1.5 ["ClHat01"]
+                        })
+   :e (build-from-kits [:Kit10-Vinyl]
+                          {
+                           1 ["Perc02"]
+                           1.25 ["Perc03"]
+                           2 ["Perc04"]
+                           2.75 []
+                           }
+                          )
    :main1 beat
-   :main2 (:bomba @beats)
+   :main2 (s/m-phrase {:refresh 0.5 :sputter 0.6 :sputter-amt 0.6} (:bomba @beats) 0.25)
    :main3 (:four-beat @beats)
    })
 (def x-naut
@@ -242,23 +251,27 @@
                (concat a a a a a
                        b b b b b
                        a a c)
-               0.25 0 [:attack 0.1 :release 0.1 :dur 0.1])
+               0.25 0 [:attack 0.1 :release 0.1 :dur 0.2])
               ))
-   ;; :b (s/phrase-p
-   ;;     overpad
-   ;;     [(chord :D4 :minor) :16 [:C4 :E4 :A4] :16]
-   ;;     0.25 0 [:attack 2 :release 3])
+   :b (let [c [:C2]
+            c1 [:C2 [:dur 3]]
+            f [:F2]
+            f1 [:F2 [:dur 3]]]
+          (s/phrase-p
+           plk-bass
+           (reduce into [c c [:4] c1  c [:4] f f [:4] f1 f [:4]])
+           0.25 2))
    }
   )
 
 (def minipops
   {:a (s/phrase-p
-       piano
+       reverb-test
        [:Ab4 :Ab4 :A4 :E4 :E4 :3
         :E4 :E4 :F4 :G4 :G4 :3
         :G4 :G4 :2 :G4 :0 :F4 :0 :D4 :0 :D4 :2
         :D4 :D4 :A4 :E4 :E4]
-       0.25 1 [:dur 3])
+       0.25 1 [:dur 3 :delay-time 0.4 :decay 5])
    }
   )
 
@@ -297,7 +310,78 @@
        0.25)
    :c (s/phrase-p
        overpad
-       [:C4 :Ab4 :G4 :Ab4 [:release 3] :25 :C4 :G4 :F4 :G4 [:release 3] :25]
+       [:C4 :Ab4 :G4 :Ab4 [:release 3] :25 :C4 :G4 :F4 :G4 [:release 3] :25
+        :C4 :Bb4 :A4 :Bb4 [:release 3] :25]
        0.25 1 [:amp 0.4])
+   }
+  )
+
+(def song-of-storms
+  {:a (let [d (chord :D4 :minor)
+           e (chord :E4 :minor)
+           f (chord :F4 :major)
+           l [:dur 1.5]]
+       (s/phrase-p
+        bpfsaw
+        [:B3 [:D4 :F4] [:D4 :F4] :C4 [:E4 l :G4 l] :4
+         :D4 [:F4 :A4] [:F4 :A4] :C4 [:E4 l :G4 l] :4]
+        ;; [d d d d e :2
+        ;;  f f f f e :2]
+        0.25
+        1
+        [:amp 1 :attack 0.5 :release 1 :atk 0.01]))
+   :b (let [l [:dur 0.4]]
+       (s/phrase-p
+        flute
+        ;; [:D5 :F5 :D6 :6 :D5 :F5 :D6 :6
+        ;;  :E6 :4 :F6 :3 :E6 :F6 :3 :E6 :C6 :A5 :6
+        ;;  :A5 :4 :D5 :4 :F5 :G5 :A5 :6
+        ;;  :A5 :4 :D5 :4 :F5 :G5 :E5 :6
+        ;;  ]
+        ;; 0.125
+        [:D5 :F5 :D6 :3 :D5 :F5 :D6 :3
+         :E6 :1 :F6 l :E6 l :F6 l :E6 l :C6 l :A5 :3
+         :A5 :1 :D5 :1 :F5 :G5 :A5 [:dur 0.7] :2
+         :A5 :1 :D5 :1 :F5 :G5 :E5 [:dur 0.8] :4
+         ]
+        0.25
+        0
+        [:amp 0.2 :dur 0.6 :attack 0.01]))
+   })
+
+(def pings
+  ;(/ 80 60
+  {:a (let [root :D3
+         notes (scale root :major)]
+        (s/phrase-p
+         zap
+         (map #(midi->hz  (nth notes (degree->int %))) [:ii :iv :v :iii])
+         0.25 0 [:freq2 (midi->hz (note root)) :dur 0.2]))
+   :b (s/phrase-p
+       bing
+       [:F#3 :C#5 :B4 :3]
+       0.25 1 [:decay 1])
+   :c (s/phrase-p
+       bpfsaw
+       [:Ab4 [:dur 2] :4 :Bb4 :G4 [:dur 1.5] :3]
+       ;[:B4 [:dur 2] :4 :C#5 :Bb4 [:dur 1.5] :3]
+       0.25 2 [:dur 1 :atk 0.01 :amp 0.8]
+       ;{:refresh 0.3 :reverse 1}
+       )
+   :d (s/phrase-p
+       reverb-test
+       [:B4 [:dur 2] :4 :Eb5 :Bb4 [:dur 1.5] :3]
+       ;[:B4 [:dur 2] :4 :C#5 :Bb4 [:dur 1.5] :3]
+       0.25 2 [:decay-time 3 :delay-time 0.5 :amp 0.6])
+   :e (fn [b]
+        (if (or (= (mod b 3) 0) false)
+          (s/chord-p piano (chord-degree (choose [:ii :iii :v :i]) :D4 :major 3) [:amp 0.5])
+          )
+        )
+   :f (s/phrase-p
+       klang-test
+       [:Eb4 :E4 :Ab4 :Bb4 :0 :B4 :3 :Eb5]
+       0.25 2 [:atk 0.01] ;{:refresh 0.5 :reverse 0.8 :sputter 0.5 :sputter-amt 0.6}
+       )
    }
   )

@@ -43,20 +43,25 @@
 (swap! t
        (fn [_]
          (let [a [:amp 0.4]]
-           (build-from-kits
-            [:Kit3-Acoustic]
-            [["SdSt-03"] :2
-             ["SdSt-06"] ["SdSt-07"] :1 ["SdSt-03" "Snr-04"] :1 ;:3
-             ;; ["SdSt-05" "Snr-09"] :1
-             ;; ["Snr-04" "SdSt-07"] :3
-             ]
-            0.25 [:amp 0.4]))
+           (s/m-phrase
+            {:refresh 0 :sputter 0.5 :sputter-amt 0.8}
+            (build-from-kits
+             [:Kit3-Acoustic]
+             [["SdSt-03"] :2
+              ["SdSt-06"] ["SdSt-07"] :1 ["SdSt-03" "Snr-04"] :3 ;:1
+              ["SdSt-05" "Snr-09"] :1
+              ["Snr-04" "SdSt-07"] :3]
+             0.25 [:amp 0.4]
+             ) 0.25))
          ))
 
 
-(def lazer (let [d [zap [:amp 0.1] dub-kick [300 :amp 1.5]]]
-             (s/build-rest-p
-              [d :6 d :2 d :5])
+(def lazer (let [d [zap [3000 :amp 0.5 :dur 0.1] dub-kick [300 :amp 1.5]]]
+             (s/m-phrase
+              {:refresh 0 :sputter 0.4 :sputter-amt 0.7}
+              (s/build-rest-p
+               [d :6 d :2 d :5])
+              0.25)
              ))
 (comment
   (s/add-p core/player there-there :main3)
@@ -65,11 +70,21 @@
   (s/add-p core/player lazer :pulse)
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
+  (start-recorder (mapcat vals
+                          (vals (group-samples (drum-kits :Kit3-Acoustic)))))
 
+
+  (s/play-p
+   (let []
+       (build-from-kits
+        [:Kit3-Acoustic]
+        [""])))
+  (s/play-p t 2)
   (s/add-p core/player techno1 :main3)
   (s/add-p core/player funky-drummer :main)
   (s/add-p core/player son-clave :main)
   (s/play-p impeach-the-president 3)
+
 
   (s/rm-p core/player :main2)
   (s/wrap-p core/player :pulse false)

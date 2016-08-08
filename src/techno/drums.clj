@@ -184,7 +184,6 @@
   (s/rm-p core/player :syncop)
   (s/add-p core/player scatter-pulse :pulse)
   (s/add-p core/player scatter-main :main)
-  (s/add-p core/player melissa-b :main)
   (s/add-p core/player untitled :main)
   (s/add-p core/player untitled-b :switch)
   (s/mod-p core/player :switch :min-wrap 2)

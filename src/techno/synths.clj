@@ -124,9 +124,10 @@
         eq (b-peak-eq dist 37.67 1 10.4)]
     (* amp eq)))
 
-(defsynth zap [freq1 5000 freq2 100 dur 0.1 amp 0.2]
-  (let [freq (x-line freq1 freq2 dur :action 2)
-        sig (* (lf-tri freq) amp)]
+(defsynth zap [freq1 5000 freq2 100 dur 0.2 amp 1]
+  (let [freq (x-line freq1 freq2 dur)
+        env (env-gen:kr (perc (* 0.1 dur) (* 0.9 dur) amp) :action 2)
+        sig (* (lf-tri freq) env)]
     (out:ar 0 sig)
     (out:ar 1 sig)
     )
@@ -266,6 +267,13 @@
     )
   )
 
+(defsynth drone [freq 440]
+  (let [freqs (map #(* freq %) [(/ 2 3) (/ 4 5) (/ 1 5)])
+        sig (klank [freqs (repeat (count freqs) (/ 1 (count freqs)))] (pink-noise))
+        sig (bpf sig freq)]
+    (out:ar [0 1] sig)
+    )
+  )
 ;; (defsynth voice [freq 220 type 0 vib 0 amp 1 lg 0.5 depth 4 atk 0.1 dur 2]
 ;;   (let [data [[[400 750 2400 2600 2900]  [1 0.28 0.08 0.1 0.01] [0.1 0.1 0.04 0.04 0.04]]
 ;;               [[800 1150 2900 3900 4950] (map dbamp [0 -6 -32 -20 -50]) (map dbamp [80 90 120 130 140])] ;sopranoA 1

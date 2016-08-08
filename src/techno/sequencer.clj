@@ -19,22 +19,44 @@
 
 (declare sync-s)
 
-(def test-pattern
-  (atom {
-         1 [dance-kick []]
-         2 [bing []]
-         3 [bing []]
-         4 [noise-snare []]
-         5 [bing []]
-         6 [dance-kick []]
-         7 [bing []]
-         8 [bing []]
-         9 [noise-snare []]
-         10 [dance-kick []]
-         })
-  )
 
+(defn sputter
+  "Returns a list where some elements may have been repeated.
 
+   Repetition is based on probabilty (defaulting to 0.25), therefore,
+   for each element in the original list, there's a chance that it will
+   be repeated. (The repetitions themselves are also subject to further
+   repetiton). The size of the resulting list can be constrained to max
+   elements (defaulting to 100).
+
+  (sputter [1 2 3 4])        ;=> [1 1 2 3 3 4]
+  (sputter [1 2 3 4] 0.7 5)  ;=> [1 1 1 2 3]
+  (sputter [1 2 3 4] 0.8 10) ;=> [1 2 2 2 2 2 2 2 3 3]
+  (sputter [1 2 3 4] 1 10)   ;=> [1 1 1 1 1 1 1 1 1 1]
+  "
+  ([list]          (sputter list 0.25))
+  ([list prob]     (sputter list prob 100))
+  ([list prob max] (sputter list prob max []))
+  ([[head & tail] prob max result]
+    (if (and head (< (count result) max))
+      (if (< (rand) prob)
+        (recur (cons head tail) prob max (conj result head))
+        (recur tail prob max (conj result head)))
+      result)))
+
+(defn p-size [val & step]
+  "Returns size of a pattern"
+  (let [val (get-val-if-ref val)
+        step (if step step 0.25)]
+    (cond
+      (fn? val) (if (= 0 (-> val class .getDeclaredMethods first .getParameterTypes alength))
+                  (first (val))
+                  1)
+      (map? val)  (apply max (keys val))
+      (sequential? val) (inc (* (dec (count val)) step))
+      true 0
+      )
+    ))
 (defn get-rand-int [min max]
   (+ (rand-int (- max min)) min)
   )
@@ -156,21 +178,17 @@
         stepped-beat (step-beat beat step)
         id (to-sc-id synth)
         seq-size (get-in @sequencer-data [id :size])]
-    ;; (println "orig " beat " stepped beat " stepped-beat
+    ;; (println "orig " beat " stepped beat " stepped-beat " seq-size " seq-size
     ;;          ;" time " (java.util.Date.)
     ;;          )
     (if (number? seq-size)
       (doseq [[k p] (get @patterns id)]
         (let [val (get-val-if-ref (p :data))
-              size (cond
-                     (map? val) (apply max (keys val))
-                     (sequential? val) (count val)
-                     true 1)
+              size (p-size val step)
               raw-size (if (sequential? val) size (+ 1 (/ (- size 1) step)))
               min-wrap (get p :min-wrap 0)
               wrap (and (p :wrap)
-                        (>= (- seq-size stepped-beat) min-wrap)
-                        (not (fn? val)))
+                        (>= (- seq-size stepped-beat) min-wrap))
               ;; counter (get @pattern-counters k)
               ;; meh (.compareAndSet counter 0 (int beat))
               ;; final-beat (if wrap
@@ -229,17 +247,16 @@
   )
 
 
+
 (defn- update-pattern-size [sequencer]
   (if (node-active? sequencer)
     (let [step (node-get-control sequencer :step)
           step (if step step 0.25)
           get-size (fn [p]
-                     (let [val (get-val-if-ref (p :data))]
+                     (let [size-p (p-size (p :data) step)]
                        (cond
                          (contains? p :size) (p :size)
-                         (fn? val) 1
-                         (map? val)  (apply max (keys val))
-                         (sequential? val) (inc (* (dec (count val)) step))
+                         (> size-p 0) size-p
                          true (if (number?
                                    (node-get-control sequencer :pattern-size))
                                 (node-get-control sequencer :pattern-size)
@@ -646,61 +663,105 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     )
   )
 
-(defn phrase-p [inst phrase step & [space args]]
-  (loop [phrase phrase beat 1 pattern {}]
-    (let [args (vec (if (not (nil? args)) args []))
-          note-arg (if (or (instance? overtone.studio.inst.Inst inst)
-                              (instance? overtone.sc.synth.Synth inst))
-                     (cond (some #(= (:name %) "freq") (:params inst)) :freq
-                           (some #(= (:name %) "note") (:params inst)) :note
-                           true false))
-          get-note #(if (number? %) %
-                        (if (= note-arg :freq)
-                          (midi->hz (note %))
-                          (note %)))
-          mk-action (fn [action block]
-                      (reduce
-                       (fn [a c]
-                         (if (sequential? c)
-                           (conj (vec (butlast a)) (into (last a) c))
-                           (conj a inst (if note-arg (conj args note-arg (get-note c))
-                                            (conj args (get-note c))))))
-                       action
-                       (vec block)))
-          cur (first phrase)
-          is-note (or (and (keyword? cur) (nil? (re-find #"^\d" (name cur)))) (number? cur))
-          is-space? #(or (and (sequential? %) (= (first %) :space)) (and (keyword? %) (re-find #"^\d" (name %))))
-          is-arg? #(and (sequential? %) (not (is-space? %)) (keyword? (first %)) (number? (second %)))
-          is-arg (is-arg? cur)
-          is-space (is-space? cur)
-          is-block (and (not is-note) (not is-space) (not is-arg))
-          action (get pattern beat [])
-          action (cond
-                   is-note (conj action inst (if note-arg
-                                               (conj args note-arg (get-note cur))
-                                               (conj args (get-note cur))))
-                   is-arg (conj (vec (butlast action)) (into (last action) cur))
-                   is-block (mk-action action cur)
-                   true nil)
-          pattern (if (and (not (nil? action)) (> (count action) 0))
-                    (assoc pattern beat action) pattern)
-          space  (cond is-space (if (sequential? cur) (second cur) (-> cur name Integer/parseInt))
-                       (not (nil? space)) space
-                       true 0)
-          pattern (if (and (= (count (rest phrase)) 0) (> space 0))
-                    (assoc pattern (+ beat (* space step)) [])
-                    pattern)
-          beat (if (or (is-arg? (second phrase)) (is-space? (second phrase)))
-                 beat
-                 (+ beat (* (inc space) step)))
-          beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)]
-      ;(println "action " action " beat " beat " phrase " (rest phrase) " space " space)
-      (if (> (count (rest phrase)) 0)
-        (recur (rest phrase) beat pattern)
-        pattern
-        )
+(defn phrase-p [inst phrase step & [space args m-args]]
+  (let [base (loop [phrase phrase beat 1 pattern {}]
+           (let [args (vec (if (not (nil? args)) args []))
+                 note-arg (if (or (instance? overtone.studio.inst.Inst inst)
+                                  (instance? overtone.sc.synth.Synth inst))
+                            (cond (some #(= (:name %) "freq") (:params inst)) :freq
+                                  (some #(= (:name %) "note") (:params inst)) :note
+                                  true false))
+                 get-note #(if (number? %) %
+                               (if (= note-arg :freq)
+                                 (midi->hz (note %))
+                                 (note %)))
+                 mk-action (fn [action block]
+                             (reduce
+                              (fn [a c]
+                                (if (sequential? c)
+                                  (conj (vec (butlast a)) (into (last a) c))
+                                  (conj a inst (if note-arg (conj args note-arg (get-note c))
+                                                   (cons (get-note c) args)))))
+                              action
+                              (vec block)))
+                 cur (first phrase)
+                 is-note (or (and (keyword? cur) (nil? (re-find #"^\d" (name cur)))) (number? cur))
+                 is-space? #(or (and (sequential? %) (= (first %) :space)) (and (keyword? %) (re-find #"^\d" (name %))))
+                 is-arg? #(and (sequential? %) (not (is-space? %)) (keyword? (first %)) (number? (second %)))
+                 is-arg (is-arg? cur)
+                 is-space (is-space? cur)
+                 is-block (and (not is-note) (not is-space) (not is-arg))
+                 action (get pattern beat [])
+                 action (cond
+                          is-note (conj action inst (if note-arg
+                                                      (conj args note-arg (get-note cur))
+                                                      (cons (get-note cur) args)))
+                          is-arg (conj (vec (butlast action)) (into (last action) cur))
+                          is-block (mk-action action cur)
+                          true nil)
+                 pattern (if (and (not (nil? action)) (> (count action) 0))
+                           (assoc pattern beat action) pattern)
+                 space  (cond is-space (if (sequential? cur) (second cur) (-> cur name Integer/parseInt))
+                              (not (nil? space)) space
+                              true 0)
+                 pattern (if (and (= (count (rest phrase)) 0) (> space 0))
+                           (assoc pattern (+ beat (* space step)) [])
+                           pattern)
+                 beat (if (or (is-arg? (second phrase)) (is-space? (second phrase)))
+                        beat
+                        (+ beat (* (inc space) step)))
+                 beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)]
+                                        ;(println "action " action " beat " beat " phrase " (rest phrase) " space " space)
+             (if (> (count (rest phrase)) 0)
+               (recur (rest phrase) beat pattern)
+               pattern
+               )
+             ))]
+    (if m-args
+      (m-phrase m-args base step)
+      base
       )
     )
+  )
+
+(defn m-phrase [m-args base step]
+  (let [to-int #(if (= (mod % (int %)) 0.0)
+                  (int %) %)
+        size (p-size base)
+        mem (atom {:def (map to-int (range 1 size step))
+                   :cur (map to-int (range 1 size step))})
+        refresh (get m-args :refresh 0)
+        rev (get m-args :reverse 0)
+        sp (get m-args :sputter 0)
+        sp-amt (get m-args :sputter-amt 0)]
+    (fn
+      ([] [size step])
+      ([b]
+       (let [idx (.indexOf (:def @mem) b)
+             beat (if (>= idx 0) (nth (:cur @mem) idx) b)]
+         (if (>= b size)
+           (do
+             (if (:reversed @mem)
+               (swap! mem (fn [m] (assoc (assoc m :cur (reverse (:cur m)))
+                                        :reversed false))))
+             (if (weighted-coin refresh)
+               (do
+                 (if (weighted-coin rev)
+                   (swap! mem (fn [m]
+                                (assoc (assoc m :cur (reverse (:def m)))
+                                       :reversed true))))
+                 (if (weighted-coin sp)
+                   (swap! mem (fn [m]
+                                (assoc m :cur (sputter (:def m) sp-amt (count (:def m))))))))
+               (do
+                 (swap! mem (fn [m]
+                              (assoc m :cur (:def m))))
+                 )
+               )
+             )
+           )
+         (get base beat))
+       )))
   )
 
 (defn start-s [synth]
@@ -715,8 +776,11 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
         speed (if (first s-args) (first s-args) 1)
         patterns (take-while #(not (number? %)) args)
         sizes (mapcat
-               #(if (map? (get-val-if-ref %)) (keys (get-val-if-ref %))
-                    [1])
+               #(cond (map? (get-val-if-ref %)) (keys (get-val-if-ref %))
+                      (and (fn? (get-val-if-ref %))
+                           (= 0 (-> (get-val-if-ref %) class .getDeclaredMethods first .getParameterTypes alength)))
+                      (range 1 (first ((get-val-if-ref %))) (second ((get-val-if-ref %))))
+                    true [1])
                patterns)
         step (reduce (fn [s b]
                        (min s
