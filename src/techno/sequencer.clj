@@ -44,19 +44,7 @@
         (recur tail prob max (conj result head)))
       result)))
 
-(defn p-size [val & step]
-  "Returns size of a pattern"
-  (let [val (get-val-if-ref val)
-        step (if step step 0.25)]
-    (cond
-      (fn? val) (if (= 0 (-> val class .getDeclaredMethods first .getParameterTypes alength))
-                  (first (val))
-                  1)
-      (map? val)  (apply max (keys val))
-      (sequential? val) (inc (* (dec (count val)) step))
-      true 0
-      )
-    ))
+
 (defn get-rand-int [min max]
   (+ (rand-int (- max min)) min)
   )
@@ -74,7 +62,19 @@
     )
   )
 
-
+(defn p-size [val & step]
+  "Returns size of a pattern"
+  (let [val (get-val-if-ref val)
+        step (if step step 0.25)]
+    (cond
+      (fn? val) (if (= 0 (-> val class .getDeclaredMethods first .getParameterTypes alength))
+                  (first (val))
+                  1)
+      (map? val)  (apply max (keys val))
+      (sequential? val) (inc (* (dec (count val)) step))
+      true 0
+      )
+    ))
 (defsynth syncopation-synth [freq 1 uid 0]
     "A synth to randomly modulate the clock speed of a trigger synth"
     (let [trigger (dust:kr freq)]
@@ -663,6 +663,46 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     )
   )
 
+(defn m-phrase [m-args base step]
+  (let [to-int #(if (= (mod % (int %)) 0.0)
+                  (int %) %)
+        size (p-size base)
+        mem (atom {:def (map to-int (range 1 size step))
+                   :cur (map to-int (range 1 size step))})
+        refresh (get m-args :refresh 0)
+        rev (get m-args :reverse 0)
+        sp (get m-args :sputter 0)
+        sp-amt (get m-args :sputter-amt 0)]
+    (fn
+      ([] [size step])
+      ([b]
+       (let [idx (.indexOf (:def @mem) b)
+             beat (if (>= idx 0) (nth (:cur @mem) idx) b)]
+         (if (>= b size)
+           (do
+             (if (:reversed @mem)
+               (swap! mem (fn [m] (assoc (assoc m :cur (reverse (:cur m)))
+                                        :reversed false))))
+             (if (weighted-coin refresh)
+               (do
+                 (if (weighted-coin rev)
+                   (swap! mem (fn [m]
+                                (assoc (assoc m :cur (reverse (:def m)))
+                                       :reversed true))))
+                 (if (weighted-coin sp)
+                   (swap! mem (fn [m]
+                                (assoc m :cur (sputter (:def m) sp-amt (count (:def m))))))))
+               (do
+                 (swap! mem (fn [m]
+                              (assoc m :cur (:def m))))
+                 )
+               )
+             )
+           )
+         (get base beat))
+       )))
+  )
+
 (defn phrase-p [inst phrase step & [space args m-args]]
   (let [base (loop [phrase phrase beat 1 pattern {}]
            (let [args (vec (if (not (nil? args)) args []))
@@ -724,45 +764,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     )
   )
 
-(defn m-phrase [m-args base step]
-  (let [to-int #(if (= (mod % (int %)) 0.0)
-                  (int %) %)
-        size (p-size base)
-        mem (atom {:def (map to-int (range 1 size step))
-                   :cur (map to-int (range 1 size step))})
-        refresh (get m-args :refresh 0)
-        rev (get m-args :reverse 0)
-        sp (get m-args :sputter 0)
-        sp-amt (get m-args :sputter-amt 0)]
-    (fn
-      ([] [size step])
-      ([b]
-       (let [idx (.indexOf (:def @mem) b)
-             beat (if (>= idx 0) (nth (:cur @mem) idx) b)]
-         (if (>= b size)
-           (do
-             (if (:reversed @mem)
-               (swap! mem (fn [m] (assoc (assoc m :cur (reverse (:cur m)))
-                                        :reversed false))))
-             (if (weighted-coin refresh)
-               (do
-                 (if (weighted-coin rev)
-                   (swap! mem (fn [m]
-                                (assoc (assoc m :cur (reverse (:def m)))
-                                       :reversed true))))
-                 (if (weighted-coin sp)
-                   (swap! mem (fn [m]
-                                (assoc m :cur (sputter (:def m) sp-amt (count (:def m))))))))
-               (do
-                 (swap! mem (fn [m]
-                              (assoc m :cur (:def m))))
-                 )
-               )
-             )
-           )
-         (get base beat))
-       )))
-  )
+
 
 (defn start-s [synth]
   (if (node-active? synth)
