@@ -18,8 +18,8 @@
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp track1]
-    (apply s/play-p (conj (vec (vals (select-keys comp [:c]))) 1.2))
+  (let [comp song-of-storms]
+    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c :d :f]))) 1.2))
     )
   )
 (def mystery
@@ -220,9 +220,9 @@
         )
    :c (s/phrase-p
        piano
-       [:G4 :Ab4 :G4 :2 :G4 :Ab4 :Bb4 :F4]
-       0.25 0 [:dur 1]
-       {:refresh 0.4 :reverse 0.7 :sputter 0.4 :sputter-amt 0.5}
+       (concat (chord-degree :v :C4 :minor) [:3] (chord-degree :i :C4 :minor))
+       0.25 0 [:dur 1 :amp 0.5]
+       {:refresh 0.4 :reverse 0.3 :sputter 0.4 :sputter-amt 0.2}
        )
    :d (build-from-kits [:Kit10-Vinyl :Kit15-Electro]
                        {
@@ -238,7 +238,7 @@
                            }
                           )
    :main1 beat
-   :main2 (s/m-phrase {:refresh 0.5 :sputter 0.6 :sputter-amt 0.6} (:bomba @beats) 0.25)
+   :main2 (:bomba @beats)
    :main3 (:four-beat @beats)
    })
 (def x-naut
@@ -317,36 +317,25 @@
   )
 
 (def song-of-storms
-  {:a (let [d (chord :D4 :minor)
-           e (chord :E4 :minor)
-           f (chord :F4 :major)
-           l [:dur 1.5]]
-       (s/phrase-p
-        bpfsaw
-        [:B3 [:D4 :F4] [:D4 :F4] :C4 [:E4 l :G4 l] :4
-         :D4 [:F4 :A4] [:F4 :A4] :C4 [:E4 l :G4 l] :4]
-        ;; [d d d d e :2
-        ;;  f f f f e :2]
-        0.25
-        1
-        [:amp 1 :attack 0.5 :release 1 :atk 0.01]))
+  {:a
+   (s/phrase-p
+    bpfsaw
+    [:B3 [:D4 :F4] [:D4 :F4] :C4 [:E4 [:dur 1.5] :G4 [:dur 1.5]] :4
+     :D4 [:F4 :A4] [:F4 :A4] :C4 [:E4 [:dur 1.5] :G4 [:dur 1.5]] :4]
+    0.25
+    1
+    [:amp 1 :attack 0.5 :release 1 :atk 0.01])
    :b (let [l [:dur 0.4]]
-       (s/phrase-p
-        flute
-        ;; [:D5 :F5 :D6 :6 :D5 :F5 :D6 :6
-        ;;  :E6 :4 :F6 :3 :E6 :F6 :3 :E6 :C6 :A5 :6
-        ;;  :A5 :4 :D5 :4 :F5 :G5 :A5 :6
-        ;;  :A5 :4 :D5 :4 :F5 :G5 :E5 :6
-        ;;  ]
-        ;; 0.125
-        [:D5 :F5 :D6 :3 :D5 :F5 :D6 :3
-         :E6 :1 :F6 l :E6 l :F6 l :E6 l :C6 l :A5 :3
-         :A5 :1 :D5 :1 :F5 :G5 :A5 [:dur 0.7] :2
-         :A5 :1 :D5 :1 :F5 :G5 :E5 [:dur 0.8] :4
-         ]
-        0.25
-        0
-        [:amp 0.2 :dur 0.6 :attack 0.01]))
+        (s/phrase-p
+         flute
+         [:D5 :F5 :D6 :3 :D5 :F5 :D6 :3
+          :E6 :1 :F6 l :E6 l :F6 l :E6 l :C6 l :A5 :3
+          :A5 :1 :D5 :1 :F5 :G5 :A5 [:dur 0.7] :2
+          :A5 :1 :D5 :1 :F5 :G5 :E5 [:dur 0.8] :4
+          ]
+         0.25
+         0
+         [:amp 0.2 :dur 0.6 :attack 0.01]))
    })
 
 (def pings
@@ -381,7 +370,28 @@
    :f (s/phrase-p
        klang-test
        [:Eb4 :E4 :Ab4 :Bb4 :0 :B4 :3 :Eb5]
-       0.25 2 [:atk 0.01] ;{:refresh 0.5 :reverse 0.8 :sputter 0.5 :sputter-amt 0.6}
+       0.25 2 [:atk 0.01] ;{:refresh 0.5 :reverse 0.3 :sputter 0.5 :sputter-amt 0.6}
        )
    }
   )
+(def house
+  {:a (s/phrase-p
+       rise-pad
+       [[:C4 :E4 :G4 :B4] :14
+        [:C4 :Eb4 :G4 :A4] :14] 0.25 0 [:detune 0])
+   :b (let [a ["SdSt-01"] b ["SdSt-02"] c ["SdSt-05"]]
+          (build-from-kits
+            [:Kit3-Acoustic]
+            [a :2 a :2 a :1 b c b :2]
+            0.125))
+   :c (let [k ["Kick-02"]]
+          (build-from-kits
+            [:Kit3-Acoustic]
+            [k :3]
+            0.25))
+   :d (s/phrase-p
+       reverb-test
+       [:B4 :4 :D5 :2 :C5 :B4 :3 :A4 :4]
+       0.25 0 [:amp 1 :decay 1]
+       {:refresh 0.4 :reverse 0.3 :sputter 0.5 :sputter-amt 0.1})
+   })

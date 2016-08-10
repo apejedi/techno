@@ -102,16 +102,18 @@
 
 (defonce syncop (atom nil))
 (swap! syncop (fn [_]
-                (fn [b]
-                  (let [kit (categorize-kit :Kit15-Electro)]
-                    (if (not (integer? b))
-                      [(choose (concat
-                                ;(vals (:kicks kit))
-                                (vals (:claps kit))
-                                (vals (:snrs kit))
-                                )
-                               ) [:amp 0.4]]
-                      ))
+                (fn
+                  ([] [4 0.25])
+                  ([b]
+                   (let [kit (categorize-kit :Kit15-Electro)]
+                     (if (not (integer? b))
+                       [(choose (concat
+                                        ;(vals (:kicks kit))
+                                 (vals (:claps kit))
+                                 (vals (:snrs kit))
+                                 )
+                                ) [:amp 0.4]]
+                       )))
                   )
                 ))
 
@@ -187,7 +189,7 @@
   (s/add-p core/player untitled :main)
   (s/add-p core/player untitled-b :switch)
   (s/mod-p core/player :switch :min-wrap 2)
-  (s/play-p untitled-b untitled 0.6)
+  (s/play-p untitled-b untitled 2)
   )
 
 

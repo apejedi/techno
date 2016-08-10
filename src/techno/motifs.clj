@@ -129,13 +129,13 @@
          ))
 
 (defn rnd-chord [b]
-  (if (and (= (mod b (int b)) 0))
+  (if (and (= (mod b 3) 0))
     (s/chord-p overpad
                (chord-degree
                 (choose [:i :iv :v :vi])
                 :C4
                 (choose [:minor]) 4)
-                [:coef 0.01 :amp 0.2 :dur 2 :attack 0.9 :release 2]
+                [:coef 0.01 :amp 0.2 :dur 2 :attack 0.1 :release 1]
                 )
     ))
 (comment
@@ -157,7 +157,7 @@
   (ctl t :gate 0)
   (ctl t :gate 1 :freq 100 :dec 4 :sus 1 :wave 0)
 
-  (s/rm-p core/player :arp)
+  (s/rm-p core/player :harmony)
   (s/add-p core/player chords :harmony)
   (s/add-p core/player arpeggio :arp)
   (s/rm-p core/player :harmony)

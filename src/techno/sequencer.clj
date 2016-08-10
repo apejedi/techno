@@ -75,6 +75,25 @@
       true 0
       )
     ))
+
+(defn get-step [pattern]
+  (let [val (get-val-if-ref pattern)
+        sizes (cond (map? val) (keys val)
+                    (and (fn? val)
+                         (= 0 (-> val class .getDeclaredMethods first .getParameterTypes alength)))
+                    (range 1 (first (val)) (second (val)))
+                    true [1])]
+    (reduce (fn [s b]
+              (min s
+                   (loop [s 1.0 b b]
+                     (if (some #{(double (mod b (int b)))} (range 0.0 1 s))
+                       s
+                       (recur (/ s 2) b)))
+                   ))
+            1
+            sizes)
+    )
+  )
 (defsynth syncopation-synth [freq 1 uid 0]
     "A synth to randomly modulate the clock speed of a trigger synth"
     (let [trigger (dust:kr freq)]
@@ -99,7 +118,13 @@
      ))
   )
 
-
+(defn set-st [sequencer step]
+  (when (node-active? sequencer)
+    (ctl (@trigger-sources (to-sc-id sequencer)) :step step)
+    (ctl sequencer :step step)
+    ;(update-pattern-size sequencer)
+    )
+  )
 (defn pp-pattern [pattern]
   (when (map? pattern)
     (println "{")
@@ -188,7 +213,8 @@
               raw-size (if (sequential? val) size (+ 1 (/ (- size 1) step)))
               min-wrap (get p :min-wrap 0)
               wrap (and (p :wrap)
-                        (>= (- seq-size stepped-beat) min-wrap))
+                        (>= (- seq-size stepped-beat) min-wrap)
+                        (if (or (not (fn? val)) (and (fn? val) (> size 1))) true false))
               ;; counter (get @pattern-counters k)
               ;; meh (.compareAndSet counter 0 (int beat))
               ;; final-beat (if wrap
@@ -216,9 +242,8 @@
                    (fn [cur]
                      (assoc-in cur [id k] new-p)
                      )))
-          ;; (if (or (= k :main)
-          ;;          true
-          ;;         )
+          ;; (if (or (= k :a)
+          ;;          false)
           ;;   (println "playing " k " with beat " final-beat " orig " orig-beat
           ;;            ;(.get counter) " size " size
           ;;                                 ;" time " (.getTime (java.util.Date.))
@@ -252,6 +277,7 @@
   (if (node-active? sequencer)
     (let [step (node-get-control sequencer :step)
           step (if step step 0.25)
+          seq-patterns (vals (get @patterns (to-sc-id sequencer)))
           get-size (fn [p]
                      (let [size-p (p-size (p :data) step)]
                        (cond
@@ -267,17 +293,22 @@
                          (let [val (get-val-if-ref (p :data))
                                cur (get-size p)]
                            (if (or (nil? c) (nil? cur))
-                             (println c cur val))
+                             (println c cur val p))
                             (max c cur)
                            ))
                        1
-                       (vals (get @patterns (to-sc-id sequencer))))
-          data (get @sequencer-data (to-sc-id sequencer) {})]
+                       seq-patterns)
+          data (get @sequencer-data (to-sc-id sequencer) {})
+          p-step (if (> (count seq-patterns) 0)
+                     (apply min
+                            (map #(get-step (:data %))
+                                 seq-patterns)))]
       (swap! sequencer-data
              (fn [seq-data]
                (assoc seq-data (to-sc-id sequencer) (assoc data :size size))
                ))
-
+      (if (and (not (= step p-step)) (not (nil? p-step)))
+        (set-st sequencer p-step))
       (ctl sequencer :pattern-size size)
       )
     )
@@ -326,7 +357,7 @@
   ([sequencer pattern] (add-p sequencer pattern (gensym "pat") {:wrap true}))
   ([sequencer pattern key] (add-p sequencer pattern key {:wrap true}))
   ([sequencer pattern key attrs]
-   (when (node-active? sequencer)
+   (when (and (node-active? sequencer) (not (nil? pattern)))
      (let [id (to-sc-id sequencer)
            cur-val (get @patterns id {})
            is-atom (instance? clojure.lang.Atom pattern)
@@ -335,10 +366,6 @@
        (if (contains? cur-val key)
          (rm-p sequencer key))
        (swap! patterns (fn [p]
-                         ;; (if (and (contains? cur-val key)
-                         ;;          (contains? (get cur-val key) :watcher))
-                         ;;   (remove-watch (get-in cur-val [key :data])
-                         ;;                 (get-in cur-val [key :watcher])))
                          (assoc p id
                                 (assoc cur-val key (merge {:data pattern} attrs))
                                 )
@@ -672,7 +699,8 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
         refresh (get m-args :refresh 0)
         rev (get m-args :reverse 0)
         sp (get m-args :sputter 0)
-        sp-amt (get m-args :sputter-amt 0)]
+        sp-amt (get m-args :sputter-amt 0)
+        shuffle (get m-args :shuffle 0)]
     (fn
       ([] [size step])
       ([b]
@@ -691,7 +719,11 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                                        :reversed true))))
                  (if (weighted-coin sp)
                    (swap! mem (fn [m]
-                                (assoc m :cur (sputter (:def m) sp-amt (count (:def m))))))))
+                                (assoc m :cur (sputter (:def m) sp-amt (count (:def m)))))))
+                 (if (weighted-coin shuffle)
+                   (swap! mem (fn [m]
+                                (assoc m :cur (sputter (:def m) sp-amt (count (:def m)))))))
+                 )
                (do
                  (swap! mem (fn [m]
                               (assoc m :cur (:def m))))
@@ -711,10 +743,13 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                             (cond (some #(= (:name %) "freq") (:params inst)) :freq
                                   (some #(= (:name %) "note") (:params inst)) :note
                                   true false))
-                 get-note #(if (number? %) %
-                               (if (= note-arg :freq)
-                                 (midi->hz (note %))
-                                 (note %)))
+                 get-note #(if (number? %)
+                             (if (and (= note-arg :freq) (< % 100))
+                               (midi->hz %)
+                               %)
+                             (if (= note-arg :freq)
+                               (midi->hz (note %))
+                               (note %)))
                  mk-action (fn [action block]
                              (reduce
                               (fn [a c]
@@ -772,6 +807,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     )
   synth
   )
+
 (defn play-p [& args]
   "play pattern once for testing"
   (let [s-args (filter number? args)
@@ -804,13 +840,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
 (defn set-size [sequencer size]
   (ctl sequencer :pattern-size size)
   )
-(defn set-st [sequencer step]
-  (when (node-active? sequencer)
-    (ctl (@trigger-sources (to-sc-id sequencer)) :step step)
-    (ctl sequencer :step step)
-    (update-pattern-size sequencer)
-    )
-  )
+
 
 
 (defunk-env adsr-ng
