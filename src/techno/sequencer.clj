@@ -62,7 +62,7 @@
     )
   )
 
-(defn p-size [val & step]
+(defn p-size [val & [step]]
   "Returns size of a pattern"
   (let [val (get-val-if-ref val)
         step (if step step 0.25)]
@@ -212,10 +212,14 @@
               size (p-size val step)
               raw-size (if (sequential? val) size (+ 1 (/ (- size 1) step)))
               min-wrap (get p :min-wrap 0)
-              wrap (and (p :wrap)
+              wrap (and (get p :wrap true)
                         (>= (- seq-size stepped-beat) min-wrap)
                         (if (or (not (fn? val)) (and (fn? val) (> size 1))) true false))
-              ;; counter (get @pattern-counters k)
+              wrap-beat (fn [beat size step]
+                          (let [steps (cycle (range 1 (inc raw-size)))
+                                w (nth steps (dec beat))]
+                            (step-beat w step)))
+              counter (get @pattern-counters k)
               ;; meh (.compareAndSet counter 0 (int beat))
               ;; final-beat (if wrap
               ;;              (step-beat (.get counter) step)
@@ -226,16 +230,25 @@
               ;; next-beat (if (>= (.get counter) raw-size)
               ;;             (.getAndSet counter 1)
               ;;             (.incrementAndGet counter))
-              wrap-beat (fn [beat size step]
-                          (let [steps (cycle (range 1 (inc raw-size)))
-                                w (nth steps (dec beat))]
-                            (step-beat w step)))
-              final-beat (if (and wrap (> stepped-beat size))
-                           (wrap-beat beat size step)
-                           stepped-beat)
-              orig-beat (if (and wrap (> beat size))
-                          (wrap-beat beat size 1)
-                          beat)
+              final-beat (if (get p :use-counter false)
+                           (let [meh (.compareAndSet counter 0 (int beat))]
+                             (if wrap
+                               (step-beat (.get counter) step)
+                               stepped-beat))
+                           (if (and wrap (> stepped-beat size))
+                             (wrap-beat beat size step)
+                             stepped-beat))
+              orig-beat (if (get p :use-counter false)
+                          (let [orig-beat (if wrap
+                                            (.get counter)
+                                            beat)
+                                next-beat (if (>= (.get counter) raw-size)
+                                            (.getAndSet counter 1)
+                                            (.incrementAndGet counter))]
+                            orig-beat)
+                          (if (and wrap (> beat size))
+                            (wrap-beat beat size 1)
+                            beat))
               new-p (play final-beat p orig-beat)]
           (if (map? new-p)
             (swap! patterns
@@ -243,7 +256,7 @@
                      (assoc-in cur [id k] new-p)
                      )))
           ;; (if (or (= k :a)
-          ;;          false)
+          ;;          true)
           ;;   (println "playing " k " with beat " final-beat " orig " orig-beat
           ;;            ;(.get counter) " size " size
           ;;                                 ;" time " (.getTime (java.util.Date.))
@@ -708,15 +721,11 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
              beat (if (>= idx 0) (nth (:cur @mem) idx) b)]
          (if (>= b size)
            (do
-             (if (:reversed @mem)
-               (swap! mem (fn [m] (assoc (assoc m :cur (reverse (:cur m)))
-                                        :reversed false))))
              (if (weighted-coin refresh)
                (do
                  (if (weighted-coin rev)
                    (swap! mem (fn [m]
-                                (assoc (assoc m :cur (reverse (:def m)))
-                                       :reversed true))))
+                                (assoc m :cur (reverse (:def m))))))
                  (if (weighted-coin sp)
                    (swap! mem (fn [m]
                                 (assoc m :cur (sputter (:def m) sp-amt (count (:def m)))))))

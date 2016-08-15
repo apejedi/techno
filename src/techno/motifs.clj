@@ -57,7 +57,7 @@
                   (let [root :C4
                         type :minor
                         args [:coef 0.001 :amp 0.4 :atk 0.01 :dur 1]
-                        inst bpfsaw
+                        inst ks1
                         v (flatten (repeat 8 (chord-degree :v root type 4)))
                         i (flatten (repeat 8 (chord-degree :iv root type 4)))]
                     (s/arp-p inst (concat v i) args 0)
@@ -166,22 +166,27 @@
   (s/add-p core/player x-naut :x-naut)
   (s/add-p core/player [(s/chord-p overpad [:F#4 :C#5 :Eb5 :Bb4] [:attack 1 :release 3]) nil nil nil nil nil])
 
-  (s/add-p
-   core/player
+  (s/play-p
+   ;core/player
    (let [root :D4
          n 3
-         [a b c d e] (map #(chord-degree % :C4 :minor) [:i :ii :iii :iv :v])
-                                        ;[a b c] [(map midi->hz a) (map midi->hz b) (map midi->hz c)]
-         ]
-     (s/m-phrase
-      {:refresh 0.6 :sputter 0.5 :sputter-amt 0.25 :reverse 0}
+         [a b c d e] (map #(chord-degree % :C4 :minor) [:i :ii :iii :iv :v])]
+     (s/phrase-p
       bing
       [b d c e a]
       0.25 2
-      [:decay 2 :release 1 :dur 2 :amp 0.3 :coef 0.01]))
-                                        :harmony
-   ;1
+      [:decay 2 :release 1 :dur 2 :amp 0.3 :coef 0.01]
+      {:refresh 0.6 :sputter 0.5 :sputter-amt 0.25 :reverse 0}))
+   1
    )
+  (s/play-p
+   (s/phrase-p
+    bing
+    [(map #(+ (note :Eb4) %) (take 4 (range 1 1000 7))) :3
+     (map #(+ (note :C4) %) (take 4 (range 1 1000 5))) :3
+     ;(map #(+ (note :F4) %) (take 4 (range 1 1000 5)))
+     ]
+    0.25 0 [:decay 2 :amp 0.4]) 2)
   (kill trigger-synth)
   (s/rm-p core/player :harmony)
   )

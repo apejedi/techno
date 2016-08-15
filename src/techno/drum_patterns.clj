@@ -52,16 +52,16 @@
                      0.25 [:amp 0.4]
                      )]
            (s/m-phrase
-            {:refresh 0.4 :sputter 0.5 :sputter-amt 0.3 :reverse 0.5}
+            {:refresh 0 :sputter 0.5 :sputter-amt 0.3 :reverse 0.5}
              base 0.25))
          ))
 
 
-(def lazer (let [d [zap [3000 :amp 0.5 :dur 0.1] dub-kick [300 :amp 1.5]]
+(def lazer (let [d [zap [3000 :amp 0.3 :dur 0.1] dub-kick [300 :amp 1.5]]
                  base (s/build-rest-p
                [d :6 d :2 d :5])]
              (s/m-phrase
-              {:refresh 0.4 :sputter 0.4 :sputter-amt 0.7}
+              {:refresh 0.7 :sputter 0.4 :sputter-amt 0.7}
               base
               0.25)
              ))
@@ -73,18 +73,38 @@
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :Kit3-Acoustic)))))
+                          (vals (group-samples (drum-kits :Kit16-Electro)))))
 
 
+  (s/add-p
+   core/player
+   (let [k "Kick02" s "Snr03"]
+       (build-from-kits
+        [:Kit16-Electro]
+        [[[dub-kick [:amp 0.5]] [kick [:amp 1 :noise 0.3]]] :3]
+        0.25))
+   :main {:use-counter true})
+
+  (s/add-p
+   core/player
+   (let [c1 "ClHat02" c2 "ClHat01" a [:amp 0]]
+       (build-from-kits
+        [:Kit16-Electro]
+        [[c1] :2 [c1] :2 [c1] :1 [c1] [c2] [c1] :3]
+        0.25))
+   :main2)
 
   (s/play-p t 2)
   (s/add-p core/player techno1 :main3)
-  (s/add-p core/player funky-drummer :main)
-  (s/add-p core/player son-clave :main)
-  (s/play-p impeach-the-president 2)
+  (s/add-p core/player
+           funky-drummer :main2)
+  (s/add-p core/player (s/m-phrase {:refresh 0.8 :sputter 0.7 :sputter-amt 0.3}
+                                   funky-drummer 0.25) :main4)
+  (s/add-p core/player impeach-the-president :main2)
+  (s/play-p impeach-the-president 3)
 
 
-  (s/rm-p core/player :main2)
+  (s/rm-p core/player :main)
   (s/wrap-p core/player :pulse false)
   )
 
@@ -98,12 +118,12 @@
      0.25 [:amp 0.5])))
 
 (def techno1
-  (let [k [kick [:sustain 1 :noise 1 :amp 0.5]] ;"Kick-03"
-        s "Snr-04" c "ClHat-04" o "OpHat-01"]
+  (let [k "Kick02"
+        s "Snr03" c "ClHat02" o "OpHat" cl "Clap02"]
     (build-from-kits
-     [:Kit3-Acoustic]
-     [[k] :1 [o] :1 [k s] :1 [o] :1
-      [k] [c] [o] :1 [k s] :1 [k o] :1]
+     [:Kit16-Electro]
+     [[k cl] :1 [o] :1 [k s] :1 [o] :1
+      [k cl] [c] [o] :1 [k s] :1 [k o cl] :1]
      0.25 [:amp 0.5])))
 
 (def son-clave

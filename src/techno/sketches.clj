@@ -8,9 +8,9 @@
         [techno.drums]))
 
 (comment
-  (let [parts [:f]
+  (let [parts [:c :d]
         rm []
-        comp pings]
+        comp track2]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -18,64 +18,64 @@
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp song-of-storms]
-    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c :d :f]))) 1.2))
+  (let [comp tekno]
+    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c]))) 2))
     )
-  )
-(def mystery
-  {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
-            b (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:Bb4])
-            c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
-            d (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:Bb4])]
-        (s/phrase-p
-         piano
-         [a b a b a b a b a b
-          c d c d c d c d c d c d]
-         0.25
-         0
-         [:coef 0.01]))
-   }
-  )
 
-(def arpeggi
-  {:a (s/phrase-p
-       ks1
-       [:G4 :A4 :C#5 :B4 :A4 :G4 :D5]
-       0.25
-       0 [:atk 0.001 :amp 0.6 :coef 0.01 :dur 1])
-   :b (let [a [:D5 :G4 :E4]
-            b [:E5 :A4 :F#4]
-            c [:A5 :D5 :B4]
-            d [:F#5 :D5 :B4]]
-        (s/phrase-p
-         klang-test
-         (concat a a a a a a
-                 b b b b b b
-                 c c c c c c
-                 d d d d d d)
-         0.25 0 [:coef 0.01 :amp 0.8 :atk 0.01 :dur 2]))
-   :c (s/phrase-p
-       bpfsaw
-       [:F#5 :G5 :A5 :4]
-       0.25 1 [:dur 0.7 :atk 0.01 :amp 0.2])
-   :d (let [d :D4 e :E4 a :A4 g :G4 f :F#4]
-        (s/phrase-p
+  (def mystery
+    {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
+              b (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:Bb4])
+              c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
+              d (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:Bb4])]
+          (s/phrase-p
+           piano
+           [a b a b a b a b a b
+            c d c d c d c d c d c d]
+           0.25
+           0
+           [:coef 0.01]))
+     }
+    )
+
+  (def arpeggi
+    {:a (s/phrase-p
+         ks1
+         [:G4 :A4 :C#5 :B4 :A4 :G4 :D5]
+         0.25
+         0 [:atk 0.001 :amp 0.6 :coef 0.01 :dur 1])
+     :b (let [a [:D5 :G4 :E4]
+              b [:E5 :A4 :F#4]
+              c [:A5 :D5 :B4]
+              d [:F#5 :D5 :B4]]
+          (s/phrase-p
+           klang-test
+           (concat a a a a a a
+                   b b b b b b
+                   c c c c c c
+                   d d d d d d)
+           0.25 0 [:coef 0.01 :amp 0.8 :atk 0.01 :dur 2]))
+     :c (s/phrase-p
          bpfsaw
-         [d d d d e e e e a a a a g g g g f f f f]
-         0.25 0 [:dur 1.5 :amp 0.5 :attack 0.5 :release 1]))
-   :e (fn [b]
-        (get
-         {10 (s/chord-p flute [:G4 :A4 :D5] [:dur 2])
-          12 (s/chord-p flute [:G4 :A4 :C#5] [:dur 2])
-          14 (s/chord-p flute [:G4 :A4 :B4] [:dur 2])
-          } b)
-        ;; (s/phrase-p
-        ;;  flute
-        ;;  [[:G4 :A4 :D5] [:G4 :A4 :C#5] [:G4 :A4 :B4]]
-        ;;  0.25 9 [:dur 3])
-        )
-   }
-  )
+         [:F#5 :G5 :A5 :4]
+         0.25 1 [:dur 0.7 :atk 0.01 :amp 0.2])
+     :d (let [d :D4 e :E4 a :A4 g :G4 f :F#4]
+          (s/phrase-p
+           bpfsaw
+           [d d d d e e e e a a a a g g g g f f f f]
+           0.25 0 [:dur 1.5 :amp 0.5 :attack 0.5 :release 1]))
+     :e (fn [b]
+          (get
+           {10 (s/chord-p flute [:G4 :A4 :D5] [:dur 2])
+            12 (s/chord-p flute [:G4 :A4 :C#5] [:dur 2])
+            14 (s/chord-p flute [:G4 :A4 :B4] [:dur 2])
+            } b)
+          ;; (s/phrase-p
+          ;;  flute
+          ;;  [[:G4 :A4 :D5] [:G4 :A4 :C#5] [:G4 :A4 :B4]]
+          ;;  0.25 9 [:dur 3])
+          )
+     }
+    ))
 (def r-prog
   {:a (let [root (note :Eb5)
             a [root (+ root 2)]
@@ -109,29 +109,36 @@
   )
 
 (def track2
-  {:a (s/phrase-p
+  {:harmony (s/phrase-p
     overpad
     [[:E4 :G4 :B4 :D5] :24
      [:D4 :F4 :A4] :22]
     0.25 0 [:attack 2 :release 5 :amp 0.2])
-   :b (s/phrase-p
+   :bells (s/phrase-p
     bpfsaw
     [[:D5 :F4] [:E5 :G4] :1 [:D5 :F4] [:E5 :G4] :2
      [:D5 :F4] [:E5 :G4] :3]
     0.25 0 [:amp 0.5 :atk 0.01])
-   :c {
+   :whistle {
     1 [whistle [:freq1 (midi->hz (note :D5)) :freq2 (midi->hz (note :A6)) :dur 3 :amp 0.3]]
     8 [whistle [:freq1 (midi->hz (note :A6)) :freq2 (midi->hz (note :E5)) :dur 3 :amp 0.3]]
     12.75 []}
-   :d (build-from-kits
-    [:Kit3-Acoustic :Kit10-Vinyl]
-    [[[dub-kick [100 :amp 0.8]]] :1 ["Perc03"] :1])
-   :e (let [a [:amp 0.4]]
+   :kicks (build-from-kits
+       [:Kit3-Acoustic :Kit10-Vinyl]
+       [[[dub-kick [100 :amp 1]]] :1
+        ["Perc03"] :1])
+   :sdst (let [a [:amp 0.4]]
            (build-from-kits
             [:Kit3-Acoustic]
             [["SdSt-03"] :2
-             ["SdSt-06"] ["SdSt-07"] :1 ["SdSt-03" "Snr-04"] :1]
-            0.25 [:amp 0.6]))}
+             ["SdSt-06"] ["SdSt-07"] :1
+             ["SdSt-03" "Snr-04"] :1]
+            0.25 [:amp 0.6]))
+   :f (let []
+        (s/phrase-p
+         plk-bass
+         [:D3 :G3 :C3 :A3]
+         0.25 4 [:dur 2]))}
   )
 
 (def on
@@ -219,10 +226,10 @@
         (s/arp-p inst (concat v i) args 0)
         )
    :c (s/phrase-p
-       piano
+       overpad
        (concat (chord-degree :v :C4 :minor) [:3] (chord-degree :i :C4 :minor))
        0.25 0 [:dur 1 :amp 0.5]
-       {:refresh 0.4 :reverse 0.3 :sputter 0.4 :sputter-amt 0.2}
+       {:refresh 1 :reverse 0.3 :sputter 0.8 :sputter-amt 0.2}
        )
    :d (build-from-kits [:Kit10-Vinyl :Kit15-Electro]
                        {
@@ -380,18 +387,20 @@
        [[:C4 :E4 :G4 :B4] :14
         [:C4 :Eb4 :G4 :A4] :14] 0.25 0 [:detune 0])
    :b (let [a ["SdSt-01"] b ["SdSt-02"] c ["SdSt-05"]]
+        (s/m-phrase
+         {:refresh 0.5 :sputter 0.7 :sputter-amt 0.2}
+         (build-from-kits
+          [:Kit3-Acoustic]
+          [a :2 a :2 a :1 b c b :2]
+          0.125) 0.125))
+   :c (let [k ["Kick-02"] k2 ["Kick-01"]]
           (build-from-kits
             [:Kit3-Acoustic]
-            [a :2 a :2 a :1 b c b :2]
-            0.125))
-   :c (let [k ["Kick-02"]]
-          (build-from-kits
-            [:Kit3-Acoustic]
-            [k :3]
+            [k2 :2 k :2]
             0.25))
    :d (s/phrase-p
        reverb-test
        [:B4 :4 :D5 :2 :C5 :B4 :3 :A4 :4]
-       0.25 0 [:amp 1 :decay 1]
+       0.25 0 [:amp 1 :decay 1.3 :delay-time 0.6]
        {:refresh 0.4 :reverse 0.3 :sputter 0.5 :sputter-amt 0.1})
    })

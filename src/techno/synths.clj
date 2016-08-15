@@ -267,6 +267,25 @@
     )
   )
 
+;; (defsynth chicago-pad2 [freq 440 cutoff 500 amp 1]
+;;   (let [freq2 (/ (* (/ 3 2) freq) 2)
+;;         freq3 (/ (* (/ 5 6) freq) 2)
+;;         delay 0.05
+;;         freq (+ freq (* (sin-osc:kr (/ freq 2)) (/ freq 2)))
+;;         snd (* 0.1 (saw [freq (+ freq 1) (- freq 1) freq2 freq3]))
+;;         snd (+ snd (* 0.1 (var-saw [freq (+ freq 1) (- freq 1) freq2
+;;                                     freq3 (+ freq2 1) (+ freq3 1)]
+;;                                    0 (range-lin:kr (lf-tri:kr 7.13) 0 0.1))))
+;;         snd (mix snd)
+;;         snd (* 16 (free-verb snd 0.51 10 0.1))
+;;         snd (rlpf snd [(/ (+ 4000 (* (sin-osc:kr 0.1) 1700)) 20.51)
+;;                        (/ (+ 700 (* (sin-osc:kr 4.2) 480)) 20)]
+;;                   (sin-osc 0.1 (* 3.14 1.5)))]
+;;     )
+;;   (out:ar [0 1] snd)
+;;   )
+
+
 (defsynth drone-noise [freq 440]
   (let [freqs (map #(* freq %) [(/ 2 3) (/ 4 5) (/ 1 5)])
         sig (klank [freqs (repeat (count freqs) (/ 1 (count freqs)))] (pink-noise))
