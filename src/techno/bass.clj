@@ -30,8 +30,6 @@
 
 
 
-
-
 (defonce bass-line (atom []))
 (swap! bass-line
        (fn [_]

@@ -1,4 +1,5 @@
 (ns techno.sketches
+  (:import java.util.concurrent.ThreadLocalRandom)
   (:use [overtone.core]
         [overtone.inst.synth]
         [techno.core :as core]
@@ -8,9 +9,9 @@
         [techno.drums]))
 
 (comment
-  (let [parts [:c :d]
+  (let [parts [:c]
         rm []
-        comp track2]
+        comp ambient]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -18,9 +19,12 @@
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp tekno]
-    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c]))) 2))
+  (let [comp arpeggi]
+    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c]))) 1))
     )
+  (s/rm-p core/player :b)
+
+
 
   (def mystery
     {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
@@ -75,64 +79,80 @@
           ;;  0.25 9 [:dur 3])
           )
      }
-    ))
-(def r-prog
-  {:a (let [root (note :Eb5)
-            a [root (+ root 2)]
-            b [root (+ root 3)]
-            c [(dec root) (+ (dec root) 2)]
-            d [(dec root) (+ (dec root) 3)]
-            e [(- root 2) (+ (- root 2) 2)]
-            f [(- root 3) (+ (- root 2) 2)]
-            pattern [a a a b b a a b b a a a
-                     c c c d d c c d d c c c
-                     e e e f f f f f]
-            pattern (map #(map midi->hz %) pattern)
-            ]
-     (s/phrase-p
-      klang-test
-      pattern
-      0.25 0 [:coef 0.01 :atk 0.01 :dur 0.5])
-     )})
+    )
+  (def r-prog
+    {:a (let [root (note :Eb5)
+              a [root (+ root 2)]
+              b [root (+ root 3)]
+              c [(dec root) (+ (dec root) 2)]
+              d [(dec root) (+ (dec root) 3)]
+              e [(- root 2) (+ (- root 2) 2)]
+              f [(- root 3) (+ (- root 2) 2)]
+              pattern [a a a b b a a b b a a a
+                       c c c d d c c d d c c c
+                       e e e f f f f f]
+              pattern (map #(map midi->hz %) pattern)
+              ]
+          (s/phrase-p
+           klang-test
+           pattern
+           0.25 0 [:coef 0.01 :atk 0.01 :dur 0.5])
+          )})
 
-(def scatterbrain
-  {:a (s/phrase-p
-       bpfsaw
-       [:A3 :A4 :E5 :1
-        :G3 :G4 :D5 :1
-        :F3 :F4 :C5 :1
-        :E3 :E4 :B4 :1
-        :E3 :E4 :A4 :1
-        :E3 :E4 :G4 :1
-        :E3 :E4 :A4 :1 :B4]
-       0.25 0 [:atk 0.01])}
-  )
+  (def scatterbrain
+    {:a (s/phrase-p
+         bpfsaw
+         [:A3 :A4 :E5 :1
+          :G3 :G4 :D5 :1
+          :F3 :F4 :C5 :1
+          :E3 :E4 :B4 :1
+          :E3 :E4 :A4 :1
+          :E3 :E4 :G4 :1
+          :E3 :E4 :A4 :1 :B4]
+         0.25 0 [:atk 0.01])}
+    ))
 
 (def track2
   {:harmony (s/phrase-p
-    overpad
-    [[:E4 :G4 :B4 :D5] :24
-     [:D4 :F4 :A4] :22]
-    0.25 0 [:attack 2 :release 5 :amp 0.2])
+             overpad
+             [[:E4 :G4 :B4 :D5] :24
+              [:D4 :F4 :A4] :22]
+             0.25 0 [:attack 2 :release 5 :amp 0.2])
    :bells (s/phrase-p
-    bpfsaw
-    [[:D5 :F4] [:E5 :G4] :1 [:D5 :F4] [:E5 :G4] :2
-     [:D5 :F4] [:E5 :G4] :3]
-    0.25 0 [:amp 0.5 :atk 0.01])
+           bpfsaw
+           [[:D5 :F4] [:E5 :G4] :1 [:D5 :F4] [:E5 :G4] :2
+            [:D5 :F4] [:E5 :G4] :3]
+           0.25 0 [:amp 0.5 :atk 0.01])
    :whistle {
-    1 [whistle [:freq1 (midi->hz (note :D5)) :freq2 (midi->hz (note :A6)) :dur 3 :amp 0.3]]
-    8 [whistle [:freq1 (midi->hz (note :A6)) :freq2 (midi->hz (note :E5)) :dur 3 :amp 0.3]]
-    12.75 []}
-   :kicks (build-from-kits
-       [:Kit3-Acoustic :Kit10-Vinyl]
-       [[[dub-kick [100 :amp 1]]] :1
-        ["Perc03"] :1])
-   :sdst (let [a [:amp 0.4]]
+             1 [whistle [:freq1 (midi->hz (note :D5)) :freq2 (midi->hz (note :A6)) :dur 3 :amp 0.3]]
+             8 [whistle [:freq1 (midi->hz (note :A6)) :freq2 (midi->hz (note :E5)) :dur 3 :amp 0.3]]
+             12.75 []}
+   :kicks (let [k "Kick-01" s "Snr03"]
+            (build-from-kits
+             [:Kit3-Acoustic :Kit16-Electro]
+             [[k [dub-kick [100 :amp 1]]] :3]
+             0.25))
+   :sdst (let [c1 "ClHat02" c2 "ClHat01" a [:amp 0]]
+           (build-from-kits
+            [:Kit16-Electro]
+            [[c1] :2 [c1] :2 [c1] :1 [c1] [c2] [c1] :5]
+            0.25))
+   :hat (let [o "OpHat"]
+            (build-from-kits
+             [:Kit16-Electro]
+             [:2 [o] :1]
+             0.25))
+   ;; :kicks (build-from-kits
+   ;;         [:Kit3-Acoustic :Kit10-Vinyl]
+   ;;         [[[dub-kick [100 :amp 1]]] :1
+   ;;          ["Perc03"] :1])
+   :sdst2 (let [s3 "SdSt-03"
+                s6 "SdSt-06"
+                s7 "SdSt-07"
+                s4 "SdSt-04"]
            (build-from-kits
             [:Kit3-Acoustic]
-            [["SdSt-03"] :2
-             ["SdSt-06"] ["SdSt-07"] :1
-             ["SdSt-03" "Snr-04"] :1]
+            [[s6] :2 [s6] :2 [s6] :1 [s6] [s7] [s6] :5]
             0.25 [:amp 0.6]))
    :f (let []
         (s/phrase-p
@@ -143,41 +163,41 @@
 
 (def on
   {:a (let [a [:delay-time 0.7 :decay 8 :amp 0.3]]
-          (s/phrase-p
-           reverb-test
-           [:Eb5 :2 :C#5 :2 :Bb4 :3
-            :Ab4 :1 :Bb4 :Ab4
-            :Bb4 :1 :C#5 :1
-            :F#4 a :F#4 a :F#4 a :3]
-           0.25 0 [:delay-time 0.5 :decay 7 :amp 0.3]))
+        (s/phrase-p
+         reverb-test
+         [:Eb5 :2 :C#5 :2 :Bb4 :3
+          :Ab4 :1 :Bb4 :Ab4
+          :Bb4 :1 :C#5 :1
+          :F#4 a :F#4 a :F#4 a :3]
+         0.25 0 [:delay-time 0.5 :decay 7 :amp 0.3]))
    }
   )
 (def bass-line
   (let [d :D2]
-      (s/phrase-p
-       plk-bass
-       [:A3 :G2 :C3]
-       0.25
-       0
-       [:dur 1 :amp 0.8]))
+    (s/phrase-p
+     plk-bass
+     [:A3 :G2 :C3]
+     0.25
+     0
+     [:dur 1 :amp 0.8]))
   )
 (def melissa
   {:a (let [l [:dur 3]
-         a [:Ab2 l]
-         f [:F#2 l]
-         main [:Eb3 :Bb4 :Eb3 :Bb4 l [:space 1] :Eb3 :Bb4]]
-     (s/phrase-p
-      ks1
-      (concat a main
-              a main
-              f main
-              f main
-              [:Bb4] [:C5 l])
-      (double (/ 1 4))
-      0
-      [:dur 2 :atk 0.001 :coef 0.01 :amp 0.5]
-      )
-     )
+            a [:Ab2 l]
+            f [:F#2 l]
+            main [:Eb3 :Bb4 :Eb3 :Bb4 l [:space 1] :Eb3 :Bb4]]
+        (s/phrase-p
+         ks1
+         (concat a main
+                 a main
+                 f main
+                 f main
+                 [:Bb4] [:C5 l])
+         (double (/ 1 4))
+         0
+         [:dur 2 :atk 0.001 :coef 0.01 :amp 0.5]
+         )
+        )
    :b (s/phrase-p
        bpfsaw
        [:C6 :Bb5 :G5 :2
@@ -237,13 +257,13 @@
                         1.5 ["ClHat01"]
                         })
    :e (build-from-kits [:Kit10-Vinyl]
-                          {
-                           1 ["Perc02"]
-                           1.25 ["Perc03"]
-                           2 ["Perc04"]
-                           2.75 []
-                           }
-                          )
+                       {
+                        1 ["Perc02"]
+                        1.25 ["Perc03"]
+                        2 ["Perc04"]
+                        2.75 []
+                        }
+                       )
    :main1 beat
    :main2 (:bomba @beats)
    :main3 (:four-beat @beats)
@@ -252,22 +272,22 @@
   {:a (let [a [:Eb5 :G5 :Bb5 :D6 :Bb5 :Eb5]
             b [:Eb5 :G5 :Ab5 :C6 :Ab5 :Eb5]
             c [:Eb5 :Eb5 :F5 :F5 :G5 :G5 :G5 :G5 [:dur 0.2] :1 :G5 :G5 :G5]]
-             (s/merge-p
-              (s/phrase-p
-               sin-inst
-               (concat a a a a a
-                       b b b b b
-                       a a c)
-               0.25 0 [:attack 0.1 :release 0.1 :dur 0.2])
-              ))
+        (s/merge-p
+         (s/phrase-p
+          sin-inst
+          (concat a a a a a
+                  b b b b b
+                  a a c)
+          0.25 0 [:attack 0.1 :release 0.1 :dur 0.2])
+         ))
    :b (let [c [:C2]
             c1 [:C2 [:dur 3]]
             f [:F2]
             f1 [:F2 [:dur 3]]]
-          (s/phrase-p
-           plk-bass
-           (reduce into [c c [:4] c1  c [:4] f f [:4] f1 f [:4]])
-           0.25 2))
+        (s/phrase-p
+         plk-bass
+         (reduce into [c c [:4] c1  c [:4] f f [:4] f1 f [:4]])
+         0.25 2))
    }
   )
 
@@ -298,10 +318,10 @@
             a [:C4 :G4 :A4 :F4]
             c [:F4 :A4 :C5]
             d [:D4 :E4 :A4]]
-          (s/phrase-p
-           ks1
-           [b a b a b :2 a :2 c b a]
-           0.25 4 [:coef 0.08 :amp 0.4]))
+        (s/phrase-p
+         ks1
+         [b a b a b :2 a :2 c b a]
+         0.25 4 [:coef 0.08 :amp 0.4]))
    }
   )
 
@@ -346,9 +366,9 @@
    })
 
 (def pings
-  ;(/ 80 60
+                                        ;(/ 80 60
   {:a (let [root :D3
-         notes (scale root :major)]
+            notes (scale root :major)]
         (s/phrase-p
          zap
          (map #(midi->hz  (nth notes (degree->int %))) [:ii :iv :v :iii])
@@ -360,14 +380,14 @@
    :c (s/phrase-p
        bpfsaw
        [:Ab4 [:dur 2] :4 :Bb4 :G4 [:dur 1.5] :3]
-       ;[:B4 [:dur 2] :4 :C#5 :Bb4 [:dur 1.5] :3]
+                                        ;[:B4 [:dur 2] :4 :C#5 :Bb4 [:dur 1.5] :3]
        0.25 2 [:dur 1 :atk 0.01 :amp 0.8]
-       ;{:refresh 0.3 :reverse 1}
+                                        ;{:refresh 0.3 :reverse 1}
        )
    :d (s/phrase-p
        reverb-test
        [:B4 [:dur 2] :4 :Eb5 :Bb4 [:dur 1.5] :3]
-       ;[:B4 [:dur 2] :4 :C#5 :Bb4 [:dur 1.5] :3]
+                                        ;[:B4 [:dur 2] :4 :C#5 :Bb4 [:dur 1.5] :3]
        0.25 2 [:decay-time 3 :delay-time 0.5 :amp 0.6])
    :e (fn [b]
         (if (or (= (mod b 3) 0) false)
@@ -394,13 +414,44 @@
           [a :2 a :2 a :1 b c b :2]
           0.125) 0.125))
    :c (let [k ["Kick-02"] k2 ["Kick-01"]]
-          (build-from-kits
-            [:Kit3-Acoustic]
-            [k2 :2 k :2]
-            0.25))
+        (build-from-kits
+         [:Kit3-Acoustic]
+         [k2 :2 k :2]
+         0.25))
    :d (s/phrase-p
        reverb-test
        [:B4 :4 :D5 :2 :C5 :B4 :3 :A4 :4]
        0.25 0 [:amp 1 :decay 1.3 :delay-time 0.6]
        {:refresh 0.4 :reverse 0.3 :sputter 0.5 :sputter-amt 0.1})
+   })
+
+(def ambient
+  {:a (s/phrase-p
+       bing
+       [(map #(+ (note :Eb4) %) (take 4 (range 1 1000 7))) :3
+        (map #(+ (note :C4) %) (take 4 (range 1 1000 5))) :3
+        (map #(+ (note :D4) %) (take 4 (range 1 1000 5))) :3]
+       0.25 0 [:decay 2 :amp 0.2])
+   :b (let [a [:D5 :E4] b [:C#5 :Eb4]]
+       (s/phrase-p
+        sweet
+        [a a a b b b]
+        0.25 3 [:vib 0 :dur 1 :amp 0.3 :t 1]))
+   :c (fn [b]
+                 (let [rand #(.nextDouble (ThreadLocalRandom/current) %1 %2)
+                       chord (map midi->hz (chord-degree (choose [:i :ii :iii :iv :v]) :E4 :major))]
+                   (if (and (integer? b) (= (rand-int 2) 0))
+                       (s/chord-p bpfsaw2
+                                  chord
+                                  [:dur (rand 1.5 4.0)
+                                   :detune (rand 0.05 0.1)
+                                   :cfmin 100
+                                   :cfmax 1500
+                                   :rqmin (rand 0.01 0.15)
+                                   :atk (rand 2.0 2.5)
+                                   :rel (rand 6.5 10.0)
+                                   :ldb 6
+                                   :amp 1.3])
+                       ))
+                 )
    })

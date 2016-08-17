@@ -12,8 +12,8 @@
 (swap! marimba
        (fn [_]
          (fn [b]
-           (let [;cfmin (* (choose (map midi->hz (scale :C4 :minor))) (choose [0.5 1 2 4]))
-                 cfmin (* (midi->hz 64) (choose [0.5 1 2 4]))
+           (let [cfmin  (choose (map midi->hz (scale :D4 :major)))
+                ; cfmin (* (midi->hz 64) (choose [0.5 1 2 4]))
                  ]
              (if (= (rand-int 2) 1)
                [bpfsaw2
@@ -27,7 +27,7 @@
                  :atk 3
                  :sus 1
                  :rel 5
-                 :amp 1]]))
+                 :amp 5]]))
            )))
 
 (def drone (atom nil))
@@ -36,15 +36,15 @@
                  (let [rand #(.nextDouble (ThreadLocalRandom/current) %1 %2)
                        ;chord (map midi->hz (chord-degree (choose [:ii :iv :v :vi]) :A4 :minor))
                        chord
-                       ;(map midi->hz (chord-degree (choose [:i :ii :iii :iv :v]) :C4 :minor))
+                       (map midi->hz (chord-degree (choose [:i :ii :iii :iv :v]) :E4 :major))
 
-                       (map #(midi->hz (note %))
-                                  (choose
-                                   [[:B0 :B1 :F#3 :Eb4 :E4]
-                                    [:A2 :E3 :F#3 :B3 :C#4 :E4]
-                                    [:E1 :E2 :B2 :Ab3 :B3 :Eb4]
-                                    [:F#2 :E3 :A3 :C#4 :Eb4]]
-                                   ))
+                       ;; (map #(midi->hz (note %))
+                       ;;            (choose
+                       ;;             [[:B0 :B1 :F#3 :Eb4 :E4]
+                       ;;              [:A2 :E3 :F#3 :B3 :C#4 :E4]
+                       ;;              [:E1 :E2 :B2 :Ab3 :B3 :Eb4]
+                       ;;              [:F#2 :E3 :A3 :C#4 :Eb4]]
+                       ;;             ))
                        ]
                    (if (and (integer? b) (= (rand-int 2) 0))
                        (s/chord-p bpfsaw2
@@ -57,7 +57,7 @@
                                    :atk (rand 2.0 2.5)
                                    :rel (rand 6.5 10.0)
                                    :ldb 6
-                                   :amp 0.3])
+                                   :amp 1.3])
                        ))
                  )))
 
@@ -78,5 +78,6 @@
   (s/add-p core/player marimba :marimba)
   (s/add-p core/player drone :drone)
   (s/add-p core/player spooky-bells :spooky)
+  (s/rm-p core/player :h)
   (s/play-p  [(s/chord-p klang-test  (map midi->hz (chord-degree (choose [:i :ii :iii :iv :v]) :C4 :minor 2)))])
   )

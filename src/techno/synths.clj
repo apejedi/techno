@@ -41,7 +41,7 @@
   )
 
 (defsynth organ
-        [note 60 dur 2 amp 0.1 gate 1]
+        [note 60 dur 2 amp 1]
         (let [freq  (midicps note)
               [a d s r] (map * (repeat 4 dur) [0.01 0.2 0.5 0.2])
               waves (sin-osc [(* 0.5 freq)
@@ -56,13 +56,13 @@
               env   (env-gen
                      (adsr-ng a d s r)
                      ;(adsr a d s r)
-                     :gate gate
                      :action FREE)
-              snd   (* env (apply + waves) amp)]
+              snd   (* env (apply + waves) amp 0.1)]
           (out 0 snd)
           (out 1 snd)
           )
         )
+
 (defsynth bpfsaw [note 60 dur 1 atk 0.3 detune 0 rq 0.2 amp 1 pan 0]
   (let [freq (midicps note)
         env (env-gen (perc (* atk dur) (* (- dur atk) dur)) :action 2)
@@ -210,14 +210,14 @@
     )
   )
 
-(defsynth reverb-test [freq 440 max-delay 0.2 delay-time 0.2 decay 1]
+(defsynth reverb-test [freq 440 max-delay 0.2 delay-time 0.2 decay 1 amp 1]
   (let [osc (klang [(map #(* freq %) [1 2 6]) [0.6 0.2 0.2]])
         env (env-gen (perc))
         env2 (env-gen (perc 0.1 decay) :action FREE)
         snd (* env osc 0.5)
         snd2 (comb-n snd max-delay delay-time decay)
         snd2 (* snd2 0.4 env2)]
-    (out [0 1] (+ snd snd2))
+    (out [0 1] (* (+ snd snd2) amp))
     )
   )
 

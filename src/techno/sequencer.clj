@@ -256,7 +256,7 @@
                      (assoc-in cur [id k] new-p)
                      )))
           ;; (if (or (= k :a)
-          ;;          true)
+          ;;          false)
           ;;   (println "playing " k " with beat " final-beat " orig " orig-beat
           ;;            ;(.get counter) " size " size
           ;;                                 ;" time " (.getTime (java.util.Date.))
@@ -338,7 +338,7 @@
     (if  (and (not (nil? val)) (contains? val :watcher))
       (remove-watch (get val :data) (get val :watcher)))
     (doseq [[k v] val]
-      (if (= (type v) overtone.sc.node.SynthNode)
+      (if (and (= (type v) overtone.sc.node.SynthNode) (node-active? v))
         (kill v)
         )
       )
@@ -411,36 +411,39 @@
     )
   )
 
-(defn- cleanup [in]
-  (let [id (to-sc-id (in :node))
-        trigger-source (@trigger-sources id)
-        trigger-bus (@trigger-buses id)
-        sequence-handler (@sequencer-handlers id)
-        sequence-buffer (@sequence-buffers id)
-        do-if (fn [in action] (if (not (nil? in)) (apply action [in])))]
-    (doseq [k (keys (@patterns id))] (rm-p (in :node) k))
-    (swap! patterns (fn [p] (dissoc p id)))
+(defn- cleanup
+  ([] (doseq [id (keys @patterns)]
+        (cleanup {:node id})))
+  ([in]
+   (let [id (to-sc-id (in :node))
+         trigger-source (@trigger-sources id)
+         trigger-bus (@trigger-buses id)
+         sequence-handler (@sequencer-handlers id)
+         sequence-buffer (@sequence-buffers id)
+         do-if (fn [in action] (if (not (nil? in)) (apply action [in])))]
+     (doseq [k (keys (@patterns id))] (rm-p (in :node) k))
+     (swap! patterns (fn [p] (dissoc p id)))
 
-    (do-if sequence-handler remove-event-handler)
-    (swap! sequencer-handlers (fn [handlers]
-                             (dissoc handlers id)
-                             ))
-    (swap! sequencer-data (fn [data] (dissoc data id)))
+     (do-if sequence-handler remove-event-handler)
+     (swap! sequencer-handlers (fn [handlers]
+                                 (dissoc handlers id)
+                                 ))
+     (swap! sequencer-data (fn [data] (dissoc data id)))
 
-    (if (node-active? trigger-source)
-      (do-if trigger-source kill)
-      )
-    (swap! trigger-sources (fn [sources]
-                             (dissoc sources id)
-                             ))
-    (do-if trigger-bus free-bus)
-    (swap! trigger-buses (fn [buses]
-                           (dissoc buses id)
-                           ))
-    (do-if sequence-buffer buffer-free)
-    (swap! sequence-buffers (fn [b]
-                              (dissoc b id)))
-    )
+     (if (node-active? trigger-source)
+       (do-if trigger-source kill)
+       )
+     (swap! trigger-sources (fn [sources]
+                              (dissoc sources id)
+                              ))
+     (do-if trigger-bus free-bus)
+     (swap! trigger-buses (fn [buses]
+                            (dissoc buses id)
+                            ))
+     (do-if sequence-buffer buffer-free)
+     (swap! sequence-buffers (fn [b]
+                               (dissoc b id)))
+     ))
   )
 
 (defn- build-sequencer

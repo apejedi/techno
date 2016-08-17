@@ -179,14 +179,32 @@
       {:refresh 0.6 :sputter 0.5 :sputter-amt 0.25 :reverse 0}))
    1
    )
-  (s/play-p
-   (s/phrase-p
-    bing
-    [(map #(+ (note :Eb4) %) (take 4 (range 1 1000 7))) :3
-     (map #(+ (note :C4) %) (take 4 (range 1 1000 5))) :3
-     ;(map #(+ (note :F4) %) (take 4 (range 1 1000 5)))
-     ]
-    0.25 0 [:decay 2 :amp 0.4]) 2)
+  (s/add-p
+   core/player
+   (let [a (chord :C4 :M7)
+         b (chord :B3 :M7)]
+     (s/phrase-p
+      sweet
+      [a a a a a :0 b b b b b :1]
+      0.25 1 [:dur 0.8 :amp 0.5 :vib 0]))
+   :harmony
+   )
+
+  (s/add-p
+   core/player
+   (let [a [:D3 :Eb4 :F#5]
+         b [:D3 :Eb4 :G5]
+         c [:D3 :Eb4 :A5]
+         d [:D3 :Eb4 :Bb5]
+         e [:D3 :F#4 :A5]]
+     (s/phrase-p
+      ks1
+      (concat a a a a b b b b
+              c c c c d d d d
+              e e e e)
+      0.25 0 [:coef 0.01 :amp 1 :dur 1.3]))
+   :harmony2
+   )
   (kill trigger-synth)
   (s/rm-p core/player :harmony)
   )

@@ -76,35 +76,18 @@
                           (vals (group-samples (drum-kits :Kit16-Electro)))))
 
 
-  (s/add-p
-   core/player
-   (let [k "Kick02" s "Snr03"]
-       (build-from-kits
-        [:Kit16-Electro]
-        [[[dub-kick [:amp 0.5]] [kick [:amp 1 :noise 0.3]]] :3]
-        0.25))
-   :main {:use-counter true})
 
-  (s/add-p
-   core/player
-   (let [c1 "ClHat02" c2 "ClHat01" a [:amp 0]]
-       (build-from-kits
-        [:Kit16-Electro]
-        [[c1] :2 [c1] :2 [c1] :1 [c1] [c2] [c1] :3]
-        0.25))
-   :main2)
-
-  (s/play-p t 2)
-  (s/add-p core/player techno1 :main3)
+  (s/play-p techno1 2)
+  (s/add-p core/player impeach-the-president :main3 {:use-counter true})
   (s/add-p core/player
            funky-drummer :main2)
   (s/add-p core/player (s/m-phrase {:refresh 0.8 :sputter 0.7 :sputter-amt 0.3}
                                    funky-drummer 0.25) :main4)
   (s/add-p core/player impeach-the-president :main2)
-  (s/play-p impeach-the-president 3)
+  (s/play-p impeach-the-president 2)
 
 
-  (s/rm-p core/player :main)
+  (s/rm-p core/player :main3)
   (s/wrap-p core/player :pulse false)
   )
 
@@ -122,8 +105,8 @@
         s "Snr03" c "ClHat02" o "OpHat" cl "Clap02"]
     (build-from-kits
      [:Kit16-Electro]
-     [[k cl] :1 [o] :1 [k s] :1 [o] :1
-      [k cl] [c] [o] :1 [k s] :1 [k o cl] :1]
+     [[k] :1 [o] :1 [k s] :1 [o] :1
+      [k] [c] [o] :1 [k s] :1 [k o] :1]
      0.25 [:amp 0.5])))
 
 (def son-clave
@@ -152,4 +135,4 @@
      [:Kit3-Acoustic]
      [[k c] :1 [c] :1 [s c] :1 [c]
       [k c] [k c] :1 [o] :1 [s c] :1 [k c] :1]
-     0.25 [:amp 0.5])))
+     0.125 [:amp 0.5])))
