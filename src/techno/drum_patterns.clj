@@ -97,7 +97,7 @@
          [s1 s2 s3 s4 s5 s6 s7 s8 s9] (map #(str "Snr-0" %) (range 1 10))]
        (build-from-kits
         [:Kit3-Acoustic]
-        [[k2 t1] :1 [c] :1 [k1 t2] :1 [] :1
+        [[k2 t1] :1 [c] :1 [k1 t2] :1 [s5] :10
          [t1] :1 [t2] [t2] [s9 t1] :1 [c]
          :1]
         0.25))
