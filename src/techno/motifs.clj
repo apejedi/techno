@@ -166,6 +166,16 @@
   (s/add-p core/player x-naut :x-naut)
   (s/add-p core/player [(s/chord-p overpad [:F#4 :C#5 :Eb5 :Bb4] [:attack 1 :release 3]) nil nil nil nil nil])
 
+  (s/add-p
+   core/player
+   (let [a [:D3 :E4] b [:D3 :D4] l [:dur 2 :coef 0.01 :amp 0.6]
+         a1 [:D3 l :E4 l] b1 [:D3 l :D4 l]]
+       (s/phrase-p
+        ks1
+        [a1 :3 a a a :1 b1 :3 b b b :3]
+        0.25 1 [:coef 0.01 :amp 0.5]))
+   :motif)
+
   (s/play-p
    ;core/player
    (let [root :D4

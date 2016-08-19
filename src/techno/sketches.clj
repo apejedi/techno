@@ -19,14 +19,14 @@
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp arpeggi]
-    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c]))) 1))
+  (let [comp ambient]
+    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c]))) 2))
     )
+  (s/play-p bass-line)
   (s/rm-p core/player :b)
 
-
-
-  (def mystery
+  )
+(def mystery
     {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
               b (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:Bb4])
               c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
@@ -110,8 +110,7 @@
           :E3 :E4 :G4 :1
           :E3 :E4 :A4 :1 :B4]
          0.25 0 [:atk 0.01])}
-    ))
-
+    )
 (def track2
   {:harmony (s/phrase-p
              overpad
@@ -142,10 +141,6 @@
              [:Kit16-Electro]
              [:2 [o] :1]
              0.25))
-   ;; :kicks (build-from-kits
-   ;;         [:Kit3-Acoustic :Kit10-Vinyl]
-   ;;         [[[dub-kick [100 :amp 1]]] :1
-   ;;          ["Perc03"] :1])
    :sdst2 (let [s3 "SdSt-03"
                 s6 "SdSt-06"
                 s7 "SdSt-07"

@@ -61,7 +61,7 @@
                  base (s/build-rest-p
                [d :6 d :2 d :5])]
              (s/m-phrase
-              {:refresh 0.7 :sputter 0.4 :sputter-amt 0.7}
+              {:refresh 0.7 :sputter 0.7 :sputter-amt 0.3}
               base
               0.25)
              ))
@@ -73,21 +73,48 @@
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :Kit16-Electro)))))
+                          (vals (group-samples (drum-kits :Kit3-Acoustic)))))
 
 
+  (s/play-p
+   ;core/player
+   (let [t "Tom-01" t1 "Tom-04"
+         s "SdSt-05" s1 "SdSt-03" s2 "SdSt-07" s3 "SdSt-04"
+         n "Snr-09" n1 "Snr-04"]
+       (build-from-kits
+        [:Kit3-Acoustic]
+        [[s n1 t] :1 [s2 n t1] :2 [s1 n1] [s] [s3] [s3] [s2 n] :5]
+        0.25))
+   1.7
+   ;:main
+   )
 
+  (s/add-p
+   core/player
+   (let [[t1 t2 t3] (map #(str "Tom-0" %) [1 4 5])
+         [k1 k2 k3] (map #(str "Kick-0" %) [1 2 3])
+         c "Crash-07"
+         [s1 s2 s3 s4 s5 s6 s7 s8 s9] (map #(str "Snr-0" %) (range 1 10))]
+       (build-from-kits
+        [:Kit3-Acoustic]
+        [[k2 t1] :1 [c] :1 [k1 t2] :1 [] :1
+         [t1] :1 [t2] [t2] [s9 t1] :1 [c]
+         :1]
+        0.25))
+   ;2
+   :main
+   )
   (s/play-p techno1 2)
-  (s/add-p core/player impeach-the-president :main3 {:use-counter true})
+  (s/add-p core/player techno1 :main3)
   (s/add-p core/player
            funky-drummer :main2)
   (s/add-p core/player (s/m-phrase {:refresh 0.8 :sputter 0.7 :sputter-amt 0.3}
-                                   funky-drummer 0.25) :main4)
-  (s/add-p core/player impeach-the-president :main2)
+                                   funky-drummer 0.25) :main2)
+  (s/add-p core/player impeach-the-president :main1)
   (s/play-p impeach-the-president 2)
 
 
-  (s/rm-p core/player :main3)
+  (s/rm-p core/player :main)
   (s/wrap-p core/player :pulse false)
   )
 
