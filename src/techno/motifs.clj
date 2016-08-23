@@ -194,14 +194,18 @@
    (let [a (chord :C4 :M7)
          b (chord :B3 :M7)]
      (s/phrase-p
-      sweet
+      bass-synth
       [a a a a a :0 b b b b b :1]
-      0.25 1 [:dur 0.8 :amp 0.5 :vib 0]))
+      0.25 2 [:dur 0.8 :amp 0.5 :vib 0]))
    :harmony
    )
-
-  (s/add-p
-   core/player
+  (s/play-p
+   (s/phrase-p
+    mooger
+    [:D3 :Eb3 :D3 :Bb2 :C3 [:t 2] :10]
+    0.25 3 [:amp 1]) 1.3)
+  (s/play-p
+   ;core/player
    (let [a [:D3 :Eb4 :F#5]
          b [:D3 :Eb4 :G5]
          c [:D3 :Eb4 :A5]
@@ -213,7 +217,7 @@
               c c c c d d d d
               e e e e)
       0.25 0 [:coef 0.01 :amp 1 :dur 1.3]))
-   :harmony2
+   ;:harmony2
    )
   (kill trigger-synth)
   (s/rm-p core/player :harmony)

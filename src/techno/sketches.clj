@@ -9,9 +9,9 @@
         [techno.drums]))
 
 (comment
-  (let [parts [:c]
+  (let [parts [:harmony]
         rm []
-        comp ambient]
+        comp x-naut]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -19,12 +19,9 @@
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp ambient]
-    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c]))) 2))
+  (let [comp strings]
+    (apply s/play-p (conj (vec (vals (select-keys comp [:harmony :motif]))) 1.3))
     )
-  (s/play-p bass-line)
-  (s/rm-p core/player :b)
-
   )
 (def mystery
     {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
@@ -219,19 +216,12 @@
   )
 
 (def track1
-  {:a (let [get-p (fn [d]
-                    (s/chord-p
-                     sweet
-                     (chord-degree d :C4 :minor 4)
-                     [:amp 0.2 :dur 1 :coef 0.01 :attack 1 :release 2]))
-            prog {1 (get-p :vi)
-                  2 (get-p :v)
-                  3 (get-p :iv)
-                  4 (get-p :ii)
-                  4.75 []
-                  }]
-        prog
-        )
+  {:a (let [c #(chord-degree % :C4 :minor)]
+        (s/phrase-p
+         sweet
+         [(c :vi) (c :v) (c :iv) (c :ii) :3]
+         ;[(c :ii) :1 (c :iii) :1 (c :iv) :1 (conj (c :v) (note :C5)) :3]
+         0.25 3 [:amp 0.2 :dur 1 :coef 0.01 :attack 1 :release 2]))
    :b (let [root :C4
             type :minor
             args [:coef 0.001 :amp 0.4 :atk 0.01 :dur 1]
@@ -264,7 +254,7 @@
    :main3 (:four-beat @beats)
    })
 (def x-naut
-  {:a (let [a [:Eb5 :G5 :Bb5 :D6 :Bb5 :Eb5]
+  {:melody (let [a [:Eb5 :G5 :Bb5 :D6 :Bb5 :Eb5]
             b [:Eb5 :G5 :Ab5 :C6 :Ab5 :Eb5]
             c [:Eb5 :Eb5 :F5 :F5 :G5 :G5 :G5 :G5 [:dur 0.2] :1 :G5 :G5 :G5]]
         (s/merge-p
@@ -275,7 +265,12 @@
                   a a c)
           0.25 0 [:attack 0.1 :release 0.1 :dur 0.2])
          ))
-   :b (let [c [:C2]
+   :harmony (let [a [:D3 :D4]]
+                (s/phrase-p
+                 piano
+                 [a a :6 a a :6]
+                 0.25 3 [:dur 2]))
+   :bass (let [c [:C2]
             c1 [:C2 [:dur 3]]
             f [:F2]
             f1 [:F2 [:dur 3]]]
@@ -425,7 +420,8 @@
        bing
        [(map #(+ (note :Eb4) %) (take 4 (range 1 1000 7))) :3
         (map #(+ (note :C4) %) (take 4 (range 1 1000 5))) :3
-        (map #(+ (note :D4) %) (take 4 (range 1 1000 5))) :3]
+        (map #(+ (note :D4) %) (take 4 (range 1 1000 5))) :3
+        ]
        0.25 0 [:decay 2 :amp 0.2])
    :b (let [a [:D5 :E4] b [:C#5 :Eb4]]
        (s/phrase-p
@@ -450,3 +446,17 @@
                        ))
                  )
    })
+(def strings
+  {:motif (let [a [:C3 :C4] b [:F4 :E3] c [:F3 :E4] d [:F3 :G4] e [:F3 :A4]
+         ab (concat a b) ac (concat a c)
+         ad (concat a d) ae (concat a e)]
+       (s/phrase-p
+        ks1
+        [ab ac ab ac ab ad ae :8]
+        0.25 4 [:coef 0.01 :dur 6]))
+   :harmony (s/phrase-p
+             flute
+             [[:C3 :A4] [:C4 :G3] :8]
+             0.25 8 [:dur 5 :amp 0.1])
+   }
+  )

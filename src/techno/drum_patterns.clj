@@ -73,37 +73,37 @@
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :Kit3-Acoustic)))))
+                          (vals (group-samples (drum-kits :Kit14-Acoustic)))))
 
 
   (s/play-p
    ;core/player
-   (let [t "Tom-01" t1 "Tom-04"
-         s "SdSt-05" s1 "SdSt-03" s2 "SdSt-07" s3 "SdSt-04"
-         n "Snr-09" n1 "Snr-04"]
-       (build-from-kits
-        [:Kit3-Acoustic]
-        [[s n1 t] :1 [s2 n t1] :2 [s1 n1] [s] [s3] [s3] [s2 n] :5]
-        0.25))
-   1.7
-   ;:main
-   )
-
-  (s/add-p
-   core/player
    (let [[t1 t2 t3] (map #(str "Tom-0" %) [1 4 5])
          [k1 k2 k3] (map #(str "Kick-0" %) [1 2 3])
          c "Crash-07"
-         [s1 s2 s3 s4 s5 s6 s7 s8 s9] (map #(str "Snr-0" %) (range 1 10))]
+         [s1 s2 s3 s4 s5 s6 s7 s8 s9] (map #(str "Snr-0" %) (range 1 10))
+         [r1 r2] ["Rim-01" "Rim-02"]]
        (build-from-kits
-        [:Kit3-Acoustic]
-        [[k2 t1] :1 [c] :1 [k1 t2] :1 [s5] :10
-         [t1] :1 [t2] [t2] [s9 t1] :1 [c]
-         :1]
+        [:Kit3-Acoustic :Kit1-Acousticclose]
+        [[k1] :2 [s3] [r1] [r2] [r1] [r2] :1 [s9]]
         0.25))
-   ;2
-   :main
+   2
+   ;:main
    )
+
+  (let [[t1 t2 t3] (map #(str "Tom-0" %) [1 4 5])
+        [k1 k2 k3] (map #(str "Kick-0" %) [1 2 3])
+        c "Crash-07"
+        [s1 s2 s3 s4 s5 s6 s7 s8 s9] (map #(str "Snr-0" %) (range 1 10))
+        main (build-from-kits
+              [:Kit3-Acoustic]
+              [[k2 t1] :1 [c] :1 [k1 t2] :1 [s5] :1
+               [t1] :1 [t2] [t2] [s9 t1] :1 [c]
+               :1]
+              0.25)]
+    (s/play-p main 2)
+    )
+
   (s/play-p techno1 2)
   (s/add-p core/player techno1 :main3)
   (s/add-p core/player

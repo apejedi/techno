@@ -246,7 +246,22 @@
     (out [0 1] sig)
    )
   )
-(defsynth bing [note   72 attack 0.02 decay  0.3 amp 1]
+(defsynth bass-synth [freq 200 amp 1 release 1 detune 3]
+  (let [freq-v (+
+                (lin-exp (lf-noise0:kr 2) -1 1 0.1 detune)
+                  freq)
+        sig (var-saw [freq-v freq-v] 0 1)
+        sig2 (* 0.02 (saw [freq freq]))
+        sig (resonz sig freq)
+        env (env-gen (perc 0.1 release) :action FREE)
+        sig (+ sig sig2)
+        sig (* sig amp env)
+        ]
+    (out:ar 0 sig)
+    )
+  )
+
+(defsynth bing [note 72 attack 0.02 decay  0.3 amp 1]
   (let [snd (sin-osc (midicps note))
         env (env-gen (perc attack decay) :action FREE)]
     (out [0 1] (* 0.8 env snd amp))))
