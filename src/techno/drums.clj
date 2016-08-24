@@ -12,8 +12,7 @@
 
 
 
-(def drum-kits (create-sample-map "D:\\musicradar-drum-samples\\musicradar-drum-samples\\Drum Kits" true))
-
+(def drum-kits (create-sample-map (str (.getCanonicalPath (clojure.java.io/file ".")) "\\musicradar-drum-samples\\Drum Kits") true))
 
 
 ;;Functions to generate patterns
@@ -61,11 +60,19 @@
                    (cond (sequential? in) in
                          true (if (string? in)
                                 (vector
-                                 (second (first
-                                          (filter
-                                           (fn [[k v]] (.contains (name k) in))
-                                           sounds
-                                           )))
+                                 (some (fn [s]
+                                         (let [re #"(?i)([a-z]+)[^0-9a-z]*([0-9]+)"
+                                               [res name-in n-in] (last (re-seq re in))
+                                               [cur cur-in curn-in] (last (re-seq re (name (first s))))]
+                                           (println name-in n-in cur-in curn-in)
+                                           (if (and (.contains
+                                                        (.toLowerCase cur-in) (.toLowerCase name-in))
+                                                    (or (nil? curn-in) (nil? n-in) (.contains
+                                                                                       (.toLowerCase curn-in) (.toLowerCase n-in)))) (last s))
+                                           )
+                                          )
+                                       sounds)
+
                                  args))
                          ))
         s (fn [ins]
@@ -77,7 +84,6 @@
           )
     )
   )
-
                                         ;Patterns
 
 

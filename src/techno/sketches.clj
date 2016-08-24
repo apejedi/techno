@@ -1,4 +1,4 @@
-(ns techno.sketches
+v(ns techno.sketches
   (:import java.util.concurrent.ThreadLocalRandom)
   (:use [overtone.core]
         [overtone.inst.synth]
@@ -11,7 +11,7 @@
 (comment
   (let [parts [:harmony]
         rm []
-        comp x-naut]
+        comp strings]
     (doseq [p rm]
       (s/rm-p core/player p)
       )

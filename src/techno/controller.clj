@@ -36,24 +36,40 @@
                          (some #(= (:name %) "note") (:params inst)) :note
                          true false))
         notes ["C" "C#" "D" "Eb" "E" "F" "F#" "G" "Ab" "A" "Bb" "B"]
-        arg (nth notes (dec n-in))
-        arg (keyword (str arg octave))
-        n (if (= note-arg :freq)
-            (midi->hz (note arg))
-            (note arg))
-        n (if note-arg [note-arg n] [n])
-        param-vals (flatten (into n (get-in @synths [inst-in :param-vals] {})))]
+        arg-in (nth notes (dec n-in))
+        arg (keyword (str arg-in octave))
+        get-params (fn [arg]
+                     (let [n (if (= note-arg :freq)
+                               (midi->hz (note arg))
+                               (note arg))
+                           n (if note-arg [note-arg n] [n])]
+                       (flatten (into n (get-in @synths [inst-in :param-vals] {})))
+                       ))
+        param-vals (get-params arg)
+        scale (get-in @synths [inst-in :scale] false)]
     (if (> (first (:args msg)) 0)
-      (apply inst param-vals)
-      (let [highlight (if (contains? (get @synths inst-in) :scale)
+      (if (and (not (= scale false))
+               (get-in @synths [inst-in (keyword (str "chord" octave))] false))
+        (let [scale-type (find-scale-name (map #(- (nth scale %) (nth scale (dec %)))
+                                               (range 1 (count scale))))
+              root (str (name (find-pitch-class-name (first scale))) octave)
+              degree (inc (.indexOf (map find-pitch-class-name scale) (keyword arg-in)))
+              degree (some #(if (= (val %) degree) (key %)) DEGREE)
+              num-notes 4
+              chord (chord-degree degree (keyword root) scale-type num-notes)]
+          (doseq [c chord]
+            (apply inst (get-params (find-note-name c)))
+            )
+          )
+        (apply inst param-vals))
+      (let [highlight (if scale
                         (map #(inc (.indexOf notes (name (find-pitch-class-name %))))
-                             (:scale (get @synths inst-in)))
+                             scale)
                         [])]
         (if (>= (.indexOf highlight n-in) 0)
           (osc-send @client (str "/synth" inst-in "/multipush1/" octave "/" n-in) 1))
         ))
-    )
-  )
+  ))
 
 (defn mod-synth [msg]
   (let [[inst-in param-in] (re-seq #"[\d]+" (:path msg))
@@ -132,15 +148,28 @@
                         (map #(inc (.indexOf notes (name (find-pitch-class-name %))))
                              (:scale s))
                         [])]
-        (doseq [n (range 1 13) octave (range 1 8)]
+        (doseq [octave (range 1 8)]
           (osc-handle
            @server
-           (str "/synth" k "/multipush1/" octave "/" n)
-           call-synth)
-          (if (>= (.indexOf highlight n) 0)
-            (osc-send @client (str "/synth" k "/multipush1/" octave "/" n) 1)
-            (osc-send @client (str "/synth" k "/multipush1/" octave "/" n) 0))
-          ))
+           (str "/synth" k "/chord" octave)
+           (fn [msg]
+             (let [arg (first (:args msg))]
+               (swap!
+                synths
+                (fn [synths]
+                  (assoc-in synths [k (keyword (str "chord" octave))]
+                            (> arg 0))
+                  ))
+               )))
+          (doseq [n (range 1 13)]
+            (osc-handle
+             @server
+             (str "/synth" k "/multipush1/" octave "/" n)
+             call-synth)
+            (if (>= (.indexOf highlight n) 0)
+              (osc-send @client (str "/synth" k "/multipush1/" octave "/" n) 1)
+              (osc-send @client (str "/synth" k "/multipush1/" octave "/" n) 0))
+            )))
       (let [params (get-in s [:synth :params])]
         (doall
          (map (fn [n p]
@@ -164,7 +193,7 @@
     (swap!
      sketch
      (fn [_]
-        strings
+        track2
         ))
     (swap!
      synths

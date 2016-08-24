@@ -8,6 +8,29 @@
         [techno.recorder]
         )
   )
+
+(defmacro drum-pattern [kits pattern & [step args]]
+  (list 'let [['t1 't2 't3 't4 't5 't6] (list 'map #(str "Tom" %) (list 'range 1 7))
+              ['k1 'k2 'k3 'k4 'k5 'k6] (list 'map #(str "Kick" %) (list 'range 1 7))
+              ['c1 'c2 'c3 'c4 'c5 'c6] (list 'map #(str "ClHat" %) (list 'range 1 7))
+              ['cl1 'cl2 'cl3 'cl4 'cl5 'cl6] (list 'map #(str "Clap" %) (list 'range 1 7))
+              ['cy1 'cy2 'cy3 'cy4 'cy5 'cy6] (list 'map #(str "Cymbal" %) (list 'range 1 7))
+              ['cr1 'cr2 'cr3 'cr4 'cr5 'cr6 'cr7] (list 'map #(str "Crash" %) (list 'range 1 8))
+              ['r1 'r2 'r3 'r4 'r5 'r6] (list 'map #(str "Rim" %) (list 'range 1 7))
+              ['ri1 'ri2 'ri3 'ri4 'ri5 'ri6] (list 'map #(str "Ride" %) (list 'range 1 7))
+              ['h1 'h2 'h3 'h4 'h5 'h6] (list 'map #(str "HfHat" %) (list 'range 1 7))
+              ['f1 'f2 'f3 'f4 'f5 'f6] (list 'map #(str "fx" %) (list 'range 1 7))
+              ['o1 'o2 'o3 'o4 'o5 'o6] (list 'map #(str "OpHat" %) (list 'range 1 7))
+              ['sd1 'sd2 'sd3 'sd4 'sd5 'sd6 'sd7 'sd8 'sd9 'sd10] (list 'map #(str "SdSt" %) (list 'range 1 11))
+              ['s1 's2 's3 's4 's5 's6 's7 's8 's9 's10 's11 's12] (list 'map #(str "Snr" %) (list 'range 1 13))]
+        (list 'build-from-kits
+              kits
+              pattern
+              (if step step 0.25)
+              (if args args []))
+        )
+  )
+
 (defonce there-there (atom nil))
 (swap! there-there
        (fn [_]
@@ -73,38 +96,36 @@
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :Kit14-Acoustic)))))
+                          (vals (group-samples (drum-kits :Kit16-Electro)))))
 
 
-  (s/play-p
-   ;core/player
-   (let [[t1 t2 t3] (map #(str "Tom-0" %) [1 4 5])
-         [k1 k2 k3] (map #(str "Kick-0" %) [1 2 3])
-         c "Crash-07"
-         [s1 s2 s3 s4 s5 s6 s7 s8 s9] (map #(str "Snr-0" %) (range 1 10))
-         [r1 r2] ["Rim-01" "Rim-02"]]
-       (build-from-kits
-        [:Kit3-Acoustic :Kit1-Acousticclose]
-        [[k1] :2 [s3] [r1] [r2] [r1] [r2] :1 [s9]]
-        0.25))
-   2
-   ;:main
-   )
 
-  (let [[t1 t2 t3] (map #(str "Tom-0" %) [1 4 5])
-        [k1 k2 k3] (map #(str "Kick-0" %) [1 2 3])
-        c "Crash-07"
-        [s1 s2 s3 s4 s5 s6 s7 s8 s9] (map #(str "Snr-0" %) (range 1 10))
-        main (build-from-kits
-              [:Kit3-Acoustic]
-              [[k2 t1] :1 [c] :1 [k1 t2] :1 [s5] :1
-               [t1] :1 [t2] [t2] [s9 t1] :1 [c]
-               :1]
-              0.25)]
-    (s/play-p main 2)
+
+  (let [kick (drum-pattern
+              [:Kit4-Electro :Kit3-Acoustic]
+              [[k1] :1 [o1]]
+              0.25)
+        cl (drum-pattern
+            [:Kit16-Electro]
+            [[c1] [c1] [c2] :2 [c1] :2]
+            0.25)
+        snr (drum-pattern
+            [:Kit3-Acoustic :Kit16-Electro]
+            [:6 [cl1] :1]
+            0.25)
+        t (drum-pattern
+           [:Kit5-Electro]
+            [:2 [[bing []]]]
+            0.25)]
+    (s/add-p core/player kick :kick)
+    (s/add-p core/player cl :cl)
+    ;(s/pp-pattern (s/merge-p kick cl))
+    (s/add-p core/player snr :snr)
+    (s/add-p core/player t :fx)
+    (s/play-p kick cl snr 1.6)
     )
 
-  (s/play-p techno1 2)
+  (s/play-p techno1 funky-drummer 2)
   (s/add-p core/player techno1 :main3)
   (s/add-p core/player
            funky-drummer :main2)
@@ -114,7 +135,7 @@
   (s/play-p impeach-the-president 2)
 
 
-  (s/rm-p core/player :main)
+  (s/rm-p core/player :sd)
   (s/wrap-p core/player :pulse false)
   )
 

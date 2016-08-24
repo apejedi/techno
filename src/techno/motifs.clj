@@ -129,13 +129,13 @@
          ))
 
 (defn rnd-chord [b]
-  (if (and (= (mod b 3) 0))
+  (if (weighted-coin 0.8)
     (s/chord-p overpad
                (chord-degree
                 (choose [:i :iv :v :vi])
                 :C4
                 (choose [:minor]) 4)
-                [:coef 0.01 :amp 0.2 :dur 2 :attack 0.1 :release 1]
+                [:coef 0.01 :amp 0.2 :dur 2 :attack 0.1 :release 2]
                 )
     ))
 (comment
@@ -165,7 +165,10 @@
   (s/add-p core/player ted-guitar :guitar)
   (s/add-p core/player x-naut :x-naut)
   (s/add-p core/player [(s/chord-p overpad [:F#4 :C#5 :Eb5 :Bb4] [:attack 1 :release 3]) nil nil nil nil nil])
-
+  (s/play-p
+   [(s/chord-p rise-pad (map midi->hz (chord :C4 :m7)) [:t 6])])
+  (s/play-p
+   [(s/chord-p rise-pad (map midi->hz (chord :F3 :M7)) [:t 6])])
   (s/add-p
    core/player
    (let [a [:D3 :E4] b [:D3 :D4] l [:dur 2 :coef 0.01 :amp 0.6]
