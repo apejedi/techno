@@ -103,28 +103,28 @@
 
   (let [kick (drum-pattern
               [:Kit4-Electro :Kit3-Acoustic]
-              [[k1] :1 [o1]]
+              [[k1] :1 [o1] :1]
               0.25)
         cl (drum-pattern
             [:Kit16-Electro]
             [[c1] [c1] [c2] :2 [c1] :2]
             0.25)
         snr (drum-pattern
-            [:Kit3-Acoustic :Kit16-Electro]
-            [:6 [cl1] :1]
+            [:Kit3-Acoustic :Kit16-Electro :Kit4-Electro]
+            [:2 [s3] :1]
             0.25)
         t (drum-pattern
            [:Kit5-Electro]
-            [:2 [[bing []]]]
+            [[cl1] :2]
             0.25)]
     (s/add-p core/player kick :kick)
     (s/add-p core/player cl :cl)
     ;(s/pp-pattern (s/merge-p kick cl))
     (s/add-p core/player snr :snr)
-    (s/add-p core/player t :fx)
-    (s/play-p kick cl snr 1.6)
+    (s/add-p core/player t :t)
+    ;(s/play-p kick cl snr 1.6)
     )
-
+  (s/rm-p core/player :snr)
   (s/play-p techno1 funky-drummer 2)
   (s/add-p core/player techno1 :main3)
   (s/add-p core/player

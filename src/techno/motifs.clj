@@ -165,10 +165,25 @@
   (s/add-p core/player ted-guitar :guitar)
   (s/add-p core/player x-naut :x-naut)
   (s/add-p core/player [(s/chord-p overpad [:F#4 :C#5 :Eb5 :Bb4] [:attack 1 :release 3]) nil nil nil nil nil])
-  (s/play-p
-   [(s/chord-p rise-pad (map midi->hz (chord :C4 :m7)) [:t 6])])
-  (s/play-p
-   [(s/chord-p rise-pad (map midi->hz (chord :F3 :M7)) [:t 6])])
+
+  (s/add-p
+   core/player
+   (s/phrase-p
+    rise-fall-pad
+    [(map midi->hz (chord :C3 :M7)) (map midi->hz (chord :F3 :M7)) :34]
+    0.25 32 [:t 5])
+   :harmony)
+
+  (s/add-p
+   core/player
+   (s/phrase-p
+    bass-synth
+    [[:E3 :B3] [:A3 :F3] :34]
+    0.25 32 [:release 6 :amp 0.4 :detune 4])
+   :motif)
+
+
+
   (s/add-p
    core/player
    (let [a [:D3 :E4] b [:D3 :D4] l [:dur 2 :coef 0.01 :amp 0.6]

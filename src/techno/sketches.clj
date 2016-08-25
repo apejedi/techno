@@ -1,4 +1,4 @@
-v(ns techno.sketches
+(ns techno.sketches
   (:import java.util.concurrent.ThreadLocalRandom)
   (:use [overtone.core]
         [overtone.inst.synth]
@@ -9,9 +9,9 @@ v(ns techno.sketches
         [techno.drums]))
 
 (comment
-  (let [parts [:harmony]
-        rm []
-        comp strings]
+  (let [parts []
+        rm [:kick :snr :harmony]
+        comp track2]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -19,8 +19,8 @@ v(ns techno.sketches
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp strings]
-    (apply s/play-p (conj (vec (vals (select-keys comp [:harmony :motif]))) 1.3))
+  (let [comp ambient]
+    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c]))) 1.3))
     )
   )
 (def mystery

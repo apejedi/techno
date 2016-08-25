@@ -63,8 +63,9 @@
                                  (some (fn [s]
                                          (let [re #"(?i)([a-z]+)[^0-9a-z]*([0-9]+)"
                                                [res name-in n-in] (last (re-seq re in))
-                                               [cur cur-in curn-in] (last (re-seq re (name (first s))))]
-                                           (println name-in n-in cur-in curn-in)
+                                               [cur cur-in curn-in] (last (re-seq re (name (first s))))
+                                               name-in (if (nil? name-in) in name-in)
+                                               cur-in (if (nil? cur-in) (name (first s)) cur-in)]
                                            (if (and (.contains
                                                         (.toLowerCase cur-in) (.toLowerCase name-in))
                                                     (or (nil? curn-in) (nil? n-in) (.contains
