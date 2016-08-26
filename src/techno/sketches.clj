@@ -10,7 +10,7 @@
 
 (comment
   (let [parts []
-        rm [:kick :snr :harmony]
+        rm [:t :kick]
         comp track2]
     (doseq [p rm]
       (s/rm-p core/player p)

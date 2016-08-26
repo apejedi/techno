@@ -179,6 +179,7 @@
    (s/phrase-p
     bass-synth
     [[:E3 :B3] [:A3 :F3] :34]
+    ;[[:E4 :B3] [:A4 [:amp 0.3] :F4 [:amp 0.3]] :34]
     0.25 32 [:release 6 :amp 0.4 :detune 4])
    :motif)
 

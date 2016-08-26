@@ -31,6 +31,19 @@
         )
   )
 
+(defmacro drum-patterns [kits & patterns]
+  (let [args (last patterns)
+        patterns (take-while #(sequential? %) patterns)
+        step (first (filter number? patterns))]
+    (println patterns)
+    `(reduce s/merge-p
+            (map (fn [p#] (and (sequential? ~args) ~step)
+                           (drum-pattern ~kits p# ~step ~args)
+                           (drum-pattern ~kits p# ~step))
+                  patterns))
+    )
+  )
+
 (defonce there-there (atom nil))
 (swap! there-there
        (fn [_]
@@ -108,7 +121,7 @@
         cl (drum-pattern
             [:Kit16-Electro]
             [[c1] [c1] [c2] :2 [c1] :2]
-            0.25)
+            0.25 [:amp 0.3])
         snr (drum-pattern
             [:Kit3-Acoustic :Kit16-Electro :Kit4-Electro]
             [:2 [s3] :1]
@@ -132,8 +145,17 @@
   (s/add-p core/player (s/m-phrase {:refresh 0.8 :sputter 0.7 :sputter-amt 0.3}
                                    funky-drummer 0.25) :main2)
   (s/add-p core/player impeach-the-president :main1)
-  (s/play-p impeach-the-president 2)
-
+  (s/add-p
+   core/player
+   (drum-pattern
+    [:Kit16-Electro :Kit5-Electro]
+    [[k1] :2 [cl1] [s3] :1 [f1] [t1]]
+    )
+   :main)
+  (reduce s/merge-p
+          (map #(drum-pattern  [:Kit3-Acoustic] %)
+               [[[k1] [k3]]
+                [[s1] [o1]]]))
 
   (s/rm-p core/player :sd)
   (s/wrap-p core/player :pulse false)
