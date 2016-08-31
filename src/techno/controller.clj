@@ -6,7 +6,9 @@
         [techno.core :as core]
         [techno.sequencer :as s]
         [techno.sketches]
-        [techno.synths])
+        [techno.synths]
+        [techno.drums]
+        [techno.samples])
   (:require [clojure.string :as string])
   )
 
@@ -22,8 +24,13 @@
 
 (defonce synths (atom {}))
 
+(defonce sample1 (atom {}))
+
 (defonce client (atom (osc-client "192.168.0.19" 9000)))
+                                        ;(swap! client (fn [_] (osc-client "172.20.10.5" 9000)))
+;(swap! client (fn [_] (osc-client "192.168.0.19" 9000)))
 (defonce server-client (atom (osc-client "127.0.0.1" 4410)))
+
 
 (defn call-synth [msg]
   (let [[inst-in push octave n-in] (re-seq #"[\d]+" (:path msg))
@@ -55,7 +62,7 @@
               root (str (name (find-pitch-class-name (first scale))) octave)
               degree (inc (.indexOf (map find-pitch-class-name scale) (keyword arg-in)))
               degree (some #(if (= (val %) degree) (key %)) DEGREE)
-              num-notes 4
+              num-notes 3
               chord (chord-degree degree (keyword root) scale-type num-notes)]
           (doseq [c chord]
             (apply inst (get-params (find-note-name c)))
@@ -70,6 +77,7 @@
           (osc-send @client (str "/synth" inst-in "/multipush1/" octave "/" n-in) 1))
         ))
   ))
+
 
 (defn mod-synth [msg]
   (let [[inst-in param-in] (re-seq #"[\d]+" (:path msg))
@@ -91,6 +99,33 @@
                                       true (scale-range val 0 1 0.1 12)))))))
     )
   )
+
+(defn handle-samples
+  ([samples] (handle-samples samples ["drum"]))
+  ([samples path]
+   (if (and (map? samples) (not (contains? samples :label)))
+     (doseq [[k v] samples]
+       (handle-samples v (conj path k)))
+     (do
+       (osc-send @client
+                 (str "/" (string/join "/" (map str (butlast path))) "/label" (last path))
+                 (if (map? samples)
+                   (:label samples)
+                   (str samples)))
+       (osc-handle
+        @server (str "/" (first path) "/multipush/" (string/join "/" (map str (rest path))))
+        (fn [msg]
+          (let [arg (first (:args msg))]
+            (when (> arg 0)
+              (if (map? samples)
+                ((:value samples))
+                (samples))
+              ))
+          )
+        ))
+     ))
+  )
+
 
 (defn load-handlers []
   (osc-rm-all-handlers @server)
@@ -185,29 +220,52 @@
       ))
   )
 (comment
-  (osc-send @client "/sketch/label1" "pattern1")
+  (osc-send @client "/sketch/label1" "test")
   (osc-send @client "/synth1/paramlabel1" "asd")
+  (osc-send @client "/drum/10/label1" "test")
   (osc-listen @server (fn [msg] (println "Listener: " msg)) :debug)
   (osc-rm-all-listeners @server)
   (let [sc  (scale :C4 :major)]
     (swap!
      sketch
      (fn [_]
-        track2
-        ))
+       house2
+       ))
     (swap!
      synths
      (fn [_]
        {1 {:synth bass-synth
-           :scale sc
-           }
-        2 {:synth ks1
-           :scale sc
-           }
-        3 {:synth piano
-           :scale sc
-           }
-        }))
+           :scale sc}
+        2 {:synth overpad
+           :scale sc}
+        3 {:synth ks1
+           :scale sc}
+        4 {:synth piano
+           :scale sc}}))
     (load-handlers)
+    (let [kit :Kit3-Acoustic
+          samples (group-samples (kit drum-kits))
+          clear-labels #(for [row (range 10 0 -1) col (range 1 13)]
+                         (doall
+                          (osc-send @client (str "/drum/" row "/label" col) "")))]
+      (clear-labels)
+      (doall
+       (map (fn [row [group sounds]]
+              (map
+               (fn [col [k sound]]
+                 (let [num (last (re-seq #"\d+" (name k)))
+                       group (if (nil? group)
+                               (last (butlast (re-seq #"[A-Za-z]+" (name k))))
+                               group)]
+                   (handle-samples
+                    {row {col {:value sound :label (str (name group) num)}}})
+                   )
+                 )
+               (range 1 (inc (count sounds)))
+               sounds)
+              )
+            (range 10 (- 10 (inc (count samples))) -1)
+            samples))
+        )
     )
   )

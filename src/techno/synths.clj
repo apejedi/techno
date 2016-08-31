@@ -21,6 +21,24 @@
     (out:ar 1 sig)
     )
   )
+(defsynth harmonic
+  [amp 0.5]
+  (let [freq     100
+        partials 20
+        z-init   0
+        offset   (line:kr 0 -0.02 60)
+        snd (loop [z z-init
+                   i 0]
+              (if (= partials i)
+                z
+                (let [f (clip:kr (mul-add
+                                   (lf-noise1:kr [(+ 6 (rand 4))
+                                                  (+ 6 (rand 4))])
+                                   0.2 offset))
+                      src  (f-sin-osc (* freq (inc i)))
+                      newz (mul-add src f z)]
+                  (recur newz (inc i)))))]
+    (out 0 (pan2 (* amp snd)))))
 
 (defsynth sc303 [out-bus 0 freq 440 wave 0 ctf 100 res 0.2 sus 0 dec 1.0 env 1000 gate 0 vol 0.2]
   (let [v (Math/pow 10 -9)
@@ -203,8 +221,9 @@
 (defsynth whistle [freq1 200 freq2 300 dur 5 freq1-sus 0.4 freq2-sus 0.4 mod 10 amp 1]
   (let [[a b c] [(* freq1-sus dur) (* (- 1 freq1-sus freq2-sus 0.1) dur) (* freq2-sus dur)]
         env (env-gen:kr
-             (envelope [freq1 freq1 freq2 freq2 0]
-                       [a b c 1] :exponential) :action FREE)
+             (envelope [0.1 freq1 freq1 freq2 freq2 0.01]
+                       [0.3 a b c 2] :exponential)
+             :action FREE)
         osc-a (* amp 0.5 (sin-osc env))]
     (out:ar [0 1] osc-a)
     )

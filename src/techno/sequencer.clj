@@ -748,7 +748,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
   )
 
 (defn phrase-p [inst phrase step & [space args m-args]]
-  (let [base (loop [phrase phrase beat 1 pattern {}]
+  (let [base (loop [phrase phrase beat 1 pattern {} prev nil]
            (let [args (vec (if (not (nil? args)) args []))
                  note-arg (if (or (instance? overtone.studio.inst.Inst inst)
                                   (instance? overtone.sc.synth.Synth inst))
@@ -796,11 +796,13 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                            pattern)
                  beat (if (or (is-arg? (second phrase)) (is-space? (second phrase)))
                         beat
-                        (+ beat (* (inc space) step)))
+                        (+ beat (* (if (and is-space (nil? prev)) space (inc space)) step))
+                        ;(+ beat (* (inc space) step))
+                        )
                  beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)]
                                         ;(println "action " action " beat " beat " phrase " (rest phrase) " space " space)
              (if (> (count (rest phrase)) 0)
-               (recur (rest phrase) beat pattern)
+               (recur (rest phrase) beat pattern cur)
                pattern
                )
              ))]
@@ -810,8 +812,6 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
       )
     )
   )
-
-
 
 (defn start-s [synth]
   (if (node-active? synth)

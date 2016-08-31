@@ -9,9 +9,9 @@
         [techno.drums]))
 
 (comment
-  (let [parts []
-        rm [:t :kick]
-        comp track2]
+  (let [parts [:b :main3]
+        rm [:main2 :motif]
+        comp track1]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -19,9 +19,11 @@
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp ambient]
-    (apply s/play-p (conj (vec (vals (select-keys comp [:a :b :c]))) 1.3))
+  (let [comp pings
+        parts (keys comp)]
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
     )
+
   )
 (def mystery
     {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
@@ -134,7 +136,7 @@
             [[c1] :2 [c1] :2 [c1] :1 [c1] [c2] [c1] :5]
             0.25))
    :hat (let [o "OpHat"]
-            (build-from-kits
+            (drum-pattern
              [:Kit16-Electro]
              [:2 [o] :1]
              0.25))
@@ -142,15 +144,16 @@
                 s6 "SdSt-06"
                 s7 "SdSt-07"
                 s4 "SdSt-04"]
-           (build-from-kits
+           (drum-pattern
             [:Kit3-Acoustic]
             [[s6] :2 [s6] :2 [s6] :1 [s6] [s7] [s6] :5]
             0.25 [:amp 0.6]))
-   :f (let []
-        (s/phrase-p
-         plk-bass
-         [:D3 :G3 :C3 :A3]
-         0.25 4 [:dur 2]))}
+   ;; :f (let []
+   ;;      (s/phrase-p
+   ;;       plk-bass
+   ;;       [:D3 :G3 :C3 :A3]
+   ;;       0.25 4 [:dur 2]))
+   }
   )
 
 (def on
@@ -418,7 +421,8 @@
 (def ambient
   {:a (s/phrase-p
        bing
-       [(map #(+ (note :Eb4) %) (take 4 (range 1 1000 7))) :3
+       [(map #(+ (note :Eb4
+                       ) %) (take 4 (range 1 1000 7))) :3
         (map #(+ (note :C4) %) (take 4 (range 1 1000 5))) :3
         (map #(+ (note :D4) %) (take 4 (range 1 1000 5))) :3
         ]
@@ -456,7 +460,38 @@
         0.25 4 [:coef 0.01 :dur 6]))
    :harmony (s/phrase-p
              flute
-             [[:C3 :A4] [:C4 :G3] :8]
-             0.25 8 [:dur 5 :amp 0.1])
+             [[:C3 :A4] [:C4 :G3] :12]
+             0.25 12 [:dur 5 :amp 0.1])
    }
   )
+
+(def house2
+  {:harmony (s/phrase-p
+             rise-fall-pad
+             [(map midi->hz (chord :C3 :M7)) (map midi->hz (chord :F3 :M7)) :34]
+             0.25 32 [:t 5])
+   :motif (s/phrase-p
+           bass-synth
+           [[:E3 :B3] [:A3 :F3] :34]
+           0.25 32 [:release 6 :amp 0.4 :detune 4])
+   :motif2 (s/phrase-p
+           bass-synth
+           [[:E4 :B3] [:A4 [:amp 0.3] :F4 [:amp 0.3]] :34]
+           0.25 32 [:release 6 :amp 0.4 :detune 4])
+   :kick (drum-pattern
+          [:Kit4-Electro :Kit3-Acoustic]
+          [[k1] :1 [o1] :1]
+          0.25)
+   :cl (drum-pattern
+        [:Kit16-Electro]
+        [[c1] [c1] [c2] :2 [c1] :2]
+        0.25 [:amp 0.3])
+   :snr (drum-pattern
+         [:Kit3-Acoustic :Kit16-Electro :Kit4-Electro]
+         [:2 [s3] :1]
+         0.25)
+   :t (drum-pattern
+       [:Kit5-Electro]
+       [[cl1] :2]
+       0.25)
+   })

@@ -3,6 +3,7 @@
         [techno.sequencer :as s :exclude [t]]
         [techno.core :as core]
         [techno.synths]
+        [overtone.core]
         [overtone.inst.synth]
         [techno.samples]
         [techno.recorder]
@@ -43,6 +44,97 @@
                   patterns))
     )
   )
+
+(defn drum-p [kits & patterns]
+  (let [args (last patterns)
+        patterns (take-while #(sequential? %) patterns)
+        step (first (filter number? patterns))
+        args (if step args [])
+        step (if step step 0.25)]
+    (reduce
+     (fn [pattern phrase]
+       (s/merge-p
+        pattern
+        (loop [phrase phrase beat 1 pattern {} prev nil]
+          (let [args (vec (if (not (nil? args)) args []))
+                sounds (reduce into [] (map #(drum-kits %) kits))
+                s-map {:t "Tom" :k "Kick" :c "ClHat" :cl "Clap"
+                       :cy "Cymbal" :cr "Crash" :r "Rim" :ri "Ride"
+                       :h "HfHat" :f "Fx" :o "OpHat" :sd "SdSt" :s "Snr"}
+                find-snd (fn [in]
+                           (some (fn [s]
+                                   (let [re #"(?i)([a-z]+)[^0-9a-z]*([0-9]+)"
+                                         [res name-in n-in] (last (re-seq re in))
+                                         [cur cur-in curn-in] (last (re-seq re (name (first s))))
+                                         name-in (if (nil? name-in) in name-in)
+                                         cur-in (if (nil? cur-in) (name (first s)) cur-in)]
+                                     (if (and (.contains
+                                               (.toLowerCase cur-in) (.toLowerCase name-in))
+                                              (or (nil? curn-in) (nil? n-in)
+                                                  (.contains
+                                                   (.toLowerCase curn-in) (.toLowerCase n-in)))) (last s))
+                                     )
+                                   )
+                                 sounds))
+                get-action (fn [in]
+                             (cond (sequential? in) in
+                                   (string? in) (find-snd in)
+                                   (keyword? in) (let [[_ k n] (re-find #"(?i)([a-z]+)(\d+)*" (name in))]
+                                            (find-snd (str (get s-map (keyword k)) n)))
+                                   true in))
+                mk-block (fn [action block]
+                            (reduce
+                             (fn [a c]
+                               (if (sequential? c)
+                                 (conj (vec (butlast a)) (into (last a) c))
+                                 (conj a (get-action c) args)))
+                             action
+                             (vec block)))
+                cur (first phrase)
+                is-inst (and (sequential? cur)
+                             (or (instance? overtone.studio.inst.Inst (first cur))
+                                 (instance? overtone.sc.synth.Synth  (first cur))
+                                 (fn? (first cur))))
+                is-action (or (and (keyword? cur) (nil? (re-find #"^\d" (name cur))))
+                              (string? cur)
+                              is-inst)
+                is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
+                is-arg? #(and (sequential? %) (not (is-space? %)) (keyword? (first %)) (number? (second %)))
+                is-arg (is-arg? cur)
+                is-space (is-space? cur)
+                is-block (and (not is-action) (not is-space) (not is-arg))
+                action (get pattern beat [])
+                action (cond
+                         is-action (if is-inst
+                                     (concat action (get-action cur))
+                                     (conj action (get-action cur) args))
+                         is-arg (conj (vec (butlast action)) (into (last action) cur))
+                         is-block (mk-block action cur)
+                         true nil)
+                pattern (if (and (not (nil? action)) (> (count action) 0))
+                          (assoc pattern beat action) pattern)
+                space  (cond is-space
+                             (-> cur name Integer/parseInt)
+                                        ;(not (nil? space)) space
+                             true 0)
+                pattern (if (and (= (count (rest phrase)) 0) (> space 0))
+                          (assoc pattern (+ beat (* space step)) [])
+                          pattern)
+                beat (if (or (is-arg? (second phrase)) (is-space? (second phrase)))
+                       beat
+                       (+ beat (* (if (and is-space (nil? prev)) space (inc space)) step)))
+                beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)]
+            (if (> (count (rest phrase)) 0)
+              (recur (rest phrase) beat pattern cur)
+              pattern
+              )
+            )))
+       )
+     {}
+     patterns
+     )
+    ))
+
 
 (defonce there-there (atom nil))
 (swap! there-there
@@ -112,31 +204,27 @@
                           (vals (group-samples (drum-kits :Kit16-Electro)))))
 
 
-
-
-  (let [kick (drum-pattern
-              [:Kit4-Electro :Kit3-Acoustic]
-              [[k1] :1 [o1] :1]
-              0.25)
-        cl (drum-pattern
-            [:Kit16-Electro]
-            [[c1] [c1] [c2] :2 [c1] :2]
-            0.25 [:amp 0.3])
-        snr (drum-pattern
-            [:Kit3-Acoustic :Kit16-Electro :Kit4-Electro]
-            [:2 [s3] :1]
-            0.25)
-        t (drum-pattern
-           [:Kit5-Electro]
-            [[cl1] :2]
-            0.25)]
-    (s/add-p core/player kick :kick)
-    (s/add-p core/player cl :cl)
-    ;(s/pp-pattern (s/merge-p kick cl))
-    (s/add-p core/player snr :snr)
-    (s/add-p core/player t :t)
-    ;(s/play-p kick cl snr 1.6)
+  (let [kits [:Kit3-Acoustic :Kit16-Electro]
+        a [:amp 0.5]
+        patterns
+        {:kick [:k1 :1 :c1 :1 :s2 :1 :c2 :1]
+         :t    [:1  :o :6]
+         :c  []
+         :cl []
+         }]
+    (doseq [[k v] patterns]
+                                        ;(s/pp-pattern (drum-p kits v))
+      (if (> (count v) 0)
+          (s/add-p
+           core/player
+           (drum-p kits v)
+           k)
+          (s/rm-p core/player k))
+      )
     )
+
+
+
   (s/rm-p core/player :snr)
   (s/play-p techno1 funky-drummer 2)
   (s/add-p core/player techno1 :main3)
@@ -152,10 +240,6 @@
     [[k1] :2 [cl1] [s3] :1 [f1] [t1]]
     )
    :main)
-  (reduce s/merge-p
-          (map #(drum-pattern  [:Kit3-Acoustic] %)
-               [[[k1] [k3]]
-                [[s1] [o1]]]))
 
   (s/rm-p core/player :sd)
   (s/wrap-p core/player :pulse false)

@@ -12,7 +12,7 @@
 (swap! marimba
        (fn [_]
          (fn [b]
-           (let [cfmin  (choose (map midi->hz (scale :D4 :major)))
+           (let [cfmin  (choose (map midi->hz (scale :C5 :major)))
                 ; cfmin (* (midi->hz 64) (choose [0.5 1 2 4]))
                  ]
              (if (= (rand-int 2) 1)
@@ -36,7 +36,7 @@
                  (let [rand #(.nextDouble (ThreadLocalRandom/current) %1 %2)
                        ;chord (map midi->hz (chord-degree (choose [:ii :iv :v :vi]) :A4 :minor))
                        chord
-                       (map midi->hz (chord-degree (choose [:i :ii :iii :iv :v]) :E4 :major))
+                       (map midi->hz (chord-degree (choose [:i :ii :iii :iv :v]) :C4 :major))
 
                        ;; (map #(midi->hz (note %))
                        ;;            (choose
@@ -64,10 +64,13 @@
 
 (def spooky-bells
   (fn [b]
-    (let [n (midi->hz (note (choose [:B5 :B4 :F#3 :Eb4 :E4
-                                     :A4 :E5 :F#4 :B5 :C#4 :E4
-                                     :E5 :E4 :B5 :Ab4 :B4 :Eb4
-                                     :F#5 :E4 :A4 :C#4 :Eb4])))]
+    (let [n (midi->hz (note (choose
+                             (scale :C4 :major)
+                             ;; [:B5 :B4 :F#3 :Eb4 :E4
+                             ;;         :A4 :E5 :F#4 :B5 :C#4 :E4
+                             ;;         :E5 :E4 :B5 :Ab4 :B4 :Eb4
+                             ;;         :F#5 :E4 :A4 :C#4 :Eb4]
+                             )))]
       (if (and
            (or (integer? b))
            (= (rand-int 3) 0))
@@ -78,6 +81,6 @@
   (s/add-p core/player marimba :marimba)
   (s/add-p core/player drone :drone)
   (s/add-p core/player spooky-bells :spooky)
-  (s/rm-p core/player :h)
+  (s/rm-p core/player :drone)
   (s/play-p  [(s/chord-p klang-test  (map midi->hz (chord-degree (choose [:i :ii :iii :iv :v]) :C4 :minor 2)))])
   )
