@@ -824,6 +824,14 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
   synth
   )
 
+(defn set-size [sequencer size]
+  (ctl sequencer :pattern-size size)
+  (swap! sequencer-data
+         (fn [seq-data]
+           (assoc-in seq-data [(to-sc-id sequencer) :size] size)
+           ))
+  )
+
 (defn play-p [& args]
   "play pattern once for testing"
   (let [s-args (filter number? args)
@@ -859,13 +867,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     )
   )
 
-(defn set-size [sequencer size]
-  (ctl sequencer :pattern-size size)
-  (swap! sequencer-data
-         (fn [seq-data]
-           (assoc-in seq-data [(to-sc-id sequencer) :size] size)
-           ))
-  )
+
 
 
 
