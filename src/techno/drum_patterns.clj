@@ -59,7 +59,7 @@
           (let [args (vec (if (not (nil? args)) args []))
                 sounds (reduce into [] (map #(drum-kits %) kits))
                 s-map {:t "Tom" :k "Kick" :c "ClHat" :cl "Clap"
-                       :cy "Cymbal" :cr "Crash" :r "Rim" :ri "Ride"
+                       :cy "Cymbal" :cr "Crash" :r "Rim" :ri "Ride" :p "Perc"
                        :h "HfHat" :f "Fx" :o "OpHat" :sd "SdSt" :s "Snr"}
                 find-snd (fn [in]
                            (some (fn [s]
@@ -193,6 +193,47 @@
               base
               0.25)
              ))
+
+(defn test-drums [patterns play & [times kits speed]]
+  (let [kits (if kits kits [:Kit3-Acoustic :Kit16-Electro :Kit10-Vinyl])
+        a [:amp 0.5]
+        speed (if speed speed 1.3)
+        times (if times times 1)]
+    (if play
+      (apply s/play-p
+             (concat (map (fn [[k v]] (if (> (count v) 0) (drum-p kits v))) patterns)
+                   [speed times]))
+      (doseq [[k v] patterns]
+                                        ;(s/pp-pattern (drum-p kits v))
+        (if (> (count v) 0)
+          (s/add-p
+           core/player
+           (drum-p kits v)
+           k)
+          (s/rm-p core/player k))
+        ))
+    ))
+
+(def drum-test
+  (fn
+    ([] [15 0.25])
+    ([b]
+     (let [beat (mod b (int b))
+           on-beat (or (= beat 0) (= beat 0.5))
+           off-beat (not on-beat)
+           sounds (group-samples (drum-kits :Kit16-Electro))]
+       (vector (cond (= beat 0) (val (first (:Kick sounds)))
+                     (= beat 0.5) (val (first (:ClHat sounds)))
+                     true (if (= (rand-int 3) 0)
+                            (choose (vals (:Clap sounds)))))
+               []))
+     )))
+
+(defn gen-beat [base samples size cycles start-on end-on]
+  (let [init {(s/p-size base) []}
+        step (s/get-step base)]
+    )
+  )
 (comment
   (s/add-p core/player there-there :main3)
   (s/set-st core/player (double (/ 1 8)))
@@ -204,29 +245,29 @@
                           (vals (group-samples (drum-kits :Kit16-Electro)))))
 
 
-  (let [kits [:Kit3-Acoustic :Kit16-Electro]
-        a [:amp 0.5]
-        patterns
-        {:kick [:k1 :1 :c1 :1 :s2 :1 :c2 :1]
-         :t    [:1  :o :6]
-         :c  []
-         :cl []
-         }]
-    (doseq [[k v] patterns]
-                                        ;(s/pp-pattern (drum-p kits v))
-      (if (> (count v) 0)
-          (s/add-p
-           core/player
-           (drum-p kits v)
-           k)
-          (s/rm-p core/player k))
-      )
-    )
+
+  (test-drums
+   {:kick [:k1 :k1 :s1 :k1 :s1 :1]
+    ;; :t [:8 :c1 :2 :c1 :1 :c2 :c2 :1]
+    ;; :c  [:cl1 :15]
+    ;; :cl [:3 :p1 :p1 :3]
+    }
+   false
+   2 [:Kit16-Electro :Kit10-Vinyl] 1.6)
+
+  (s/play-p drum-test)
+  (map #(alength (.getParameterTypes %)) (-> drum-test class .getDeclaredMethods))
+  (s/add-p
+   core/player
+   :drum-test)
+
+
+  (kill trigger-synth)
 
 
 
   (s/rm-p core/player :snr)
-  (s/play-p techno1 funky-drummer 2)
+  (s/play-p techno1 son-clave 2 3)
   (s/add-p core/player techno1 :main3)
   (s/add-p core/player
            funky-drummer :main2)

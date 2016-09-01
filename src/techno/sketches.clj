@@ -9,9 +9,9 @@
         [techno.drums]))
 
 (comment
-  (let [parts [:b :main3]
-        rm [:main2 :motif]
-        comp track1]
+  (let [parts [:harmony :cl :kick :t]
+        rm []
+        comp house2]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -19,13 +19,15 @@
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp pings
-        parts (keys comp)]
+  (let [comp track1
+        parts [:a]
+                                        ;(keys comp)
+        ]
     (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
     )
 
-  )
-(def mystery
+
+  (def mystery
     {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
               b (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:Bb4])
               c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
@@ -38,7 +40,7 @@
            0
            [:coef 0.01]))
      }
-    )
+    ))
 
   (def arpeggi
     {:a (s/phrase-p

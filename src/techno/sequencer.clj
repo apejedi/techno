@@ -67,7 +67,9 @@
   (let [val (get-val-if-ref val)
         step (if step step 0.25)]
     (cond
-      (fn? val) (if (= 0 (-> val class .getDeclaredMethods first .getParameterTypes alength))
+      (fn? val) (if (some #{0}
+                          (map #(alength (.getParameterTypes %))
+                                    (-> val class .getDeclaredMethods)))
                   (first (val))
                   1)
       (map? val)  (apply max (keys val))
@@ -80,7 +82,9 @@
   (let [val (get-val-if-ref pattern)
         sizes (cond (map? val) (keys val)
                     (and (fn? val)
-                         (= 0 (-> val class .getDeclaredMethods first .getParameterTypes alength)))
+                         (some #{0}
+                               (map #(alength (.getParameterTypes %))
+                                    (-> val class .getDeclaredMethods))))
                     (range 1 (first (val)) (second (val)))
                     true [1])]
     (reduce (fn [s b]
@@ -256,7 +260,7 @@
                      (assoc-in cur [id k] new-p)
                      )))
           ;; (if (or (= k :a)
-          ;;          false)
+          ;;          true)
           ;;   (println "playing " k " with beat " final-beat " orig " orig-beat
           ;;            ;(.get counter) " size " size
           ;;                                 ;" time " (.getTime (java.util.Date.))
@@ -824,11 +828,15 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
   "play pattern once for testing"
   (let [s-args (filter number? args)
         speed (if (first s-args) (first s-args) 1)
+        times (if (second s-args) (second s-args) 1)
         patterns (take-while #(not (number? %)) args)
         sizes (mapcat
                #(cond (map? (get-val-if-ref %)) (keys (get-val-if-ref %))
                       (and (fn? (get-val-if-ref %))
-                           (= 0 (-> (get-val-if-ref %) class .getDeclaredMethods first .getParameterTypes alength)))
+                           (some #{0}
+                                 (map (fn [f] alength (.getParameterTypes f))
+                                      (-> % class .getDeclaredMethods)))
+                           )
                       (range 1 (first ((get-val-if-ref %))) (second ((get-val-if-ref %))))
                     true [1])
                patterns)
@@ -843,14 +851,20 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                      sizes)
         s (get-s speed step true)]
     (ensure-node-active! s)
-    (doseq [p patterns]
-      (add-p s p))
+    (do
+      (doseq [p patterns]
+        (add-p s p))
+      (set-size s (* times (get-in @sequencer-data [(to-sc-id s) :size]))))
     (start-s s)
     )
   )
 
 (defn set-size [sequencer size]
   (ctl sequencer :pattern-size size)
+  (swap! sequencer-data
+         (fn [seq-data]
+           (assoc-in seq-data [(to-sc-id sequencer) :size] size)
+           ))
   )
 
 
