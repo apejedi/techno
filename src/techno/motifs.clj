@@ -12,12 +12,12 @@
                (fn [b]
                  (let [n1 (choose (scale :C5 :minor))
                        n2 (choose (scale :C5 :minor))]
-                   (if (or (= (- b (int b)) 0.5)
-                           ;(= (rand-int 1) 1)
+                   (if (and (or (= (- b (int b)) 0.5) (= (- b (int b)) 0))
+                           (= (rand-int 2) 0)
                            true
                         )
                      [
-                      overpad [n1 :amp 0.3 :dur 2 :attack 0.1 :release 0.8]
+                      ;overpad [n1 :amp 0.3 :dur 2 :attack 0.1 :release 0.8]
                       piano [n2 :amp 0.4 :dur 1]
                       ;flute [n2 :amp 0.2 :dur 1 :coef 0.001]
                       ])
@@ -129,7 +129,7 @@
          ))
 
 (defn rnd-chord
-  ([] [10.75 0.25])
+  ([] [7.75 0.25])
   ([b]
    (if (= b 1)
      (s/chord-p
@@ -139,7 +139,7 @@
             (choose [:i :iv :v :vi])
             :C4
             (choose [:minor]) 4))
-      [:coef 0.01 :amp 0.2 :dur 2 :attack 1 :release 9]
+      [:coef 0.01 :amp 0.2 :dur 2 :attack 0.1 :release 4 :t 5]
       ))
    )
   )
@@ -186,20 +186,24 @@
       0.25 1 [:coef 0.01 :amp 0.5]))
    :motif)
 
-  (s/add-p
-   core/player
-   (let [root :D4
-         n 3
-         [a b c d e] (map #(chord-degree % :C4 :minor) [:i :ii :iii :iv :v])]
+  (s/play-p
+   ;core/player
+   (let [root :C4
+         n 4
+         [a b c d e f g]
+         (map #(chord-degree % root :minor n) [:i :ii :iii :iv :v :vi :vii])]
      (s/phrase-p
       reverb-test
-      [b d c e a]
+                                        ;[f e d b]
+      [e a d b]
       0.25 3
       [:decay 3 :delay-time 0.4 :release 1 :dur 2 :amp 0.3 :coef 0.01]
                                         ;      {:refresh 0.6 :sputter 0.5 :sputter-amt 0.25 :reverse 0}
       ))
-                                        ;1
-   :motif)
+   1.6
+   3
+   ;:motif
+   )
   (s/add-p
    core/player
    (s/phrase-p

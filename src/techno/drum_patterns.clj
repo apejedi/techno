@@ -262,11 +262,11 @@
 
 
   (test-drums
-   {:kick [:k1 :1 :o :1]
+   {:kick [[dub-kick []] :3]
     ;:six-eight [:k1 :2 :s1 :2]
     ;:three-four [:k1 :c1 :s1]
     ;:t [:c1 :10 :c1 :3 :c2]
-    ;:c  [:c1]
+    :c  [:2 :p1]
     ;; :cl [:3 :p1 :p1 :3]
     }
    false
@@ -288,17 +288,23 @@
 
   (kill trigger-synth)
 
-  (let [base {1 [:a []] 1.75 []}
-        sounds (group-samples (drum-kits :Kit16-Electro))
+  (let [base {1 ["Kick01" "Kick04"]
+                              2 ["Kick02"]
+                              2.5 ["Kick01"]
+                              2.75 []
+                              }
+        sounds (group-samples (drum-kits :Kit3-Acoustic))
         actions [[bing []]]
         samples (map #(vector % [])
-                     (vals (merge (:Clap sounds)))
+                     (vals (merge (get sounds :SdSt)
+                                  (get sounds :ClHat)
+                                  (get sounds nil)))
                      )
         beat (gen-beat base
                 samples
-                3 true true 0.4 0.1 2)]
-;    (s/pp-pattern beat)
-    (s/add-p core/player beat :a)
+                5 true false 1 0.1 0)]
+    (s/pp-pattern beat)
+    (s/add-p core/player beat :g)
     )
 
   (s/rm-p core/player :secondary2)

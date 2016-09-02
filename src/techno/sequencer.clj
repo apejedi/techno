@@ -151,6 +151,12 @@
     )
   )
 
+(defn dump-p [sequencer & parts]
+  (let [data (get @patterns (to-sc-id sequencer))
+        parts (if parts parts (keys data))
+        p (apply merge-p (map #(get % :data) (vals (select-keys data parts))))]
+    (pp-pattern p))
+  )
 
 
 
