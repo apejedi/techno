@@ -247,20 +247,6 @@
     )
   )
 
-(defn fit-p [base pattern & [fill pad step]]
-  (let [step (if step step (s/get-step pattern))
-        base-size (inc (/ (dec (s/p-size base step)) step))
-        size (inc (/ (dec (s/p-size pattern step)) step))
-        pad (if pad pad 0)
-        size (loop [size size] (if (= (double (mod size base-size)) 0.0) size (recur (inc size))))
-        size (+ size (* base-size pad))
-        size (inc (* (dec size) step))
-        pattern (if fill
-                  (s/stretch-p pattern size)
-                  (assoc pattern size []))]
-    pattern
-    )
-  )
 
 
 (comment
@@ -286,24 +272,33 @@
    false
    2 [:Kit4-Electro :Kit10-Vinyl] 1.6)
 
+  (s/add-p
+   core/player
+   (s/fit-p {1.75 []}
+    (drum-p [:Kit10-Vinyl]
+            [:3 :k2 :k2]) false 2) :k2 {:use-counter true})
 
+
+  (s/add-p
+   core/player
+   (s/fit-p {1.75 []}
+    (drum-p [:Kit4-Electro]
+            [:3 :k2 :k2]) false 2) :k2 {:use-counter true})
 
 
   (kill trigger-synth)
 
   (let [base {1 [:a []] 1.75 []}
-        sounds (group-samples (drum-kits :Kit14-Acoustic))
+        sounds (group-samples (drum-kits :Kit16-Electro))
         actions [[bing []]]
         samples (map #(vector % [])
-                     (vals (merge (:ClHat sounds)
-                                  (:Clap sounds)
-                                  (get sounds nil)))
+                     (vals (merge (:Clap sounds)))
                      )
         beat (gen-beat base
                 samples
-                8 true true 0.4 0.5 2)]
-    (s/pp-pattern beat)
-    (s/add-p core/player beat :b)
+                3 true true 0.4 0.1 2)]
+;    (s/pp-pattern beat)
+    (s/add-p core/player beat :a)
     )
 
   (s/rm-p core/player :secondary2)

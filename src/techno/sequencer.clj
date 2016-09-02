@@ -687,6 +687,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
    patterns)
   )
 
+
 (defn stretch-p [pattern & [new-size]]
   (let [step (reduce (fn [s b]
                        (min s (if (= (double (mod b (int b))) 0.0)
@@ -708,6 +709,21 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
            (assoc p cur-beat action)
            p))
        ) pattern (range (inc size) (inc new-size)))
+    )
+  )
+
+(defn fit-p [base pattern & [fill pad step]]
+  (let [step (if step step (get-step pattern))
+        base-size (inc (/ (dec (p-size base step)) step))
+        size (inc (/ (dec (p-size pattern step)) step))
+        pad (if pad pad 0)
+        size (loop [size size] (if (= (double (mod size base-size)) 0.0) size (recur (inc size))))
+        size (+ size (* base-size pad))
+        size (inc (* (dec size) step))
+        pattern (if fill
+                  (stretch-p pattern size)
+                  (assoc pattern size []))]
+    pattern
     )
   )
 

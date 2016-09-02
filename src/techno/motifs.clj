@@ -128,16 +128,22 @@
               ))
          ))
 
-(defn rnd-chord [b]
-  (if (weighted-coin 0.3)
-    (s/chord-p overpad
-               (chord-degree
-                (choose [:i :iv :v :vi])
-                :C4
-                (choose [:minor]) 4)
-                [:coef 0.01 :amp 0.2 :dur 2 :attack 0.1 :release 2]
-                )
-    ))
+(defn rnd-chord
+  ([] [10.75 0.25])
+  ([b]
+   (if (= b 1)
+     (s/chord-p
+      rise-pad
+      (map midi->hz
+           (chord-degree
+            (choose [:i :iv :v :vi])
+            :C4
+            (choose [:minor]) 4))
+      [:coef 0.01 :amp 0.2 :dur 2 :attack 1 :release 5]
+      ))
+   )
+  )
+
 (comment
   (s/add-p core/player scatterbrain :sc)
   (s/add-p core/player ambient :harmony)
