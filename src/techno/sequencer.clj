@@ -701,6 +701,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     (reduce
      (fn [p b]
        (let [cur-beat (+ 1 (* (- b 1) step))
+             cur-beat (if (= (double (mod cur-beat (int cur-beat))) 0.0) (int cur-beat) cur-beat)
              wrapped (double (nth beats (dec b)))
              action (get new-map wrapped)]
          (if (or action (= b new-size))
@@ -862,7 +863,10 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     (do
       (doseq [p patterns]
         (add-p s p))
-      (set-size s (* times (get-in @sequencer-data [(to-sc-id s) :size]))))
+      (let [size (get-in @sequencer-data [(to-sc-id s) :size])
+            size (+ 1 (/ (- size 1) step))
+            size (+ 1 (* (- (* times size) 1) step))]
+          (set-size s size)))
     (start-s s)
     )
   )

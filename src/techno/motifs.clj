@@ -129,7 +129,7 @@
          ))
 
 (defn rnd-chord [b]
-  (if (weighted-coin 0.8)
+  (if (weighted-coin 0.3)
     (s/chord-p overpad
                (chord-degree
                 (choose [:i :iv :v :vi])

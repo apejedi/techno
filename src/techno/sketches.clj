@@ -19,28 +19,27 @@
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp track1
+  (let [comp mystery
         parts [:a]
                                         ;(keys comp)
         ]
-    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1))
     )
-
-
-  (def mystery
-    {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
-              b (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:Bb4])
-              c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
-              d (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:Bb4])]
-          (s/phrase-p
-           piano
-           [a b a b a b a b a b
-            c d c d c d c d c d c d]
-           0.25
-           0
-           [:coef 0.01]))
-     }
-    ))
+  )
+(def mystery
+  {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
+            b (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:Bb4])
+            c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
+            d (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:Bb4])]
+        (s/phrase-p
+         piano
+         [a b a b a b a b a b
+          c d c d c d c d c d c d]
+         0.25
+         0
+         [:coef 0.01]))
+   }
+  )
 
   (def arpeggi
     {:a (s/phrase-p

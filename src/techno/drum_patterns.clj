@@ -214,26 +214,55 @@
         ))
     ))
 
-(def drum-test
-  (fn
-    ([] [15 0.25])
-    ([b]
-     (let [beat (mod b (int b))
-           on-beat (or (= beat 0) (= beat 0.5))
-           off-beat (not on-beat)
-           sounds (group-samples (drum-kits :Kit16-Electro))]
-       (vector (cond (= beat 0) (val (first (:Kick sounds)))
-                     (= beat 0.5) (val (first (:ClHat sounds)))
-                     true (if (= (rand-int 3) 0)
-                            (choose (vals (:Clap sounds)))))
-               []))
-     )))
 
-(defn gen-beat [base samples size cycles start-on end-on]
-  (let [init {(s/p-size base) []}
-        step (s/get-step base)]
+(defn gen-beat [base actions
+                & [size start-on end-on on-prob off-prob pad step]]
+  (let [step (if step step (s/get-step base))
+        base-size (inc (/ (dec (s/p-size base step)) step))
+        size (if size size base-size)
+        pad (if pad pad 1)
+        size (loop [size size] (if (= (double (mod size base-size)) 0.0) size (recur (inc size))))
+        offsets (range 1 (inc (* (dec (inc size)) step)) step)
+        size (+ size (* base-size pad))
+        on-prob (if on-prob on-prob 0.1)
+        off-prob (if off-prob off-prob 0.1)
+        pattern {(inc (* (dec size) step)) []}
+        pattern (if start-on (assoc pattern 1 (first actions)) pattern)
+        pattern (if end-on (assoc pattern (last offsets) (first actions)) pattern)
+        pattern (loop [beats (butlast (rest offsets)) pattern pattern]
+                  (let [cur (first beats)
+                        cur (if (= (double (mod cur (int cur))) 0.0) (int cur) cur)
+                        on-beat (> (count (get base (inc (mod cur (int cur))))) 0)
+                        pattern (cond (and on-beat (weighted-coin on-prob))
+                                      (assoc pattern cur (choose actions))
+                                      (and (not on-beat) (weighted-coin off-prob))
+                                      (assoc pattern cur (choose actions))
+                                      true pattern)]
+                    (if (= (count (rest beats)) 0)
+                      pattern
+                      (recur (rest beats) pattern))
+                    )
+                  )]
+    pattern
     )
   )
+
+(defn fit-p [base pattern & [fill pad step]]
+  (let [step (if step step (s/get-step pattern))
+        base-size (inc (/ (dec (s/p-size base step)) step))
+        size (inc (/ (dec (s/p-size pattern step)) step))
+        pad (if pad pad 0)
+        size (loop [size size] (if (= (double (mod size base-size)) 0.0) size (recur (inc size))))
+        size (+ size (* base-size pad))
+        size (inc (* (dec size) step))
+        pattern (if fill
+                  (s/stretch-p pattern size)
+                  (assoc pattern size []))]
+    pattern
+    )
+  )
+
+
 (comment
   (s/add-p core/player there-there :main3)
   (s/set-st core/player (double (/ 1 8)))
@@ -247,26 +276,37 @@
 
 
   (test-drums
-   {:kick [:k1 :k1 :s1 :k1 :s1 :1]
-    ;; :t [:8 :c1 :2 :c1 :1 :c2 :c2 :1]
-    ;; :c  [:cl1 :15]
+   {:kick [:k1 :1 :o :1]
+    ;:six-eight [:k1 :2 :s1 :2]
+    ;:three-four [:k1 :c1 :s1]
+    ;:t [:c1 :10 :c1 :3 :c2]
+    ;:c  [:c1]
     ;; :cl [:3 :p1 :p1 :3]
     }
    false
-   2 [:Kit16-Electro :Kit10-Vinyl] 1.6)
+   2 [:Kit4-Electro :Kit10-Vinyl] 1.6)
 
-  (s/play-p drum-test)
-  (map #(alength (.getParameterTypes %)) (-> drum-test class .getDeclaredMethods))
-  (s/add-p
-   core/player
-   :drum-test)
+
 
 
   (kill trigger-synth)
 
+  (let [base {1 [:a []] 1.75 []}
+        sounds (group-samples (drum-kits :Kit14-Acoustic))
+        actions [[bing []]]
+        samples (map #(vector % [])
+                     (vals (merge (:ClHat sounds)
+                                  (:Clap sounds)
+                                  (get sounds nil)))
+                     )
+        beat (gen-beat base
+                samples
+                8 true true 0.4 0.5 2)]
+    (s/pp-pattern beat)
+    (s/add-p core/player beat :b)
+    )
 
-
-  (s/rm-p core/player :snr)
+  (s/rm-p core/player :secondary2)
   (s/play-p techno1 son-clave 2 3)
   (s/add-p core/player techno1 :main3)
   (s/add-p core/player
