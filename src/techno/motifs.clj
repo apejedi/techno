@@ -139,7 +139,7 @@
             (choose [:i :iv :v :vi])
             :C4
             (choose [:minor]) 4))
-      [:coef 0.01 :amp 0.2 :dur 2 :attack 1 :release 5]
+      [:coef 0.01 :amp 0.2 :dur 2 :attack 1 :release 9]
       ))
    )
   )
