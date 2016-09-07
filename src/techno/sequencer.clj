@@ -122,6 +122,34 @@
      ))
   )
 
+(defn merge-p [& patterns]
+  (reduce
+   (fn [res cur]
+     (let [cur (cond (map? cur) cur
+                     (fn? cur) (let [has-size (some #{0}
+                                                    (map (fn [f]
+                                                           (alength (.getParameterTypes f)))
+                                                      (-> cur class .getDeclaredMethods)))
+                                     size (if has-size (first (cur)) (apply max (keys res)))
+                                     step (if has-size (second (cur)) 0.25)
+                                     offsets (range 1 (+ size step) step)]
+                                 (reduce (fn [m o] (if (cur o) (assoc m o (cur o)) m)) {(last offsets) []} offsets)
+                                 ))]
+         (reduce
+          (fn [p b]
+            (let [val (get p b)
+                  to-add (get cur b)
+                  new-val (if (sequential? val)
+                            (concat val to-add)
+                            to-add)]
+              (assoc p b new-val)))
+          res
+          (keys cur)))
+     )
+   {}
+   patterns)
+  )
+
 (defn set-st [sequencer step]
   (when (node-active? sequencer)
     (ctl (@trigger-sources (to-sc-id sequencer)) :step step)
@@ -129,16 +157,18 @@
     ;(update-pattern-size sequencer)
     )
   )
+
 (defn pp-pattern [pattern]
-  (when (map? pattern)
-    (println "{")
-    (doseq [i (sort (keys pattern))]
-      (print i " ")
-      (doseq [[instrument args] (partition 2 (pattern i))]
-        (print "[" (to-str instrument) (to-str args) "]"))
-      (println)
-      )
-    (println "}"))
+  (let [pattern (if (fn? pattern) (merge-p pattern) pattern)]
+      (when (map? pattern)
+        (println "{")
+        (doseq [i (sort (keys pattern))]
+          (print i " ")
+          (doseq [[instrument args] (partition 2 (pattern i))]
+            (print "[" (to-str instrument) (to-str args) "]"))
+          (println)
+          )
+        (println "}")))
   (when (sequential? pattern)
     (println "[")
     (doseq [i pattern]
@@ -151,12 +181,7 @@
     )
   )
 
-(defn dump-p [sequencer & parts]
-  (let [data (get @patterns (to-sc-id sequencer))
-        parts (if parts parts (keys data))
-        p (apply merge-p (map #(get % :data) (vals (select-keys data parts))))]
-    (pp-pattern p))
-  )
+
 
 
 
@@ -265,9 +290,9 @@
                    (fn [cur]
                      (assoc-in cur [id k] new-p)
                      )))
-          ;; (if (or (= k :a)
-          ;;          true)
-          ;;   (println "playing " k " with beat " final-beat " orig " orig-beat
+          ;; (if (or (= k :test)
+          ;;          false)
+          ;;   (println "playing " k " with beat " final-beat " orig " beat
           ;;            ;(.get counter) " size " size
           ;;                                 ;" time " (.getTime (java.util.Date.))
           ;;            ))
@@ -337,42 +362,43 @@
     )
   )
 
-(defn rm-p [sequencer pattern]
-    "(rm-p sequencer pattern) stops the given pattern from being played"
-  (let [id (to-sc-id sequencer)
-        cur-val (get @patterns id {})
-        val (if (or (keyword? pattern) (symbol? pattern))
-              (get cur-val pattern)
-              (first (filter #(= (get-val-if-ref pattern) (get-val-if-ref (% :data)))
-                             (vals cur-val))))]
-    (if  (and (not (nil? val)) (contains? val :watcher))
-      (remove-watch (get val :data) (get val :watcher)))
-    (doseq [[k v] val]
-      (if (and (= (type v) overtone.sc.node.SynthNode) (node-active? v))
-        (kill v)
+(defn rm-p [sequencer & to-rm]
+  "(rm-p sequencer pattern) stops the given pattern from being played"
+  (doseq [pattern to-rm]
+    (let [id (to-sc-id sequencer)
+          cur-val (get @patterns id {})
+          val (if (or (keyword? pattern) (symbol? pattern))
+                (get cur-val pattern)
+                (first (filter #(= (get-val-if-ref pattern) (get-val-if-ref (% :data)))
+                               (vals cur-val))))]
+      (if  (and (not (nil? val)) (contains? val :watcher))
+        (remove-watch (get val :data) (get val :watcher)))
+      (doseq [[k v] val]
+        (if (and (= (type v) overtone.sc.node.SynthNode) (node-active? v))
+          (kill v)
+          )
         )
-      )
-    (swap! patterns (fn [p]
-                      (if (= pattern :all)
-                        (assoc p id {})
-                        (assoc p id
-                               (if (keyword? pattern)
-                                 (dissoc cur-val pattern)
-                                 (into {}
-                                       (remove
-                                        (fn [[k v]]
-                                          (= (get-val-if-ref pattern) (get-val-if-ref (v :data)))
-                                          )
-                                        cur-val
-                                        )))
-                               ))
-                      ))
-    (swap! pattern-counters
-           (fn [c]
-             (dissoc c pattern)
-             ))
-    (update-pattern-size sequencer)
-    )
+      (swap! patterns (fn [p]
+                        (if (= pattern :all)
+                          (assoc p id {})
+                          (assoc p id
+                                 (if (keyword? pattern)
+                                   (dissoc cur-val pattern)
+                                   (into {}
+                                         (remove
+                                          (fn [[k v]]
+                                            (= (get-val-if-ref pattern) (get-val-if-ref (v :data)))
+                                            )
+                                          cur-val
+                                          )))
+                                 ))
+                        ))
+      (swap! pattern-counters
+             (fn [c]
+               (dissoc c pattern)
+               ))
+      (update-pattern-size sequencer)
+      ))
   )
 
 (defn add-p
@@ -590,6 +616,50 @@
                          )
                        ))))
 
+(defn mod-actions [sequencer pattern f]
+  (swap! patterns (fn [p]
+                     (let [id (to-sc-id sequencer)
+                           key (if (keyword? pattern) pattern
+                                   (first (first
+                                           (filter (fn [[k v]]
+                                                     (= (v :data)  pattern)) (p id)))))
+                           cur-data (get-in p [id key :data])
+                           is-atom (instance? clojure.lang.Atom cur-data)
+                           data (get-val-if-ref (if cur-data cur-data {}))
+                           is-map (map? data)
+                           offsets (filter #(sequential? (get data %)) (keys data))]
+                       (if (and (not (nil? key)) is-map)
+                         (let [res (reduce (fn [m k]
+                                             (assoc m k
+                                                    (let [actions (get data k)]
+                                                      (mapcat f (partition 2 actions))
+                                                      )))
+                                           data offsets)]
+                           (if is-atom
+                             (do (swap! cur-data (fn [_] res))
+                                 p)
+                             (assoc-in p [id key :data]
+                                       res)))
+                         p)
+                       ))))
+
+(defn set-amp [sequencer pattern amp]
+  (mod-actions
+   sequencer pattern
+   (fn [[inst args]]
+     (let [args (vec (mapcat #(if (not (= :amp (first %))) % []) (partition 2 args)))]
+       [inst (conj args :amp amp)])))
+  )
+
+(defn set-arg [sequencer pattern arg val]
+  (mod-actions
+   sequencer pattern
+   (fn [[inst args]]
+     (let [args (vec (mapcat #(if (not (= arg (first %))) % []) (partition 2 args)))]
+       [inst (conj args arg val)])))
+  )
+
+
 (defn wrap-p
   ([sequencer pattern] (wrap-p sequencer pattern true))
   ([sequencer pattern val]
@@ -675,22 +745,14 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
        )
   )
 
-(defn merge-p [& patterns]
-  (reduce
-   (fn [res cur]
-     (reduce
-      (fn [p b]
-        (let [val (get p b)
-              to-add (get cur b)
-              new-val (if (sequential? val)
-                        (concat val to-add)
-                        to-add)]
-          (assoc p b new-val)))
-      res
-      (keys cur))
-     )
-   {}
-   patterns)
+
+
+(defn dump-p [sequencer & parts]
+  (let [data (get @patterns (to-sc-id sequencer))
+        parts (if parts parts (keys data))
+        to-fit {(get-in @sequencer-data [(to-sc-id sequencer) :size]) nil}
+        p (apply merge-p (map #(get % :data) (conj (vals (select-keys data parts)) to-fit)))]
+    (pp-pattern p))
   )
 
 
@@ -728,7 +790,11 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
         size (inc (* (dec size) step))
         pattern (if fill
                   (stretch-p pattern size)
-                  (assoc pattern size []))]
+                  (if (contains? pattern size)
+                    pattern
+                    (assoc pattern
+                           (if (= (double (mod size (int size))) 0.0) (int size) size)
+                           [])))]
     pattern
     )
   )
@@ -865,7 +931,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                #(cond (map? (get-val-if-ref %)) (keys (get-val-if-ref %))
                       (and (fn? (get-val-if-ref %))
                            (some #{0}
-                                 (map (fn [f] alength (.getParameterTypes f))
+                                 (map (fn [f] (alength (.getParameterTypes f)))
                                       (-> % class .getDeclaredMethods)))
                            )
                       (range 1 (first ((get-val-if-ref %))) (second ((get-val-if-ref %))))

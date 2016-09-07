@@ -28,6 +28,7 @@
 
 (defonce client (atom (osc-client "192.168.0.19" 9000)))
                                         ;(swap! client (fn [_] (osc-client "172.20.10.5" 9000)))
+
 ;(swap! client (fn [_] (osc-client "192.168.0.19" 9000)))
 (defonce server-client (atom (osc-client "127.0.0.1" 4410)))
 
@@ -133,7 +134,7 @@
    (map (fn [[k v] num]
           (osc-send @client (str "/sketch/label" num) (name k))
           (osc-handle
-           @server (str "/sketch/toggle" num)
+           @server (str "/sketch/push" num)
            (fn [msg]
              (if (not @queue?)
                (let [arg (first (:args msg))]
@@ -225,11 +226,12 @@
   (osc-send @client "/drum/10/label1" "test")
   (osc-listen @server (fn [msg] (println "Listener: " msg)) :debug)
   (osc-rm-all-listeners @server)
-  (let [sc  (scale :C4 :major)]
+  (let [sc  (scale :C4 :minor)
+        comp track1]
     (swap!
      sketch
      (fn [_]
-       house2
+       (zipmap (keys comp) (map #(atom %) (vals comp)))
        ))
     (swap!
      synths
@@ -243,29 +245,30 @@
         4 {:synth piano
            :scale sc}}))
     (load-handlers)
-    (let [kit :Kit3-Acoustic
-          samples (group-samples (kit drum-kits))
-          clear-labels #(for [row (range 10 0 -1) col (range 1 13)]
-                         (doall
-                          (osc-send @client (str "/drum/" row "/label" col) "")))]
-      (clear-labels)
-      (doall
-       (map (fn [row [group sounds]]
-              (map
-               (fn [col [k sound]]
-                 (let [num (last (re-seq #"\d+" (name k)))
-                       group (if (nil? group)
-                               (last (butlast (re-seq #"[A-Za-z]+" (name k))))
-                               group)]
-                   (handle-samples
-                    {row {col {:value sound :label (str (name group) num)}}})
-                   )
-                 )
-               (range 1 (inc (count sounds)))
-               sounds)
-              )
-            (range 10 (- 10 (inc (count samples))) -1)
-            samples))
-        )
     )
   )
+
+    ;; (let [kit :Kit3-Acoustic
+    ;;       samples (group-samples (kit drum-kits))
+    ;;       clear-labels #(for [row (range 10 0 -1) col (range 1 13)]
+    ;;                      (doall
+    ;;                       (osc-send @client (str "/drum/" row "/label" col) "")))]
+    ;;   (clear-labels)
+    ;;   (doall
+    ;;    (map (fn [row [group sounds]]
+    ;;           (map
+    ;;            (fn [col [k sound]]
+    ;;              (let [num (last (re-seq #"\d+" (name k)))
+    ;;                    group (if (nil? group)
+    ;;                            (last (butlast (re-seq #"[A-Za-z]+" (name k))))
+    ;;                            group)]
+    ;;                (handle-samples
+    ;;                 {row {col {:value sound :label (str (name group) num)}}})
+    ;;                )
+    ;;              )
+    ;;            (range 1 (inc (count sounds)))
+    ;;            sounds)
+    ;;           )
+    ;;         (range 10 (- 10 (inc (count samples))) -1)
+    ;;         samples))
+    ;;     )

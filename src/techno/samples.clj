@@ -11,7 +11,7 @@
   (let [directory (file path)
         tree (reduce (fn [tree listing]
                        (if (and (.isFile listing)
-                                (or (.contains (.getName listing) "wav") (.contains (.getName listing) "aiff"))
+                                (or (.contains (.getName listing) "wav") (.contains (.getName listing) "aif"))
                                 (and (if (fn? filter) (filter listing) true)))
                          (let [nested-path
                                (map (fn [part]

@@ -67,7 +67,7 @@
                                          [res name-in n-in] (last (re-seq re in))
                                          [cur cur-in curn-in] (last (re-seq re (name (first s))))
                                          name-in (if (nil? name-in) in name-in)
-                                         cur-in (if (nil? cur-in) (name (first s)) cur-in)]
+                                         cur-in (if (< (count (re-seq re (name (first s)))) 2)  (name (first s)) cur-in)]
                                      (if (and (.contains
                                                (.toLowerCase cur-in) (.toLowerCase name-in))
                                               (or (nil? curn-in) (nil? n-in)
@@ -80,7 +80,11 @@
                              (cond (sequential? in) in
                                    (string? in) (find-snd in)
                                    (keyword? in) (let [[_ k n] (re-find #"(?i)([a-z]+)(\d+)*" (name in))]
-                                            (find-snd (str (get s-map (keyword k)) n)))
+                                                   (find-snd
+                                                    (str
+                                                     (if (contains? s-map (keyword k))
+                                                       (get s-map (keyword k)) (name k))
+                                                         n)))
                                    true in))
                 mk-block (fn [action block]
                             (reduce
@@ -123,7 +127,7 @@
                 beat (if (or (is-arg? (second phrase)) (is-space? (second phrase)))
                        beat
                        (+ beat (* (if (and is-space (nil? prev)) space (inc space)) step)))
-                beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)]
+                beat (if (= (double (mod beat (int beat))) 0.0) (int beat) beat)]
             (if (> (count (rest phrase)) 0)
               (recur (rest phrase) beat pattern cur)
               pattern
@@ -227,8 +231,8 @@
         on-prob (if on-prob on-prob 0.1)
         off-prob (if off-prob off-prob 0.1)
         pattern {(inc (* (dec size) step)) []}
-        pattern (if start-on (assoc pattern 1 (first actions)) pattern)
-        pattern (if end-on (assoc pattern (last offsets) (first actions)) pattern)
+        pattern (if start-on (assoc pattern 1 (nth actions (if (number? start-on) start-on 0))) pattern)
+        pattern (if end-on (assoc pattern (last offsets) (nth actions (if (number? end-on) end-on 0))) pattern)
         pattern (loop [beats (butlast (rest offsets)) pattern pattern]
                   (let [cur (first beats)
                         cur (if (= (double (mod cur (int cur))) 0.0) (int cur) cur)
@@ -257,57 +261,95 @@
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :Kit16-Electro)))))
+                          (vals (group-samples (drum-kits :KurzweilKit08)))))
 
 
 
-  (test-drums
-   {:kick [[dub-kick []] :3]
-    ;:six-eight [:k1 :2 :s1 :2]
-    ;:three-four [:k1 :c1 :s1]
-    ;:t [:c1 :10 :c1 :3 :c2]
-    :c  [:2 :p1]
-    ;; :cl [:3 :p1 :p1 :3]
-    }
-   false
-   2 [:Kit4-Electro :Kit10-Vinyl] 1.6)
+  (let [z1 [zap [(midi->hz (note :Eb3)) :amp 0.3]]
+        z2 [zap [(midi->hz (note :F3)) :amp 0.3]]
+        base {1.75 []}
+        parts {
+               ;; :test [(drum-p [:KurzweilKit08] [:p3 [:amp 2] :p3 :1 :p2])]
+               ;; :tr [(drum-p [:Kit4-Electro] [:o1 :o1 :1 :o2 :1])]
+               ;:whistle [(drum-p [:whistles] [:w5 [:end 0.1] :3 :w6])]
+               :kick [(drum-p [:Kit4-Electro] [:k1 :3])]
+               ;:cl [(drum-p [:Kit4-Electro] [:c1 :1 :c1 :c1 :1 :c2 :c3])]
+               ;:kick2 [(drum-p [:Kit4-Electro] [:k2 :2 :k2 :k2 :2]) [false 1]]
+               ;:hat [(drum-p [:Kit4-Electro] [:7 :o1])]
+               ;; :zap [(drum-p [:Kit4-Electro] [z1 z2])]
+               ;:snr [(drum-p [:Kit4-Electro] [:3 :s3 :4 :s2])]
+               ;:tamb [(drum-p [:Kit8-Vinyl] [:tam :1 :tam]) [false 0 0.25]]
+               ;; :shkr [(drum-p [:Kit8-Vinyl] [:shkr3 :shkr1 :2]) [false 0 0.25]]
+               }
+        rm [:snr]]
+    (doseq [[k [v args]] parts]
+      (s/add-p core/player
+               (apply s/fit-p (concat (vector base v) args))
+               k)
+      )
+    (doseq [r rm]
+      (s/rm-p core/player r)
+      )
+    )
+
+  (s/add-p core/player
+           (s/m-phrase
+            {:refresh 0 :sputter 0.5 :sputter-amt 0.3 :reverse 0.5}
+            (s/fit-p {1.75 []} (drum-p [:KurzweilKit08] [:t3 :1 :t4 :t3 :1 :t4 :1]))
+            0.25)
+           :test)
+  (s/add-p core/player (s/fit-p {1.75 []} (drum-p [:Kit8-Vinyl] [:shkr3 :shkr3 :shkr1 :1])) :shkr)
+
+  (s/add-p core/player
+           (s/fit-p {1.75 []}
+                    (drum-p [:KurzweilKit07] [:1 :sd :1 :sd :1]))
+           :test2 {:use-counter true})
+  (s/add-p core/player
+           (s/fit-p {1.75 []}
+                    (drum-p [:KurzweilKit08] [:sd1 :1 :sd1 :sd1 :sd2 :1 :sd1 :1]))
+           :test3 {:use-counter true})
+
+  (s/set-arg core/player :shkr :amp 0.5)
 
   (s/add-p
    core/player
-   (s/fit-p {1.75 []}
-    (drum-p [:Kit10-Vinyl]
-            [:3 :k2 :k2]) false 2) :k2 {:use-counter true})
+   (gen-beat (:four-beat @beats)
+             (map #(vector % [:amp 1]) (concat (vals (drum-kits :Congas))
+                                                 (vals (drum-kits :Bongos))
+                                                 ;(vals (drum-kits :Triangles))
+                                                 ))
+             ;[[zap [(midi->hz (note :Eb4)) :amp 0.6 :dur 0.2]] [zap [(midi->hz (note :G4)) :amp 0.6 :dur 0.2]] [bing [(note :Bb5)]]]
+             12
+             true true 1 0.3 0)
+   :test4)
+
+  (s/rm-p core/player :test4)
 
 
   (s/add-p
    core/player
-   (s/fit-p {1.75 []}
-    (drum-p [:Kit4-Electro]
-            [:3 :k2 :k2]) false 2) :k2 {:use-counter true})
+   (s/fit-p {2.75 []}
+    (drum-p [:Kit3-Acoustic]
+            [:t1 :t5 :1 :s3]) false 0) :k2 {:use-counter true})
 
 
   (kill trigger-synth)
 
-  (let [base {1 ["Kick01" "Kick04"]
-                              2 ["Kick02"]
-                              2.5 ["Kick01"]
-                              2.75 []
-                              }
+  (let [base {1 [:k []] 1.75 []}
         sounds (group-samples (drum-kits :Kit3-Acoustic))
         actions [[bing []]]
         samples (map #(vector % [])
                      (vals (merge (get sounds :SdSt)
                                   (get sounds :ClHat)
-                                  (get sounds nil)))
+                                  (get sounds :Snr)))
                      )
         beat (gen-beat base
                 samples
-                5 true false 1 0.1 0)]
-    (s/pp-pattern beat)
+                8 true true 1 0.1 0)]
     (s/add-p core/player beat :g)
     )
 
-  (s/rm-p core/player :secondary2)
+  (s/rm-p core/player :test)
   (s/play-p techno1 son-clave 2 3)
   (s/add-p core/player techno1 :main3)
   (s/add-p core/player

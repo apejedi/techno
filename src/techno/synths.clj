@@ -3,7 +3,6 @@
         [overtone.inst.synth]
         [techno.sequencer :only [adsr-ng]])
   )
-
 (defsynth sweet [note 60 dur 1 amp 1 vib 0.02]
   (let [freq (midicps note)
         ratios [1 3/4 1/5 2/7 11/5 5/8]
@@ -221,10 +220,11 @@
 (defsynth whistle [freq1 200 freq2 300 dur 5 freq1-sus 0.4 freq2-sus 0.4 mod 10 amp 1]
   (let [[a b c] [(* freq1-sus dur) (* (- 1 freq1-sus freq2-sus 0.1) dur) (* freq2-sus dur)]
         env (env-gen:kr
-             (envelope [0.1 freq1 freq1 freq2 freq2 0.01]
-                       [0.3 a b c 2] :exponential)
+             (envelope [freq1 freq1 freq2 freq2 0.01]
+                       [a b c 0.01] :exponential)
              :action FREE)
-        osc-a (* amp 0.5 (sin-osc env))]
+        osc-a (* amp 0.5 (sin-osc env))
+        ticks (impulse:ar 20)]
     (out:ar [0 1] osc-a)
     )
   )

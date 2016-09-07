@@ -9,8 +9,8 @@
         [techno.drums]))
 
 (comment
-  (let [parts [:b]
-        rm [:a]
+  (let [parts [:main3 :b]
+        rm [:d]
         comp track1]
     (doseq [p rm]
       (s/rm-p core/player p)
@@ -19,11 +19,11 @@
       (s/add-p core/player (comp p) p)
       )
     )
-  (let [comp track1
-        parts [:main2]
-                                        ;(keys comp)
+  (s/set-arg core/player :d :amp 0.7)
+  (let [comp track2
+        parts (keys comp)                        ;(keys comp)
         ]
-    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1.3 2))
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
     )
   )
 (def mystery
@@ -224,7 +224,6 @@
         (s/phrase-p
          sweet
          [(c :vi) (c :v) (c :iv) (c :ii) :3]
-         ;[(c :ii) :1 (c :iii) :1 (c :iv) :1 (conj (c :v) (note :C5)) :3]
          0.25 3 [:amp 0.2 :dur 1 :coef 0.01 :attack 1 :release 2]))
    :a2 (let [ch #(chord-degree % :C4 :minor)
              [a b c d] (map ch [:vi :v :iv :ii])
@@ -242,6 +241,11 @@
             i (flatten (repeat 8 (chord-degree :iv root type 4)))]
         (s/arp-p inst (concat v i) args 0)
         )
+   :b2 (fn [b]
+         (if (= (rand-int 3) 0)
+             (let [notes (concat (chord-degree :v :C4 :minor 4) (chord-degree :i :C4 :minor 4))]
+               [piano [(choose notes) :dur 3]]
+               )))
    :c (s/phrase-p
        overpad
        (concat (chord-degree :v :C4 :minor) [:3] (chord-degree :i :C4 :minor))

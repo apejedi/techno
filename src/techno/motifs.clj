@@ -9,20 +9,12 @@
 
 (defonce motif (atom (fn [_])))
 (swap! motif (fn [_]
-               (fn [b]
-                 (let [n1 (choose (scale :C5 :minor))
-                       n2 (choose (scale :C5 :minor))]
-                   (if (and (or (= (- b (int b)) 0.5) (= (- b (int b)) 0))
-                           (= (rand-int 2) 0)
-                           true
-                        )
-                     [
-                      ;overpad [n1 :amp 0.3 :dur 2 :attack 0.1 :release 0.8]
-                      piano [n2 :amp 0.4 :dur 1]
-                      ;flute [n2 :amp 0.2 :dur 1 :coef 0.001]
-                      ])
-                   )
-                 )
+               (s/phrase-p
+                ks1
+                [:Bb5 :Ab5 :G5 :Ab5 :G5 [:dur 5] :3 :D4 :Eb4 :D4 :1 :C4 [:dur 8] :3]
+                0.25 0 [:coef 0.01 :dur 2]
+                {:refresh 0.7 :sputter 0.5 :sputter-amt 0.2}
+                )
                ))
 
 (def ambient (fn [b]
@@ -37,19 +29,12 @@
 
 (swap! chords
        (fn [_]
-         (let [get-p (fn [d]
-                       (s/chord-p sweet
-                                  (chord-degree d :C4 :minor 4)
-                                  [:amp 0.2 :dur 1 :coef 0.01 :attack 1 :release 2])
-                       )
-               prog {1 (get-p :vi)
-                     2 (get-p :v)
-                     3 (get-p :iv)
-                     4 (get-p :ii)
-                     4.75 []
-                     }]
-           prog
-           )
+         (let [c #(chord-degree % :C4 :minor 4)]
+        (s/phrase-p
+         sweet
+         [(c :v) (c :ii) (c :vi) (c :i) :3]
+         ;[(c :ii) :1 (c :iii) :1 (c :iv) :1 (conj (c :v) (note :C5)) :3]
+         0.25 3 [:amp 0 :dur 1 :coef 0.01 :attack 1 :release 2 :vib 0]))
          ))
 
 (defonce arpeggio (atom nil))
@@ -139,7 +124,7 @@
             (choose [:i :iv :v :vi])
             :C4
             (choose [:minor]) 4))
-      [:coef 0.01 :amp 0.2 :dur 2 :attack 0.1 :release 4 :t 5]
+      [:coef 0.01 :amp 0.2 :dur 2 :attack 0.1 :release 4 :t 7]
       ))
    )
   )
@@ -152,12 +137,39 @@
     (s/add-p core/player melissa-motif :motif)
     (s/add-p core/player techno.drums/melissa-b :main)
     )
+
+  (let [[i iv v vi] (map #(map midi->hz
+                               (chord-degree
+                                %
+                                :C4
+                                (choose [:minor]) 4)) [:i :iv :v :vi])]
+    (s/add-p core/player
+             (s/fit-p {1.75 []}
+              (s/phrase-p
+               rise-pad
+               [iv v vi i :15]
+               0.25 15)) :motif)
+    )
   (s/add-p core/player motif :motif)
   (s/add-p core/player coffee :harmony)
   (s/add-p core/player untitled :harmony)
   (s/add-p core/player untitled-f :motif)
-  (s/add-p core/player rnd-chord :harmony)
+  (s/add-p core/player rnd-chord :motif)
+  (s/add-p
+   core/player
+   (fn [b]
+     (if (or (= (rand-int 4) 0)
+          (integer? b) (= (mod b (int b)) 0.5) (= (mod b (int b)) 0.75)
+          )
+       (let [notes (concat (chord-degree :ii :C4 :minor 4) (chord-degree :iii :C4 :minor 4)
+                           (chord-degree :v :C4 :minor 4))]
+         [(choose [piano]) [(choose notes) :dur 1 :amp 0.2 :coef 0.05]
+          (choose [piano]) [(choose notes) :dur 1 :amp 0.15 :coef 0.05]]
+         )))
+   :motif2)
 
+  (s/set-amp core/player :a 0.2)
+  (s/set-arg core/player :main3 :amp 0.5)
   (s/play-p acid ;core/player acid :acid ;{:sc303 1001}
             5)
   (ctl t :gate 0)
@@ -170,21 +182,20 @@
   (s/wrap-p core/player :harmony true)
   (s/add-p core/player ted-guitar :guitar)
   (s/add-p core/player x-naut :x-naut)
-  (s/add-p core/player [(s/chord-p overpad [:F#4 :C#5 :Eb5 :Bb4] [:attack 1 :release 3]) nil nil nil nil nil])
-
-
-
-  (kill trigger-synth)
 
   (s/add-p
    core/player
-   (let [a [:D3 :E4] b [:D3 :D4] l [:dur 2 :coef 0.01 :amp 0.6]
-         a1 [:D3 l :E4 l] b1 [:D3 l :D4 l]]
-     (s/phrase-p
-      ks1
-      [a1 :3 a a a :1 b1 :3 b b b :3]
-      0.25 1 [:coef 0.01 :amp 0.5]))
-   :motif)
+   (let [[a b] [[:G3 :D4] [:G3 :Eb4]]
+         [c d] [[:A3 :E4] [:A3 :F4]]]
+       (s/phrase-p
+        ks1
+        [a b a b :2 a b :2 a b a b a b :2
+         c d c d :2 c d :2 c d c d c d :2]
+        0.25 0 [:coef 0.01 :dur 2]))
+   :motif2)
+  (s/rm-p core/player :motif2)
+
+  (bass-synth (midi->hz (note (choose (scale :F#2 :locrian)))) :release 3)
 
   (s/play-p
    ;core/player
@@ -204,103 +215,24 @@
    3
    ;:motif
    )
-  (s/add-p
-   core/player
-   (s/phrase-p
-    klang-test
-    [:Bb5 [:dur 4] :6 :Bb5 :D6 [:dur 4] :3 :Bb5 :4]
-    0.25 0 [:atk 0.001])
-   :motif2 {:use-counter true})
-
-  (s/add-p
-   core/player
-   (s/phrase-p
-    bass-synth
-    [:Eb3 :5 :G3 :F3 :4 :Eb3 :5]
-    0.25 0 [:release 3 :amp 0.3])
-   :bass)
-
-
 
   (s/play-p
                                         ;core/player
    (let [a (chord :C4 :M7)
-         ;b (chord :B3 :M7)
+         b (chord :B3 :M7)
          ]
      (s/phrase-p
       klang-test
                                         ;[a a a a a :0 b b b b b :1]
       [a a a a a
-       ;:0 b b b b b :1
+       :0 b b b b b :1
        ]
-      0.25 4 [:dur 0.8 :amp 0.5 :vib 0]))
+      0.25 2 [:dur 0.8 :amp 0.5 :vib 0]))
                                         ;:harmony
    1.6
    )
 
-  (s/play 1 {:data [(s/chord-p
-                      piano
-                      (chord-degree
-                       (choose [:ii :iii :iv :v :vi])
-                       :C5 :minor) [:dur 3])]})
 
-
-  (s/play-p
-   (s/phrase-p
-    mooger
-    [:D3 :Eb3 :D3 :Bb2 :C3 [:t 2] :10]
-    0.25 3 [:amp 1]) 1.3)
-  (s/play-p
-                                        ;core/player
-   (let [a [:D3 :Eb4 :F#5]
-         b [:D3 :Eb4 :G5]
-         c [:D3 :Eb4 :A5]
-         d [:D3 :Eb4 :Bb5]
-         e [:D3 :F#4 :A5]]
-     (s/phrase-p
-      ks1
-      (concat a a a a b b b b
-              c c c c d d d d
-              e e e e)
-      0.25 0 [:coef 0.01 :amp 1 :dur 1.3]))
-                                        ;:harmony2
-   )
-  (s/add-p
-
-
-   core/player
-   (s/phrase-p
-    whistle
-    [(midi->hz (note :Bb5)) :5 (midi->hz (note :Bb5)) (midi->hz (note :Ab5)) :4 (midi->hz (note :G5)) :4 (midi->hz (note :F5))]
-    0.25 0 [:freq2 (midi->hz (note :Eb5)) :dur 1 :freq2-sus 0.1])
-   :motif3
-   )
-  (s/add-p
-   core/player
-   (let [root :D4
-         type :minor
-         [a b c d e f g] (map #(chord-degree % root type 4) [:i :ii :iii :iv :v :vi :vii])]
-     (s/phrase-p
-      overpad
-      [a e c f]
-      0.25 12 [:attack 1 :release 5])
-     )
-   :harmony)
-  (s/add-p
-   core/player
-   (let [root :D4
-         type :minor
-         [a b c d e f g] (scale root type)
-         ;[a b c d e f g] (map midi->hz [a b c d e f g])
-         ]
-     (s/phrase-p
-      flute
-      [d c a]
-      0.25 12 [:dur 3 :amp 1])
-     )
-   :motif)
-  (kill trigger-synth)
-  (s/rm-p core/player :harmony)
   )
 
 

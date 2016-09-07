@@ -169,6 +169,7 @@
   (start-recorder (mapcat vals
                           (vals (group-samples (drum-kits :Kit3-Acoustic)))))
   (s/set-sp core/player (/ 80 60))
+  ((choose (vals (:tabla drum-kits))))
   (s/set-size core/player 4.25)
   (s/add-p core/player electro :electro)
   (s/add-p core/player pulse-beat :pulse)
@@ -195,7 +196,6 @@
   (s/add-p core/player scatter-main :main)
   (s/add-p core/player untitled :main)
   (s/add-p core/player untitled-b :switch)
-  (s/mod-p core/player :switch :min-wrap 2)
   (s/play-p untitled-b untitled 2)
   )
 
