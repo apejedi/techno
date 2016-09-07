@@ -309,7 +309,7 @@
                     (drum-p [:KurzweilKit08] [:sd1 :1 :sd1 :sd1 :sd2 :1 :sd1 :1]))
            :test3 {:use-counter true})
 
-  (s/set-arg core/player :shkr :amp 0.5)
+  (s/set-arg core/player  :amp 0.5)
 
   (s/add-p
    core/player
