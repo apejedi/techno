@@ -9,9 +9,9 @@
         [techno.drums]))
 
 (comment
-  (let [parts [:main3 :b]
-        rm [:d]
-        comp track1]
+  (let [parts [:whistle]
+        rm []
+        comp track2]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -21,7 +21,7 @@
     )
   (s/set-arg core/player :d :amp 0.7)
   (let [comp track2
-        parts (keys comp)                        ;(keys comp)
+        parts [:harmony]                        ;(keys comp)
         ]
     (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
     )
@@ -136,11 +136,8 @@
             [:Kit16-Electro]
             [[c1] :2 [c1] :2 [c1] :1 [c1] [c2] [c1] :5]
             0.25))
-   :hat (let [o "OpHat"]
-            (drum-pattern
-             [:Kit16-Electro]
-             [:2 [o] :1]
-             0.25))
+   :hat (drum-p [:Kit16-Electro]
+            [:2 :o :1])
    :sdst2 (let [s3 "SdSt-03"
                 s6 "SdSt-06"
                 s7 "SdSt-07"
@@ -225,14 +222,11 @@
          sweet
          [(c :vi) (c :v) (c :iv) (c :ii) :3]
          0.25 3 [:amp 0.2 :dur 1 :coef 0.01 :attack 1 :release 2]))
-   :a2 (let [ch #(chord-degree % :C4 :minor)
-             [a b c d] (map ch [:vi :v :iv :ii])
-             args {:amp 0.2 :dur 1 :coef 0.01 :attack 1 :release 2}
-             l (assoc args :dur 3)]
-        (s/phrase-p
-         sweet
-         [a b c (mapcat #(vector % (flatten (into [] l))) d) :6]
-         0.25 3 (flatten (into [] args))))
+   :a2 (let [c #(chord-degree % :C4 :minor 4)]
+         (s/phrase-p
+          sweet
+          [(c :v) (c :ii) (c :vi) (c :i) :3]
+          0.25 3 [:amp 0.2 :dur 1 :coef 0.01 :vib 0]))
    :b (let [root :C4
             type :minor
             args [:coef 0.001 :amp 0.4 :atk 0.01 :dur 1]
@@ -242,32 +236,40 @@
         (s/arp-p inst (concat v i) args 0)
         )
    :b2 (fn [b]
-         (if (= (rand-int 3) 0)
-             (let [notes (concat (chord-degree :v :C4 :minor 4) (chord-degree :i :C4 :minor 4))]
-               [piano [(choose notes) :dur 3]]
-               )))
+         (if (or (= (rand-int 4) 0)
+                 (integer? b) (= (mod b (int b)) 0.5) (= (mod b (int b)) 0.75)
+                 )
+           (let [notes (concat (chord-degree :ii :C4 :minor 4) (chord-degree :iii :C4 :minor 4)
+                               (chord-degree :v :C4 :minor 4))]
+             [(choose [piano]) [(choose notes) :dur 1 :amp 0.2 :coef 0.05]
+              (choose [piano]) [(choose notes) :dur 1 :amp 0.15 :coef 0.05]]
+             )))
    :c (s/phrase-p
        overpad
        (concat (chord-degree :v :C4 :minor) [:3] (chord-degree :i :C4 :minor))
        0.25 0 [:dur 1 :amp 0.5]
        {:refresh 1 :reverse 0.3 :sputter 0.8 :sputter-amt 0.2}
        )
-   :d (build-from-kits [:Kit10-Vinyl :Kit15-Electro]
-                       {
-                        1 ["Perc01"]
-                        1.5 ["ClHat01"]
-                        })
-   :e (build-from-kits [:Kit10-Vinyl]
-                       {
-                        1 ["Perc02"]
-                        1.25 ["Perc03"]
-                        2 ["Perc04"]
-                        2.75 []
-                        }
-                       )
-   :main1 beat
-   :main2 (:bomba @beats)
-   :main3 (:four-beat @beats)
+   :d (drum-p [:Kit10-Vinyl :Kit15-Electro] [:p1 :1 :c1])
+   :e (drum-p [:Kit10-Vinyl] [:p2 :p3 :2 :p4 :3])
+   :toms (s/m-phrase
+            {:refresh 0 :sputter 0.5 :sputter-amt 0.3 :reverse 0.5}
+            (s/fit-p {1.75 []} (drum-p [:KurzweilKit08] [:t3 :1 :t4 :t3 :1 :t4 :1]))
+            0.25)
+   :beat1 (s/fit-p {1.75 []}
+                   (drum-p [:KurzweilKit07] [:1 :sd :1 :sd :1]))
+   :beat2 (s/fit-p {1.75 []}
+                   (drum-p [:KurzweilKit08] [:sd1 :1 :sd1 :sd1 :sd2 :1 :sd1 :1]))
+   :shkr (s/fit-p {1.75 []} (drum-p [:Kit8-Vinyl] [:shkr3 :shkr3 :shkr1 :1]))
+   :congas (gen-beat (:four-beat @beats)
+             (map #(vector % [:amp 1]) (concat (vals (drum-kits :Congas))
+                                                 (vals (drum-kits :Bongos))
+                                                 ))
+             12
+             true true 1 0.3 0)
+   :main1 (drum-p [:Kit10-Vinyl] [[:k1 :c1] :k4 :p4 :1 :s2 :1 :p3 :5 :s2 :3])
+   :main2 (drum-p [:Kit10-Vinyl] [[:k1 :k4] :1 :p1 :k1 :k2 :p1 :k1 :1])
+   :main3 (drum-p [:Kit10-Vinyl] [:k1 :1 :c1 :1 :s2 :1 :c1 :1])
    })
 (def x-naut
   {:melody (let [a [:Eb5 :G5 :Bb5 :D6 :Bb5 :Eb5]

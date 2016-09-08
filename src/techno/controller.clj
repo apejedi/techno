@@ -18,11 +18,15 @@
 
 (defonce queue? (atom false))
 
-(defonce send-q (atom []))
+(defonce send-q (atom {}))
 
 (defonce sketch (atom {}))
 
 (defonce synths (atom {}))
+
+(defonce cur-pattern (atom {}))
+
+(defonce p-map (atom {}))
 
 (defonce sample1 (atom {}))
 
@@ -31,7 +35,6 @@
 
 ;(swap! client (fn [_] (osc-client "192.168.0.19" 9000)))
 (defonce server-client (atom (osc-client "127.0.0.1" 4410)))
-
 
 (defn call-synth [msg]
   (let [[inst-in push octave n-in] (re-seq #"[\d]+" (:path msg))
@@ -133,20 +136,57 @@
   (doall
    (map (fn [[k v] num]
           (osc-send @client (str "/sketch/label" num) (name k))
+          (swap! p-map (fn [m] (assoc m k num)))
           (osc-handle
            @server (str "/sketch/push" num)
            (fn [msg]
-             (if (not @queue?)
-               (let [arg (first (:args msg))]
-                 (if (> arg 0)
-                   (s/add-p @core/s-player (get @sketch k) k)
-                   (s/rm-p @core/s-player k)
-                   ))
-               (swap! send-q conj msg)
-               )))
+             (let [arg (first (:args msg))]
+               (if (> arg 0)
+                 (do
+                   (osc-send @client (str "/sketch/push" num) 1)
+                   (swap! cur-pattern (fn [_] k))
+                   (doseq [i (range 1 25)]
+                     (if (not (= i num))
+                       (osc-send @client (str "/sketch/push" i) 0)
+                       )
+                     )
+                   )
+                 ))
+             ))
           )
         @sketch (range 1 (inc (count (keys @sketch))))
         ))
+  (osc-handle
+   @server "/sketch/addp"
+   (fn [msg]
+     (let [arg (first (:args msg))]
+       (if (> arg 0)
+         (if (not @queue?)
+           (if (keyword? @cur-pattern)
+             (do
+               (s/add-p @core/s-player (get @sketch @cur-pattern) @cur-pattern)
+               (osc-send @client (str "/sketch/push" (get @p-map @cur-pattern) "/color") "green")
+               ))
+           ;(swap! send-q conj msg)
+           (swap! send-q (fn [q] (assoc q :add (conj (get q :add []) @cur-pattern))))
+           ))
+       )))
+  (osc-handle
+   @server "/sketch/rmp"
+   (fn [msg]
+     (let [arg (first (:args msg))]
+       (if (> arg 0)
+         (if (not @queue?)
+           (if (keyword? @cur-pattern)
+             (do
+               (s/rm-p @core/s-player @cur-pattern)
+               (osc-send @client (str "/sketch/push" (get @p-map @cur-pattern) "/color") "blue")
+               ))
+           (swap! send-q (fn [q] (assoc q :rm (conj (get q :rm []) @cur-pattern))))
+           ;(swap! send-q conj msg)
+           )
+         )
+       )))
   (osc-handle
    @server "/sketch/play"
    (fn [msg]
@@ -170,10 +210,19 @@
        (if (> arg 0)
          (swap! queue? (fn [_] true))
          (do
-           (doseq [m @send-q]
-             (peer-send-msg @server-client (apply mk-osc-msg (:path m) (osc-type-tag (:args m)) (:args m)))
+           (doseq [p (get @send-q :add)]
+             (s/add-p @core/s-player (get @sketch p) p)
+             (osc-send @client (str "/sketch/push" (get @p-map p) "/color") "green")
              )
-           (swap! send-q (fn [_] []))
+           (doseq [p (get @send-q :rm)]
+             (s/rm-p @core/s-player p)
+             (osc-send @client (str "/sketch/push" (get @p-map p) "/color") "blue")
+             )
+           (swap! send-q (fn [_] {}))
+           ;; (doseq [m @send-q]
+           ;;   (peer-send-msg @server-client (apply mk-osc-msg (:path m) (osc-type-tag (:args m)) (:args m)))
+           ;;   )
+           ;; (swap! send-q (fn [_] []))
            (swap! queue? (fn [_] false)))
          ))))
   (if (not (nil? @synths))
@@ -221,13 +270,13 @@
       ))
   )
 (comment
-  (osc-send @client "/sketch/label1" "test")
+  (osc-send @client "/sketch/push1/color" "blue")
   (osc-send @client "/synth1/paramlabel1" "asd")
   (osc-send @client "/drum/10/label1" "test")
   (osc-listen @server (fn [msg] (println "Listener: " msg)) :debug)
   (osc-rm-all-listeners @server)
   (let [sc  (scale :C4 :minor)
-        comp track1]
+        comp track2]
     (swap!
      sketch
      (fn [_]

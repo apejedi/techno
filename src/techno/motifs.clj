@@ -155,6 +155,12 @@
   (s/add-p core/player untitled :harmony)
   (s/add-p core/player untitled-f :motif)
   (s/add-p core/player rnd-chord :motif)
+  (s/play-p
+   (s/phrase-p
+    zap
+    [:Eb2 [:freq2 (note :Eb3)] :2 :Bb2 [:freq2 (note :Bb3)]]
+    0.25 0 [:dur 0.3 :amp 6])
+   2)
   (s/add-p
    core/player
    (fn [b]
