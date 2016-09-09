@@ -295,6 +295,9 @@
            :scale sc}}))
     (load-handlers)
     )
+  (s/rm-p @core/s-player :main3)
+  (s/set-sp @core/s-player 2)
+  (s/set-amp @core/s-player :sdst 0.5)
   )
 
     ;; (let [kit :Kit3-Acoustic

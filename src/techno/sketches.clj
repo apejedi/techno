@@ -9,8 +9,8 @@
         [techno.drums]))
 
 (comment
-  (let [parts [:whistle]
-        rm []
+  (let [parts []
+        rm [:kicks :whistle :hat :motif :zap :clap]
         comp track2]
     (doseq [p rm]
       (s/rm-p core/player p)
@@ -19,27 +19,27 @@
       (s/add-p core/player (comp p) p)
       )
     )
-  (s/set-arg core/player :d :amp 0.7)
+
   (let [comp track2
-        parts [:harmony]                        ;(keys comp)
+        parts [:bells]                        ;(keys comp)
         ]
     (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
     )
-  )
-(def mystery
-  {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
-            b (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:Bb4])
-            c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
-            d (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:Bb4])]
-        (s/phrase-p
-         piano
-         [a b a b a b a b a b
-          c d c d c d c d c d c d]
-         0.25
-         0
-         [:coef 0.01]))
-   }
-  )
+
+  (def mystery
+    {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
+              b (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:Bb4])
+              c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
+              d (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:Bb4])]
+          (s/phrase-p
+           piano
+           [a b a b a b a b a b
+            c d c d c d c d c d c d]
+           0.25
+           0
+           [:coef 0.01]))
+     }
+    ))
 
   (def arpeggi
     {:a (s/phrase-p
@@ -122,13 +122,15 @@
            [[:D5 :F4] [:E5 :G4] :1 [:D5 :F4] [:E5 :G4] :2
             [:D5 :F4] [:E5 :G4] :3]
            0.25 0 [:amp 0.5 :atk 0.01])
-   :whistle {
-             1 [whistle [:freq1 (midi->hz (note :D5)) :freq2 (midi->hz (note :A6)) :dur 3 :amp 0.3]]
-             8 [whistle [:freq1 (midi->hz (note :A6)) :freq2 (midi->hz (note :E5)) :dur 3 :amp 0.3]]
-             12.75 []}
+   :whistle (let [a [:freq1 (midi->hz (note :D5)) :freq2 (midi->hz (note :A6)) :dur 3 :amp 0.3]
+                  b [:freq1 (midi->hz (note :A6)) :freq2 (midi->hz (note :E5)) :dur 3 :amp 0.3]]
+              (s/build-rest-p
+               [[whistle a] :27 [whistle b] :19]
+               0.25 0))
+
    :kicks (let [k "Kick-01" s "Snr03"]
             (build-from-kits
-             [:Kit3-Acoustic :Kit16-Electro]
+             [:Kit16-Electro]
              [[k [dub-kick [100 :amp 1]]] :3]
              0.25))
    :sdst (let [c1 "ClHat02" c2 "ClHat01" a [:amp 0]]
@@ -137,20 +139,19 @@
             [[c1] :2 [c1] :2 [c1] :1 [c1] [c2] [c1] :5]
             0.25))
    :hat (drum-p [:Kit16-Electro]
-            [:2 :o :1])
-   :sdst2 (let [s3 "SdSt-03"
-                s6 "SdSt-06"
-                s7 "SdSt-07"
-                s4 "SdSt-04"]
-           (drum-pattern
-            [:Kit3-Acoustic]
-            [[s6] :2 [s6] :2 [s6] :1 [s6] [s7] [s6] :5]
-            0.25 [:amp 0.6]))
-   ;; :f (let []
-   ;;      (s/phrase-p
-   ;;       plk-bass
-   ;;       [:D3 :G3 :C3 :A3]
-   ;;       0.25 4 [:dur 2]))
+                [:2 :o :1])
+   :kick2 (drum-p [:Kit4-Electro] [:k2 :3 :k2 :3 :k2 :k2 :2 :k2 :3])
+   :clap (drum-p [:Kit16-Electro] [:12 [:cl1 :cl2] :3])
+   :zap (let [z1 [zap [(midi->hz (note :Eb3)) (midi->hz (note :Eb2)) :dur 0.2 :amp 2]]
+              z2 [zap [(midi->hz (note :F3)) (midi->hz (note :F2)) :dur 0.2 :amp 2]]]
+            (drum-p [:Kit4-Electro] [z1 :1 z2 z2 :4]))
+   :motif (let [a [:D4 :E4 :C5]
+               ;b [:D4 :E4 :B4]
+               b [:C4 :D4 :A4]]
+            (s/phrase-p
+             reverb-test
+             (concat a a a a a a a a b b b b b b b b)
+             0.25 0 [:amp 1 :t 2]))
    }
   )
 

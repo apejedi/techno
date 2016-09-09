@@ -261,36 +261,39 @@
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :KurzweilKit08)))))
+                          (vals (group-samples (drum-kits :KurzweilKit07)))))
 
 
 
-  (let [z1 [zap [(midi->hz (note :Eb3)) :amp 0.3]]
-        z2 [zap [(midi->hz (note :F3)) :amp 0.3]]
-        base {1.75 []}
-        parts {
-               ;; :test [(drum-p [:KurzweilKit08] [:p3 [:amp 2] :p3 :1 :p2])]
-               ;; :tr [(drum-p [:Kit4-Electro] [:o1 :o1 :1 :o2 :1])]
-               ;:whistle [(drum-p [:whistles] [:w5 [:end 0.1] :3 :w6])]
-               :kick [(drum-p [:Kit4-Electro] [:k1 :3])]
-               :cl [(drum-p [:Kit4-Electro] [:c1 :1 :c1 :c1 :1 :c2 :c3])]
-               :clap [(drum-p [:Kit16-Electro] [:cl1]) [false 2 0.25]]
-               ;:hat [(drum-p [:Kit4-Electro] [:7 :o1])]
-               ;; :zap [(drum-p [:Kit4-Electro] [z1 z2])]
-               ;:snr [(drum-p [:Kit4-Electro] [:3 :s3 :4 :s2])]
-               ;:tamb [(drum-p [:Kit8-Vinyl] [:tam :1 :tam]) [false 0 0.25]]
-               ;; :shkr [(drum-p [:Kit8-Vinyl] [:shkr3 :shkr1 :2]) [false 0 0.25]]
-               }
-        rm []]
-    (doseq [[k [v args]] parts]
-      (s/add-p core/player
-               (apply s/fit-p (concat (vector base v) args))
-               k)
-      )
-    (doseq [r rm]
-      (s/rm-p core/player r)
-      )
+
+
+
+(let []
+      base {1.75 []}
+      parts {
+             ;; :test [(drum-p [:KurzweilKit08] [:p3 [:amp 2] :p3 :1 :p2])]
+             ;; :tr [(drum-p [:Kit4-Electro] [:o1 :o1 :1 :o2 :1])]
+                                        ;:whistle [(drum-p [:whistles] [:w5 [:end 0.1] :3 :w6])]
+             ;:kick [(drum-p [:Kit4-Electro] [:k1 :3])]
+             ;:cl [(drum-p [:Kit4-Electro] [:c1 :2 :c1 :2 :c1 :1 :c2 :c2 :c1 :5])]
+                                        ;:hat [(drum-p [:Kit4-Electro] [:7 :o1])]
+                                        ;:snr [(drum-p [:KurzweilKit07 :Kit4-Electro] [:2 [:s2 :s3 :s4]])]
+                                        ;:tamb [(drum-p [:Kit8-Vinyl] [:tam :1 :tam]) [false 0 0.25]]
+             ;; :shkr [(drum-p [:Kit8-Vinyl] [:shkr3 :shkr1 :2]) [false 0 0.25]]
+             }
+      rm []]
+  (doseq [[k [v args]] parts
+          args (if args args [[false 0 0.25]])
+          ]
+    (s/add-p core/player
+             (apply s/fit-p (concat (vector base v) args))
+             k)
     )
+  (s/set-arg core/player :sdst :amp 0.4)
+  (doseq [r rm]
+    (s/rm-p core/player r)
+    )
+  )
 
 
 

@@ -150,6 +150,12 @@
                [iv v vi i :15]
                0.25 15)) :motif)
     )
+
+  (s/add-p
+   core/player
+
+   :motif)
+  (s/set-arg core/player :harmony :amp 0.2)
   (s/add-p core/player motif :motif)
   (s/add-p core/player coffee :harmony)
   (s/add-p core/player untitled :harmony)
@@ -161,6 +167,14 @@
     [:Eb2 [:freq2 (note :Eb3)] :2 :Bb2 [:freq2 (note :Bb3)]]
     0.25 0 [:dur 0.3 :amp 6])
    2)
+
+  (s/add-p
+   core/player
+   (s/phrase-p
+    bpfsaw
+    [:A4 :B4 :D3 :C3 :B3]
+    0.25 3)
+   :motif3)
   (s/add-p
    core/player
    (fn [b]

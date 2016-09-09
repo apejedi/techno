@@ -617,31 +617,33 @@
                        ))))
 
 (defn mod-actions [sequencer pattern f]
-  (swap! patterns (fn [p]
-                     (let [id (to-sc-id sequencer)
-                           key (if (keyword? pattern) pattern
-                                   (first (first
-                                           (filter (fn [[k v]]
-                                                     (= (v :data)  pattern)) (p id)))))
-                           cur-data (get-in p [id key :data])
-                           is-atom (instance? clojure.lang.Atom cur-data)
-                           data (get-val-if-ref (if cur-data cur-data {}))
-                           is-map (map? data)
-                           offsets (filter #(sequential? (get data %)) (keys data))]
-                       (if (and (not (nil? key)) is-map)
-                         (let [res (reduce (fn [m k]
-                                             (assoc m k
-                                                    (let [actions (get data k)]
-                                                      (mapcat f (partition 2 actions))
-                                                      )))
-                                           data offsets)]
-                           (if is-atom
-                             (do (swap! cur-data (fn [_] res))
-                                 p)
-                             (assoc-in p [id key :data]
-                                       res)))
-                         p)
-                       ))))
+  (if (contains? (get @patterns (to-sc-id sequencer)) pattern)
+      (swap! patterns (fn [p]
+                        (let [id (to-sc-id sequencer)
+                              key (if (keyword? pattern) pattern
+                                      (first (first
+                                              (filter (fn [[k v]]
+                                                        (= (v :data)  pattern)) (p id)))))
+                              cur-data (get-in p [id key :data])
+                              is-atom (instance? clojure.lang.Atom cur-data)
+                              data (get-val-if-ref (if cur-data cur-data {}))
+                              is-map (map? data)
+                              offsets (filter #(sequential? (get data %)) (keys data))]
+                          (if (and (not (nil? key)) is-map)
+                            (let [res (reduce (fn [m k]
+                                                (assoc m k
+                                                       (let [actions (get data k)]
+                                                         (mapcat f (partition 2 actions))
+                                                         )))
+                                              data offsets)]
+                              (if is-atom
+                                (do (swap! cur-data (fn [_] res))
+                                    p)
+                                (assoc-in p [id key :data]
+                                          res)))
+                            p)
+                          ))))
+  nil)
 
 (defn set-amp [sequencer pattern amp]
   (mod-actions
