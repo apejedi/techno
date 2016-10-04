@@ -265,7 +265,7 @@
     (out [0 1] sig)
    )
   )
-(defsynth bass-synth [freq 200 amp 1 release 1 detune 3]
+(defsynth bass-synth [freq 200 attack 0.1 amp 1 release 1 detune 3]
   (let [freq-v (+
                 (lin-exp (lf-noise0:kr 2) -1 1 0.1 detune)
                   freq)

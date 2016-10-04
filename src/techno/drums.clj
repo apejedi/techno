@@ -176,7 +176,7 @@
   (do
     (s/rm-p core/player :harmony)
     (s/rm-p core/player :electro)
-    (s/rm-p core/player :motif)
+    (s/rm-p core/player :pulse)
     ;(s/rm-p core/player :arp)
     (s/rm-p core/player :bass-line)
     )

@@ -2,7 +2,8 @@
   (:use [overtone.core]
         [techno.sequencer :as s]
         )
-  )
+
+  (:require [techno.core :as core]))
 (defonce s-player (atom nil))
 (declare player)
 (comment
@@ -18,6 +19,9 @@
   (kill player)
   )
 
+(defn get-patterns []
+   (s/get-p player)
+  )
 (defn start-player []
   (let [player @s-player]
       (if (or (nil? player) (not (node-active? player)))

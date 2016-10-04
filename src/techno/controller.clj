@@ -26,12 +26,15 @@
 
 (defonce cur-pattern (atom {}))
 
+(defonce cur-amp (atom nil))
+
 (defonce p-map (atom {}))
 
 (defonce sample1 (atom {}))
 
 (defonce client (atom (osc-client "192.168.0.19" 9000)))
                                         ;(swap! client (fn [_] (osc-client "172.20.10.5" 9000)))
+;(swap! client (fn [_] (osc-client "192.168.1.114" 9000)))
 
 ;(swap! client (fn [_] (osc-client "192.168.0.19" 9000)))
 (defonce server-client (atom (osc-client "127.0.0.1" 4410)))
@@ -157,6 +160,27 @@
         @sketch (range 1 (inc (count (keys @sketch))))
         ))
   (osc-handle
+   @server "/sketch/param1"
+   (fn [msg]
+     (let [arg (first (:args msg))]
+       (if (keyword? @cur-pattern)
+         (do
+           (swap! cur-amp (fn [_] arg))
+           (osc-send @client (str "/sketch/amplabel") (str arg))
+           ))
+       )))
+  (osc-handle
+   @server "/sketch/applyamp"
+   (fn [msg]
+     (let [arg (first (:args msg))]
+       (if (> arg 0)
+         (if (keyword? @cur-pattern)
+           (do
+             (s/set-arg @core/s-player @cur-pattern :amp @cur-amp)
+             ))
+         )
+       )))
+  (osc-handle
    @server "/sketch/addp"
    (fn [msg]
      (let [arg (first (:args msg))]
@@ -271,17 +295,21 @@
   )
 (comment
   (osc-send @client "/sketch/push1/color" "blue")
-  (osc-send @client "/synth1/paramlabel1" "asd")
+  (osc-send @client "/synth1/curamplabel" "asd")
   (osc-send @client "/drum/10/label1" "test")
   (osc-listen @server (fn [msg] (println "Listener: " msg)) :debug)
   (osc-rm-all-listeners @server)
-  (let [sc  (scale :C4 :minor)
-        comp track2]
+  (let [sc  (scale :Bb4 :major)
+        comp house2]
     (swap!
      sketch
      (fn [_]
-       (zipmap (keys comp) (map #(atom %) (vals comp)))
-       ))
+       (merge
+        ;{:beat1 (:beat1 track2)}
+        (zipmap (keys comp) (map #(atom %) (vals comp)))
+        )
+       )
+     )
     (swap!
      synths
      (fn [_]
@@ -295,32 +323,38 @@
            :scale sc}}))
     (load-handlers)
     )
+  (kill trigger-synth)
   (s/rm-p @core/s-player :main3)
-  (s/set-sp @core/s-player 2)
+  (do
+    (s/set-sp @core/s-player 2)
+    (s/rm-p @core/s-player :main3)
+    )
+  (s/set-arg )
   (s/set-amp @core/s-player :sdst 0.5)
-  )
 
-    ;; (let [kit :Kit3-Acoustic
-    ;;       samples (group-samples (kit drum-kits))
-    ;;       clear-labels #(for [row (range 10 0 -1) col (range 1 13)]
-    ;;                      (doall
-    ;;                       (osc-send @client (str "/drum/" row "/label" col) "")))]
-    ;;   (clear-labels)
-    ;;   (doall
-    ;;    (map (fn [row [group sounds]]
-    ;;           (map
-    ;;            (fn [col [k sound]]
-    ;;              (let [num (last (re-seq #"\d+" (name k)))
-    ;;                    group (if (nil? group)
-    ;;                            (last (butlast (re-seq #"[A-Za-z]+" (name k))))
-    ;;                            group)]
-    ;;                (handle-samples
-    ;;                 {row {col {:value sound :label (str (name group) num)}}})
-    ;;                )
-    ;;              )
-    ;;            (range 1 (inc (count sounds)))
-    ;;            sounds)
-    ;;           )
-    ;;         (range 10 (- 10 (inc (count samples))) -1)
-    ;;         samples))
-    ;;     )
+
+  ;; (let [kit :Kit3-Acoustic
+  ;;       samples (group-samples (kit drum-kits))
+  ;;       clear-labels #(for [row (range 10 0 -1) col (range 1 13)]
+  ;;                      (doall
+  ;;                       (osc-send @client (str "/drum/" row "/label" col) "")))]
+  ;;   (clear-labels)
+  ;;   (doall
+  ;;    (map (fn [row [group sounds]]
+  ;;           (map
+  ;;            (fn [col [k sound]]
+  ;;              (let [num (last (re-seq #"\d+" (name k)))
+  ;;                    group (if (nil? group)
+  ;;                            (last (butlast (re-seq #"[A-Za-z]+" (name k))))
+  ;;                            group)]
+  ;;                (handle-samples
+  ;;                 {row {col {:value sound :label (str (name group) num)}}})
+  ;;                )
+  ;;              )
+  ;;            (range 1 (inc (count sounds)))
+  ;;            sounds)
+  ;;           )
+  ;;         (range 10 (- 10 (inc (count samples))) -1)
+  ;;         samples))
+  ;;     )
+  )

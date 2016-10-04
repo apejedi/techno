@@ -9,9 +9,10 @@
         [techno.drums]))
 
 (comment
-  (let [parts []
-        rm [:kicks :whistle :hat :motif :zap :clap]
-        comp track2]
+  (let [parts [:harmony]
+        rm []
+        comp house2
+        ]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -21,12 +22,12 @@
     )
 
   (let [comp track2
-        parts [:bells]                        ;(keys comp)
-        ]
+        parts (keys comp)]
     (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
     )
+  )
 
-  (def mystery
+(def mystery
     {:a (let [a (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:A4])
               b (concat (mapcat #(vector % [:amp 0.2]) (chord :G4 :minor)) [:Bb4])
               c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
@@ -39,7 +40,7 @@
            0
            [:coef 0.01]))
      }
-    ))
+    )
 
   (def arpeggi
     {:a (s/phrase-p
@@ -142,11 +143,12 @@
                 [:2 :o :1])
    :kick2 (drum-p [:Kit4-Electro] [:k2 :3 :k2 :3 :k2 :k2 :2 :k2 :3])
    :clap (drum-p [:Kit16-Electro] [:12 [:cl1 :cl2] :3])
+
    :zap (let [z1 [zap [(midi->hz (note :Eb3)) (midi->hz (note :Eb2)) :dur 0.2 :amp 2]]
               z2 [zap [(midi->hz (note :F3)) (midi->hz (note :F2)) :dur 0.2 :amp 2]]]
-            (drum-p [:Kit4-Electro] [z1 :1 z2 z2 :4]))
-   :motif (let [a [:D4 :E4 :C5]
-               ;b [:D4 :E4 :B4]
+          (drum-p [:Kit4-Electro] [z1 :1 z2 z2 :4]))
+   :motif (let [;a [:D4 :E4 :C5]
+               a [:D4 :E4 :B4]
                b [:C4 :D4 :A4]]
             (s/phrase-p
              reverb-test
@@ -243,7 +245,7 @@
            (let [notes (concat (chord-degree :ii :C4 :minor 4) (chord-degree :iii :C4 :minor 4)
                                (chord-degree :v :C4 :minor 4))]
              [(choose [piano]) [(choose notes) :dur 1 :amp 0.2 :coef 0.05]
-              (choose [piano]) [(choose notes) :dur 1 :amp 0.15 :coef 0.05]]
+              (choose [flute]) [(choose notes) :dur 1 :amp 0.15 :coef 0.05]]
              )))
    :c (s/phrase-p
        overpad
@@ -252,11 +254,9 @@
        {:refresh 1 :reverse 0.3 :sputter 0.8 :sputter-amt 0.2}
        )
    :d (drum-p [:Kit10-Vinyl :Kit15-Electro] [:p1 :1 :c1])
+
    :e (drum-p [:Kit10-Vinyl] [:p2 :p3 :2 :p4 :3])
-   :toms (s/m-phrase
-            {:refresh 0 :sputter 0.5 :sputter-amt 0.3 :reverse 0.5}
-            (s/fit-p {1.75 []} (drum-p [:KurzweilKit08] [:t3 :1 :t4 :t3 :1 :t4 :1]))
-            0.25)
+   :toms (s/fit-p {1.75 []} (drum-p [:KurzweilKit08] [:t3 :1 :t4 :t3 :1 :t4 :1]))
    :beat1 (s/fit-p {1.75 []}
                    (drum-p [:KurzweilKit07] [:1 :sd :1 :sd :1]))
    :beat2 (s/fit-p {1.75 []}
@@ -264,8 +264,8 @@
    :shkr (s/fit-p {1.75 []} (drum-p [:Kit8-Vinyl] [:shkr3 :shkr3 :shkr1 :1]))
    :congas (gen-beat (:four-beat @beats)
              (map #(vector % [:amp 1]) (concat (vals (drum-kits :Congas))
-                                                 (vals (drum-kits :Bongos))
-                                                 ))
+                                               (vals (drum-kits :Bongos))
+                                               ))
              12
              true true 1 0.3 0)
    :main1 (drum-p [:Kit10-Vinyl] [[:k1 :c1] :k4 :p4 :1 :s2 :1 :p3 :5 :s2 :3])
@@ -494,14 +494,18 @@
            bass-synth
            [[:E4 :B3] [:A4 [:amp 0.3] :F4 [:amp 0.3]] :34]
            0.25 32 [:release 6 :amp 0.4 :detune 4])
-   :kick (drum-pattern
+   :motif3 (s/phrase-p
+            reverb-test
+            [:A4 :B4 :D4 :C4 :B4]
+            0.25 2)
+   :kick (drum-p
           [:Kit4-Electro :Kit3-Acoustic]
-          [[k1] :1 [o1] :1]
+          [:k1 :1 :o1 [:amp 0.3] :1]
           0.25)
-   :cl (drum-pattern
-        [:Kit16-Electro]
-        [[c1] [c1] [c2] :2 [c1] :2]
-        0.25 [:amp 0.3])
+   :cl  (drum-pattern
+           [:Kit16-Electro]
+           [[c1] [c1] [c2] :2 [c1] :2]
+           0.25 [:amp 0.3])
    :snr (drum-pattern
          [:Kit3-Acoustic :Kit16-Electro :Kit4-Electro]
          [:2 [s3] :1]

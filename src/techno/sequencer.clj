@@ -596,7 +596,7 @@
 (defn get-p
   ([] patterns)
   ([sequencer]
-   (keys (get patterns (to-sc-id sequencer) {})))
+   (keys (get @patterns (to-sc-id sequencer) {})))
   )
 
 (defn set-sp [sequencer speed]
@@ -617,7 +617,8 @@
                        ))))
 
 (defn mod-actions [sequencer pattern f]
-  (if (contains? (get @patterns (to-sc-id sequencer)) pattern)
+  (if (and (contains? (get @patterns (to-sc-id sequencer)) pattern)
+           (map? (get-val-if-ref (get-in @patterns [(to-sc-id sequencer) pattern :data]))))
       (swap! patterns (fn [p]
                         (let [id (to-sc-id sequencer)
                               key (if (keyword? pattern) pattern
@@ -752,17 +753,14 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
 (defn dump-p [sequencer & parts]
   (let [data (get @patterns (to-sc-id sequencer))
         parts (if parts parts (keys data))
-        to-fit {(get-in @sequencer-data [(to-sc-id sequencer) :size]) nil}
+        to-fit {(get-in @sequencer-data [(to-sc-id sequencer) :size]) []}
         p (apply merge-p (map #(get % :data) (conj (vals (select-keys data parts)) to-fit)))]
     (pp-pattern p))
   )
 
 
 (defn stretch-p [pattern & [new-size]]
-  (let [step (reduce (fn [s b]
-                       (min s (if (= (double (mod b (int b))) 0.0)
-                                b
-                                (mod b (int b))))) 1 (keys pattern))
+  (let [step (get-step pattern)
         tail (apply max (keys pattern))
         quantize #(+ 1 (/ (- % 1) step))
         new-map (zipmap (map quantize (keys pattern)) (vals pattern))

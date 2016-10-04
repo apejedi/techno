@@ -261,40 +261,56 @@
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :KurzweilKit07)))))
+                          (vals (group-samples (drum-kits :Kit3-Acoustic)))))
 
 
 
 
 
 
-(let []
-      base {1.75 []}
-      parts {
-             ;; :test [(drum-p [:KurzweilKit08] [:p3 [:amp 2] :p3 :1 :p2])]
-             ;; :tr [(drum-p [:Kit4-Electro] [:o1 :o1 :1 :o2 :1])]
-                                        ;:whistle [(drum-p [:whistles] [:w5 [:end 0.1] :3 :w6])]
-             ;:kick [(drum-p [:Kit4-Electro] [:k1 :3])]
-             ;:cl [(drum-p [:Kit4-Electro] [:c1 :2 :c1 :2 :c1 :1 :c2 :c2 :c1 :5])]
+  (let [base {1.75 []}
+        z [zap [(midi->hz (note :C4))]]
+        t [bing [(note :C5) 0.001 0.1]]
+        parts {
+               :test [(drum-p [:Kit3-Acoustic] [:cr3 :cr3 :cr3 :cr3]) [false 0 0.25]]
+               ;; :zap [(drum-p [:Kit4-Electro] [z :3 z z :2 z])]
+               :kick [(drum-p [:Kit4-Electro] [:k1 :3])]
+               ;; :clp [(drum-p [:Kit16-Electro] [:cl1 :2 :cl1 :2 :cl1 :2]) [true 0 0.25]]
+               ;; :cl [(drum-p [:Kit4-Electro] [:c1 :2 :c1 :2 :c1 :1 :c2 :c2 :c1 :5])]
+                                        ;:kick2 [(drum-p [:Kit4-Electro] [:k2 :3 :k2 :3 :k2 :k2 :2 :k2 :3])]
+               ;; :tick [(drum-p [:Kit4-Electro] [t :2 t :1])]
                                         ;:hat [(drum-p [:Kit4-Electro] [:7 :o1])]
-                                        ;:snr [(drum-p [:KurzweilKit07 :Kit4-Electro] [:2 [:s2 :s3 :s4]])]
-                                        ;:tamb [(drum-p [:Kit8-Vinyl] [:tam :1 :tam]) [false 0 0.25]]
-             ;; :shkr [(drum-p [:Kit8-Vinyl] [:shkr3 :shkr1 :2]) [false 0 0.25]]
-             }
-      rm []]
-  (doseq [[k [v args]] parts
-          args (if args args [[false 0 0.25]])
-          ]
-    (s/add-p core/player
-             (apply s/fit-p (concat (vector base v) args))
-             k)
+               ;; :t [(drum-p [:KurzweilKit07 :Kit4-Electro] [:1 :t2 :t2 :1 :t1])]
+               ;; :tamb [(drum-p [:Kit8-Vinyl] [:tam :tam :1 :tam :1 :tam]) [false 1 0.25]]
+               :snr [(drum-p [:Kit8-Vinyl] [:3 :snr2 :1]) [false 0 0.25]]
+               ;; :clhat [(drum-p [:Kit8-Vinyl] [:c1]) [false 0 0.25]]
+               }
+        rm [:kick]]
+    (doseq [[k [v args]] parts]
+      (let [args (if args args [false 0 0.25])]
+          (s/add-p core/player
+                   (apply s/fit-p (concat (vector base v)
+                                          args))
+                   k))
     )
-  (s/set-arg core/player :sdst :amp 0.4)
+  ;(s/set-arg @core/s-player :sdst :amp 0.4)
   (doseq [r rm]
     (s/rm-p core/player r)
     )
   )
 
+
+  (s/add-p
+   core/player
+   (gen-beat (:four-beat @beats)
+             (map #(vector % [:amp 1.5]) (concat (vals (drum-kits :tabla))
+                                          (vals (:Tom (group-samples (drum-kits :KurzweilKit08))))
+                                          ))
+             12
+             true true 0.5 0.5 1)
+   :main)
+
+  (s/rm-p core/player :main)
 
 
   (s/add-p
@@ -352,16 +368,16 @@
        [[k c] [c] [k c] [c] [s c] [c]
         [k c] [s o] [c] [s c] [k c] [s c] [s c]
         [k o] [c] [s c]]
-       0.25 [:amp 0.5]))))
+       0.25 [:amp 0.5])))
 
-(def techno1
-  (let [k "Kick02"
-        s "Snr03" c "ClHat02" o "OpHat" cl "Clap02"]
-    (build-from-kits
-     [:Kit16-Electro]
-     [[k] :1 [o] :1 [k s] :1 [o] :1
-      [k] [c] [o] :1 [k s] :1 [k o] :1]
-     0.25 [:amp 0.5])))
+  (def techno1
+    (let [k "Kick02"
+          s "Snr03" c "ClHat02" o "OpHat" cl "Clap02"]
+      (build-from-kits
+       [:Kit16-Electro]
+       [[k] :1 [o] :1 [k s] :1 [o] :1
+        [k] [c] [o] :1 [k s] :1 [k o] :1]
+       0.25 [:amp 0.5]))))
 
 (def son-clave
   (let [k "Kick-03" r "Rim" c "ClHat"]

@@ -121,9 +121,9 @@
       rise-pad
       (map midi->hz
            (chord-degree
-            (choose [:i :iv :v :vi])
-            :C4
-            (choose [:minor]) 4))
+            (choose [:i :v :vi :iii])
+            :B3
+            :major 4))
       [:coef 0.01 :amp 0.2 :dur 2 :attack 0.1 :release 4 :t 7]
       ))
    )
@@ -153,28 +153,98 @@
 
   (s/add-p
    core/player
+   (s/phrase-p
+    rise-fall-pad
+    [(map midi->hz (chord :C3 :M7)) (map midi->hz (chord :G3 :M7)) :34]
+    0.25 32 [:t 5])
+   :harmony)
 
+  (s/add-p
+   core/player
+   (fn [b]
+     (if (or (integer? b) (weighted-coin 0.3))
+       [piano [(choose (scale :C5 :major)) :dur 3]])
+    )
    :motif)
-  (s/set-arg core/player :harmony :amp 0.2)
-  (s/add-p core/player motif :motif)
+
+
+  (s/add-p
+   core/player
+   (let [p (fn [_]
+             {:phrase (s/phrase-p
+                       bpfsaw
+                       (conj (vec (chord-degree (choose [:i :iv :v :vi]) :A3 :minor 4)))
+                       0.25 0 [:coef 0.01 :dur 0.4 :amp 0.7])
+              :count 0})
+         mem (atom (p nil))]
+     (fn
+       ([] [1.75 0.25])
+       ([b]
+        (if (or (>= (:count @mem) 12) (= (rand-int 10) 3))
+          (swap! mem p)
+          (swap! mem (fn [m] (assoc m :count (inc (:count m)))))
+          )
+        (get-in @mem [:phrase b]))
+       )
+     )
+   :motif4)
+
+
+
+  (s/add-p
+   core/player
+   (s/fit-p
+    {1.75 []}
+    (s/phrase-p
+     rise-fall-pad
+     [(chord :D4 :m7) :28 (chord :F4 :M7) :28 (chord :C4 :M7) :28]
+     0.25 0 [:coef 0.01 :release 5 :attack 1 :amp 0.3]))
+   :harmony)
+
+  (let [a [:D3 :F4]
+        b [:C#3 :E4]
+        c [:C3 :E4]
+        e [:B3 :D4]]
+    (s/play-p
+     (s/phrase-p
+      bass-synth
+      [a a a a a a b b b b b c c c c c e e e e e]
+      ;[c e]
+      0.25 1 [:attack 1 :release 1])
+     )
+    )
+
+
+  (s/add-p
+   core/player
+   (fn
+     ([] [12.75 0.25])
+     ([b]
+      (if (= b 1)
+        (s/chord-p
+         overpad
+          (chord-degree (choose [:i :vi :iii :iv]) :C4 :major 4)
+         ;(map midi->hz (chord-degree (choose [:i :ii :iii :vi]) :C4 :major 4))
+          [:coef 0.01 :t 10 :attack 5 :release 5 :amp 0.4])
+        )))
+   :harmony)
+
+  (s/set-arg core/player :click :amp 0.2)
+
   (s/add-p core/player coffee :harmony)
   (s/add-p core/player untitled :harmony)
   (s/add-p core/player untitled-f :motif)
   (s/add-p core/player rnd-chord :motif)
-  (s/play-p
-   (s/phrase-p
-    zap
-    [:Eb2 [:freq2 (note :Eb3)] :2 :Bb2 [:freq2 (note :Bb3)]]
-    0.25 0 [:dur 0.3 :amp 6])
-   2)
+
 
   (s/add-p
    core/player
    (s/phrase-p
-    bpfsaw
+    bing
     [:A4 :B4 :D3 :C3 :B3]
     0.25 3)
-   :motif3)
+   :motif3
+   )
   (s/add-p
    core/player
    (fn [b]
