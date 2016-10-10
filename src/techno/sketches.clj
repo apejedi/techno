@@ -11,7 +11,7 @@
 (comment
   (let [parts [:harmony]
         rm []
-        comp house2
+        comp track2
         ]
     (doseq [p rm]
       (s/rm-p core/player p)
@@ -21,9 +21,9 @@
       )
     )
 
-  (let [comp track2
+  (let [comp arpeggi
         parts (keys comp)]
-    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1))
     )
   )
 
@@ -92,12 +92,12 @@
               pattern [a a a b b a a b b a a a
                        c c c d d c c d d c c c
                        e e e f f f f f]
-              pattern (map #(map midi->hz %) pattern)
+              ;pattern (map #(map midi->hz %) pattern)
               ]
           (s/phrase-p
-           klang-test
+           piano
            pattern
-           0.25 0 [:coef 0.01 :atk 0.01 :dur 0.5])
+           0.25 0 [:coef 0.01 :atk 0.01 :dur 2])
           )})
 
   (def scatterbrain

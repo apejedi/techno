@@ -255,16 +255,6 @@
                                 w (nth steps (dec beat))]
                             (step-beat w step)))
               counter (get @pattern-counters k)
-              ;; meh (.compareAndSet counter 0 (int beat))
-              ;; final-beat (if wrap
-              ;;              (step-beat (.get counter) step)
-              ;;              stepped-beat)
-              ;; orig-beat (if wrap
-              ;;             (.get counter)
-              ;;             beat)
-              ;; next-beat (if (>= (.get counter) raw-size)
-              ;;             (.getAndSet counter 1)
-              ;;             (.incrementAndGet counter))
               final-beat (if (get p :use-counter false)
                            (let [meh (.compareAndSet counter 0 (int beat))]
                              (if wrap
@@ -414,11 +404,11 @@
            attrs (if is-atom (merge attrs {:watcher watcher-key}) attrs)]
        (if (contains? cur-val key)
          (rm-p sequencer key))
-       (swap! patterns (fn [p]
-                         (assoc p id
-                                (assoc cur-val key (merge {:data pattern} attrs))
-                                )
-                         ))
+       (swap! patterns
+              (fn [p]
+                (assoc p id
+                       (assoc cur-val key (merge {:data pattern} attrs))
+                       )))
        (swap! pattern-counters
               (fn [c]
                 (assoc c key (AtomicInteger. 0))

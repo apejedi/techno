@@ -272,7 +272,7 @@
         sig (var-saw [freq-v freq-v] 0 1)
         sig2 (* 0.02 (saw [freq freq]))
         sig (resonz sig freq)
-        env (env-gen (perc 0.1 release) :action FREE)
+        env (env-gen (perc attack release) :action FREE)
         sig (+ sig sig2)
         sig (* sig amp env)
         ]

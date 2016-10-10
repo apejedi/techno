@@ -270,22 +270,22 @@
 
   (let [base {1.75 []}
         z [zap [(midi->hz (note :C4))]]
-        t [bing [(note :C5) 0.001 0.1]]
+        t [bing [(note :C5) 0.001 0.1 1.5]]
         parts {
                :test [(drum-p [:Kit3-Acoustic] [:cr3 :cr3 :cr3 :cr3]) [false 0 0.25]]
-               ;; :zap [(drum-p [:Kit4-Electro] [z :3 z z :2 z])]
-               :kick [(drum-p [:Kit4-Electro] [:k1 :3])]
-               ;; :clp [(drum-p [:Kit16-Electro] [:cl1 :2 :cl1 :2 :cl1 :2]) [true 0 0.25]]
+               ;:zap [(drum-p [:Kit4-Electro] [z :3 z z :2 z])]
+               :kick [(drum-p [:Kit4-Electro] [:k2 :3])]
+               ;:clp [(drum-p [:Kit16-Electro] [:cl1 :2 :cl1 :2 :cl1 :2]) [true 0 0.25]]
                ;; :cl [(drum-p [:Kit4-Electro] [:c1 :2 :c1 :2 :c1 :1 :c2 :c2 :c1 :5])]
                                         ;:kick2 [(drum-p [:Kit4-Electro] [:k2 :3 :k2 :3 :k2 :k2 :2 :k2 :3])]
-               ;; :tick [(drum-p [:Kit4-Electro] [t :2 t :1])]
+               :tick [(drum-p [:Kit4-Electro] [t :2 t :1])]
                                         ;:hat [(drum-p [:Kit4-Electro] [:7 :o1])]
-               ;; :t [(drum-p [:KurzweilKit07 :Kit4-Electro] [:1 :t2 :t2 :1 :t1])]
+               ;:t [(drum-p [:KurzweilKit07 :Kit4-Electro] [:1 :t2 :t2 :1 :t1])]
                ;; :tamb [(drum-p [:Kit8-Vinyl] [:tam :tam :1 :tam :1 :tam]) [false 1 0.25]]
-               :snr [(drum-p [:Kit8-Vinyl] [:3 :snr2 :1]) [false 0 0.25]]
+               ;; :snr [(drum-p [:Kit8-Vinyl] [:3 :snr2 :1]) [false 0 0.25]]
                ;; :clhat [(drum-p [:Kit8-Vinyl] [:c1]) [false 0 0.25]]
                }
-        rm [:kick]]
+        rm [:snr]]
     (doseq [[k [v args]] parts]
       (let [args (if args args [false 0 0.25])]
           (s/add-p core/player
