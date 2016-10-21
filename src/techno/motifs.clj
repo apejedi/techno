@@ -168,28 +168,6 @@
    :motif)
 
 
-  (s/add-p
-   core/player
-   (let [p (fn [_]
-             {:phrase (s/phrase-p
-                       bpfsaw
-                       (conj (vec (chord-degree (choose [:i :ii :v :iv :vi]) :A3 :minor 4)))
-                       0.25 0 [:coef 0.01 :dur 0.4 :amp 1])
-              :count 0})
-         mem (atom (p nil))]
-     (fn
-       ([] [1.75 0.25])
-       ([b]
-        (let [a (get-in @mem [:phrase b])]
-          (if (or (>= (:count @mem) 16) ;(= (rand-int 10) 3)
-                  )
-            (swap! mem p)
-            (swap! mem (fn [m] (assoc m :count (inc (:count m)))))
-            )
-          a))
-       )
-     )
-   :motif4)
 
   (s/play-p
    (s/phrase-p
@@ -199,16 +177,6 @@
     )
    1
    )
-
-  (s/add-p
-   core/player
-   (s/fit-p
-    {1.75 []}
-    (s/phrase-p
-     rise-pad
-     [(chord :D4 :m7) :28 (chord :F4 :M7) :28 (chord :C4 :M7) :28]
-     0.25 0 [:coef 0.01 :t 6 :amp 0.6]))
-   :harmony)
 
   (let [a [:D3 :F4]
         b [:C#3 :E4]
@@ -223,20 +191,6 @@
      )
     )
 
-
-  (s/add-p
-   core/player
-   (fn
-     ([] [12.75 0.25])
-     ([b]
-      (if (= b 1)
-        (s/chord-p
-         bass-synth
-          ;(chord-degree (choose [:i :vi :iii :iv]) :C4 :major 4)
-         (map midi->hz (chord-degree (choose [:i :ii :iii :vi]) :C3 :major 4))
-          [:coef 0.01 :t 10 :attack 8 :release 5 :amp 0.2])
-        )))
-   :harmony2)
 
   (s/set-arg core/player :click :amp 0.2)
 

@@ -11,8 +11,7 @@
 (comment
   (let [parts [:harmony]
         rm []
-        comp track2
-        ]
+        comp x-naut]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -21,9 +20,9 @@
       )
     )
 
-  (let [comp arpeggi
+  (let [comp track2
         parts (keys comp)]
-    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1))
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
     )
   )
 
@@ -149,7 +148,8 @@
           (drum-p [:Kit4-Electro] [z1 :1 z2 z2 :4]))
    :motif (let [;a [:D4 :E4 :C5]
                a [:D4 :E4 :B4]
-               b [:C4 :D4 :A4]]
+               b [:C4 :D4 :A4]
+                ]
             (s/phrase-p
              reverb-test
              (concat a a a a a a a a b b b b b b b b)
@@ -514,4 +514,46 @@
        [:Kit5-Electro]
        [[cl1] :2]
        0.25)
+   })
+
+(def ambient2
+  {:motif (let [p (fn [_]
+                    {:phrase (s/phrase-p
+                              bpfsaw
+                              (vec (chord-degree (choose [:i :ii :v :iv]) :A3 :minor 4))
+                              0.25 0 [:coef 0.01 :dur 0.4 :amp 1])
+                     :count 0})
+                mem (atom (p nil))]
+            (fn
+              ([] [1.75 0.25])
+              ([b]
+               (let [a (get-in @mem [:phrase b])]
+                 (if (or (>= (:count @mem) 16) ;(= (rand-int 10) 3)
+                         )
+                   (swap! mem p)
+                   (swap! mem (fn [m] (assoc m :count (inc (:count m)))))
+                   )
+                 a))
+              )
+            )
+   :harmony (s/fit-p
+             {1.75 []}
+             (s/phrase-p
+              rise-pad
+              [(chord :D4 :m7) :28 (chord :E4 :m7) :28 (chord :C4 :M7) :28]
+              0.25 0 [:coef 0.01 :t 6 :amp 0.4 :dur 4 :atk 0.7]))
+   :bass (fn
+           ([] [12.75 0.25])
+           ([b]
+            (if (= b 1)
+              (s/chord-p
+               bass-synth
+                                        ;(chord-degree (choose [:i :vi :iii :iv]) :C4 :major 4)
+               (map midi->hz (chord-degree (choose [:i :ii :iii :vi]) :C3 :major 4))
+               [:coef 0.01 :t 10 :attack 8 :release 5 :amp 0.07])
+              )))
+   :crash (drum-p [:Kit3-Acoustic] [:cr3 :cr3 :cr3 :cr3])
+   :kick (drum-p [:Kit4-Electro] [:k2 :3])
+   :tick (let [t [bing [(note :C5) 0.001 0.1 1.5]]]
+             (drum-p [:Kit4-Electro] [t :2 t :1]))
    })

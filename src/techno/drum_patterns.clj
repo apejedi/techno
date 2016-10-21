@@ -303,8 +303,10 @@
   (s/add-p
    core/player
    (gen-beat (:four-beat @beats)
-             (map #(vector % [:amp 1.5]) (concat (vals (drum-kits :tabla))
-                                          (vals (:Tom (group-samples (drum-kits :KurzweilKit08))))
+             (map #(vector % [:amp 1.5]) (concat (vals (drum-kits :Congas))
+                                                 ;; (vals (:Tom
+                                                 ;;        (group-samples
+                                                 ;;         (drum-kits :KurzweilKit08))))
                                           ))
              12
              true true 0.5 0.5 1)
