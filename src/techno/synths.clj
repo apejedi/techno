@@ -215,6 +215,26 @@
     (out:ar [0 1] snd))
   )
 
+(definst snare [freq  405 amp  0.3
+   sustain 0.1
+   decay  0.1
+   drum-amp 0.25
+   crackle-amp 40
+   tightness 1000]
+  (let [drum-env  (env-gen (perc 0.005 sustain) :action FREE)
+        drum-osc  (mix (* drum-env (sin-osc [freq (* freq 0.53)])))
+        drum-s3   (* drum-env (pm-osc (saw (* freq 0.85)) 184 (/ 0.5 1.3)))
+        drum      (* drum-amp (+ drum-s3 drum-osc))
+        noise     (* 0.1 (lf-noise0 20000))
+        noise-env (env-gen (perc 0.005 sustain) :action FREE)
+        filtered  (* 0.5 (brf noise 8000 0.1))
+        filtered  (* 0.5 (brf filtered 5000 0.1))
+        filtered  (* 0.5 (brf filtered 3600 0.1))
+        filtered  (* (brf filtered 2000 0.0001) noise-env)
+        resonance (* (resonz filtered tightness) crackle-amp)]
+    (* amp (+ drum resonance))))
+
+
 
 
 (defsynth whistle [freq1 200 freq2 300 dur 5 freq1-sus 0.4 freq2-sus 0.4 mod 10 amp 1]
@@ -321,12 +341,25 @@
 
 
 (defsynth drone-noise [freq 440]
-  (let [freqs (map #(* freq %) [(/ 2 3) (/ 4 5) (/ 1 5)])
+  (let [freqs (map #(* freq %) [2 4 1])
         sig (klank [freqs (repeat (count freqs) (/ 1 (count freqs)))] (pink-noise))
         sig (bpf sig freq)]
     (out:ar [0 1] sig)
     )
   )
+(defsynth wobble-drone [freq 100 wobble 2 amp 1]
+  (let [mod-f (/ freq 2)
+        idx (* 10 (sin-osc wobble))
+        sig (pm-osc freq mod-f idx)
+        sig2 (var-saw freq :width (lin-lin (lf-noise0 3) -1 1 0 1))
+        sig (+ (* amp sig ) (* 0.1 sig2))]
+    (out:ar [0 1] sig)
+    )
+  )
+(def d (wobble-drone))
+(ctl d :freq (midi->hz (note :C2)))
+(ctl d :amp 0.3)
+(kill wobble-drone)
 
 
 

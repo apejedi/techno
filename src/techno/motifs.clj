@@ -187,7 +187,7 @@
       bass-synth
       [a a a a a a b b b b b c c c c c e e e e e]
       ;[c e]
-      0.25 1 [:attack 1 :release 1])
+      0.25 1 [:attack 0.1 :release 0.3])
      )
     )
 

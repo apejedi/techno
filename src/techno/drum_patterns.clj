@@ -218,6 +218,36 @@
         ))
     ))
 
+(defn euclid-p [m n & [rotate-at]]
+  (let [init (vec (concat (repeatedly m #(choose [[:k] [:s]])) (repeat (- n m) [nil])))
+        rotate (fn [scale-sequence offset]
+                 (take (count scale-sequence)
+                       (drop offset (cycle scale-sequence))))]
+    (loop [cur init]
+      (let [big (count (first cur))
+            small (count (last cur))
+            small-cnt (count (filter #(or (< (count %) big) (= % [nil])) cur))
+            can-dist (> small-cnt 1)
+            to-take (min small-cnt (- (count cur) small-cnt))]
+        (if can-dist
+          (recur (vec (concat (map #(vec (concat %1 %2))
+                                   (take to-take cur)
+                                   (take-last to-take cur))
+                              (subvec cur to-take (- (count cur) to-take))
+                              )))
+          (if rotate-at
+            (rotate (flatten cur) rotate-at)
+            (flatten cur)))
+        )
+      )
+    )
+  )
+
+;; (s/add-p core/player
+;;  (drum-p
+;;   [:Kit4-Electro]
+;;   (euclid-p 8 12))
+;;  :a4)
 
 (defn gen-beat [base actions
                 & [size start-on end-on on-prob off-prob pad step]]
@@ -271,21 +301,21 @@
   (let [base {1.75 []}
         z [zap [(midi->hz (note :C4))]]
         t [bing [(note :C5) 0.001 0.1 1.5]]
+        k [kick []]
+        snr [snare [:freq 100 :sustain 0.5 :amp 1]]
         parts {
-               :test [(drum-p [:Kit3-Acoustic] [:cr3 :cr3 :cr3 :cr3]) [false 0 0.25]]
-               ;:zap [(drum-p [:Kit4-Electro] [z :3 z z :2 z])]
-               :kick [(drum-p [:Kit4-Electro] [:k2 :3])]
+               :kick [(drum-p [:Kit4-Electro] [:k2 :1 snr :1])]
+               ;; :zap [(drum-p [:Kit4-Electro] [z :3 z z :2 z])]
                ;:clp [(drum-p [:Kit16-Electro] [:cl1 :2 :cl1 :2 :cl1 :2]) [true 0 0.25]]
-               ;; :cl [(drum-p [:Kit4-Electro] [:c1 :2 :c1 :2 :c1 :1 :c2 :c2 :c1 :5])]
+               ;:cl [(drum-p [:Kit4-Electro] [:c1 :2 :c1 :2 :c1 :1 :c2 :c2 :c1 :5])]
                                         ;:kick2 [(drum-p [:Kit4-Electro] [:k2 :3 :k2 :3 :k2 :k2 :2 :k2 :3])]
-               :tick [(drum-p [:Kit4-Electro] [t :2 t :1])]
                                         ;:hat [(drum-p [:Kit4-Electro] [:7 :o1])]
                ;:t [(drum-p [:KurzweilKit07 :Kit4-Electro] [:1 :t2 :t2 :1 :t1])]
-               ;; :tamb [(drum-p [:Kit8-Vinyl] [:tam :tam :1 :tam :1 :tam]) [false 1 0.25]]
+               ;:tamb [(drum-p [:Kit8-Vinyl] [:tam :tam :1 :tam :1 :tam]) [false 1 0.25]]
                ;; :snr [(drum-p [:Kit8-Vinyl] [:3 :snr2 :1]) [false 0 0.25]]
                ;; :clhat [(drum-p [:Kit8-Vinyl] [:c1]) [false 0 0.25]]
                }
-        rm [:snr]]
+        rm [:tamb]]
     (doseq [[k [v args]] parts]
       (let [args (if args args [false 0 0.25])]
           (s/add-p core/player

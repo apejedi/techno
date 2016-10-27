@@ -16,6 +16,7 @@
                    )))
   (s/set-size player 3.75)
   (s/set-sp player 0.1)
+;  (s/mod-p player :pattern10 :use-counter true)
   (s/set-sp player (/ 120 60))
   (s/set-st player (double (/ 1 4)
                            ))
@@ -23,7 +24,9 @@
   )
 
 (defn get-patterns []
-   (s/get-p player)
+  (if (and (not (nil? player)) (node-active? player))
+    (s/get-p player)
+    )
   )
 (defn start-player []
   (let [player @s-player]
