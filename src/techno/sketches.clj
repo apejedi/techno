@@ -9,9 +9,9 @@
         [techno.drums]))
 
 (comment
-  (let [parts [:harmony]
-        rm []
-        comp x-naut]
+  (let [parts []
+        rm [:a]
+        comp tekno]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -20,9 +20,9 @@
       )
     )
 
-  (let [comp track1
+  (let [comp track2
         parts (keys comp)]
-    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1.4))
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
     )
   )
 
@@ -262,12 +262,12 @@
    :beat2 (s/fit-p {1.75 []}
                    (drum-p [:KurzweilKit08] [:sd1 :1 :sd1 :sd1 :sd2 :1 :sd1 :1]))
    :shkr (s/fit-p {1.75 []} (drum-p [:Kit8-Vinyl] [:shkr3 :shkr3 :shkr1 :1]))
-   :congas (gen-beat (:four-beat @beats)
-             (map #(vector % [:amp 1]) (concat (vals (drum-kits :Congas))
-                                               (vals (drum-kits :Bongos))
-                                               ))
-             12
-             true true 1 0.3 0)
+   ;; :congas (gen-beat (:four-beat @beats)
+   ;;           (map #(vector % [:amp 1]) (concat (vals (drum-kits :Congas))
+   ;;                                             (vals (drum-kits :Bongos))
+   ;;                                             ))
+   ;;           12
+   ;;           true true 1 0.3 0)
    :main1 (drum-p [:Kit10-Vinyl] [[:k1 :c1] :k4 :p4 :1 :s2 :1 :p3 :5 :s2 :3])
    :main2 (drum-p [:Kit10-Vinyl] [[:k1 :k4] :1 :p1 :k1 :k2 :p1 :k1 :1])
    :main3 (drum-p [:Kit10-Vinyl] [:k1 :1 :c1 :1 :s2 :1 :c1 :1])
@@ -552,6 +552,10 @@
                (map midi->hz (chord-degree (choose [:i :ii :iii :vi]) :C3 :major 4))
                [:coef 0.01 :t 10 :attack 8 :release 5 :amp 0.07])
               )))
+   :clap (drum-p
+          [:Kit5-Electro]
+          [:4 :cl :3]
+          0.25 [:amp 1])
    :crash (drum-p [:Kit3-Acoustic] [:cr3 :cr3 :cr3 :cr3])
    :kick (drum-p [:Kit4-Electro] [:k2 :3])
    :tick (let [t [bing [(note :C5) 0.001 0.1 1.5]]]

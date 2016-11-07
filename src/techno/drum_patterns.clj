@@ -49,7 +49,7 @@
   (let [args (last patterns)
         step (first (filter number? patterns))
         patterns (take-while #(sequential? %) patterns)
-        args (if step args [])
+        args (if (and step (sequential? args)) args [])
         step (if step step 0.25)]
     (reduce
      (fn [pattern phrase]
@@ -337,11 +337,11 @@
 
 
   (let [patterns [(euclid-p 3 8 :k)
-                  ;; (euclid-p 1 4 :k2 3)
-                  (euclid-p 5 7 :c2 6)
-                  (euclid-p 2 5 :s2 5)
+                  (euclid-p 11 16 :o 5)
+                  (euclid-p 6 8 :c 3)
+                  (euclid-p 2 8 :s2 3)
                   ]]
-    (s/rm-p core/player :all)
+    ;(s/rm-p core/player :all)
     (dotimes [i (count patterns)]
       (s/add-p
        core/player

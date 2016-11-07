@@ -367,7 +367,10 @@
     (out:ar [0 1] sig)
     )
   )
-
+;; (def w (wobble-drone :amp 0.4 :wobble 10))
+;; (ctl w :wobble 3.2)
+;; (ctl w :freq 200)
+;; (kill wobble-drone)
 
 
 (defsynth rise-pad [freq 440 t 3 attack 0.5 amp 1 detune 0.1]
