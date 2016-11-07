@@ -47,8 +47,8 @@
 
 (defn drum-p [kits & patterns]
   (let [args (last patterns)
-        patterns (take-while #(sequential? %) patterns)
         step (first (filter number? patterns))
+        patterns (take-while #(sequential? %) patterns)
         args (if step args [])
         step (if step step 0.25)]
     (reduce
@@ -75,6 +75,7 @@
                                                    (.toLowerCase curn-in) (.toLowerCase n-in)))) (last s))
                                      )
                                    )
+
                                  sounds))
                 get-action (fn [in]
                              (cond (sequential? in) in
@@ -101,7 +102,8 @@
                                  (fn? (first cur))))
                 is-action (or (and (keyword? cur) (nil? (re-find #"^\d" (name cur))))
                               (string? cur)
-                              is-inst)
+                              is-inst
+                              (nil? cur))
                 is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
                 is-arg? #(and (sequential? %) (not (is-space? %)) (keyword? (first %)) (number? (second %)))
                 is-arg (is-arg? cur)
@@ -124,9 +126,12 @@
                 pattern (if (and (= (count (rest phrase)) 0) (> space 0))
                           (assoc pattern (+ beat (* space step)) [])
                           pattern)
-                beat (if (or (is-arg? (second phrase)) (is-space? (second phrase)))
+                beat (if ;(or (is-arg? (second phrase)) (and (not is-space) (is-space? (second phrase))))
+                       (or (is-arg? (second phrase)) (is-space? (second phrase)))
                        beat
-                       (+ beat (* (if (and is-space (nil? prev)) space (inc space)) step)))
+                       (+ beat (* (if (and is-space (nil? prev)) space (inc space)) step))
+                       ;(+ beat (* (if is-space space (inc space)) step))
+                       )
                 beat (if (= (double (mod beat (int beat))) 0.0) (int beat) beat)]
             (if (> (count (rest phrase)) 0)
               (recur (rest phrase) beat pattern cur)
@@ -218,8 +223,8 @@
         ))
     ))
 
-(defn euclid-p [m n & [rotate-at]]
-  (let [init (vec (concat (repeatedly m #(choose [[:k] [:s]])) (repeat (- n m) [nil])))
+(defn euclid-p [m n action & [rotate-at]]
+  (let [init (vec (concat (repeat m [action]) (repeat (- n m) [nil])))
         rotate (fn [scale-sequence offset]
                  (take (count scale-sequence)
                        (drop offset (cycle scale-sequence))))]
@@ -235,19 +240,17 @@
                                    (take-last to-take cur))
                               (subvec cur to-take (- (count cur) to-take))
                               )))
-          (if rotate-at
-            (rotate (flatten cur) rotate-at)
-            (flatten cur)))
+          (map
+           #(if (not (nil? %)) action)
+           (if rotate-at
+             (rotate (flatten cur) rotate-at)
+             (flatten cur))))
         )
       )
     )
   )
 
-;; (s/add-p core/player
-;;  (drum-p
-;;   [:Kit4-Electro]
-;;   (euclid-p 8 12))
-;;  :a4)
+
 
 (defn gen-beat [base actions
                 & [size start-on end-on on-prob off-prob pad step]]
@@ -291,7 +294,7 @@
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :Kit3-Acoustic)))))
+                          (vals (group-samples (drum-kits :Kit15-Electro)))))
 
 
 
@@ -304,7 +307,7 @@
         k [kick []]
         snr [snare [:freq 100 :sustain 0.5 :amp 1]]
         parts {
-               :kick [(drum-p [:Kit4-Electro] [:k2 :1 snr :1])]
+               :kick [(drum-p [:Kit4-Electro] [:k2 :2])]
                ;; :zap [(drum-p [:Kit4-Electro] [z :3 z z :2 z])]
                ;:clp [(drum-p [:Kit16-Electro] [:cl1 :2 :cl1 :2 :cl1 :2]) [true 0 0.25]]
                ;:cl [(drum-p [:Kit4-Electro] [:c1 :2 :c1 :2 :c1 :1 :c2 :c2 :c1 :5])]
@@ -328,6 +331,29 @@
     (s/rm-p core/player r)
     )
   )
+
+
+
+
+
+  (let [patterns [(euclid-p 3 8 :k)
+                  ;; (euclid-p 1 4 :k2 3)
+                  (euclid-p 5 7 :c2 6)
+                  (euclid-p 2 5 :s2 5)
+                  ]]
+    (s/rm-p core/player :all)
+    (dotimes [i (count patterns)]
+      (s/add-p
+       core/player
+       (drum-p
+        [:Kit15-Electro]
+        (nth patterns i)
+        0.25 [])
+       (keyword (str i))))
+    )
+
+  (s/set-amp core/player :2 0.6)
+
 
 
   (s/add-p
@@ -367,11 +393,21 @@
                 8 true true 1 0.1 0)]
     (s/add-p core/player beat :g)
     )
+
+
   (s/add-p
    core/player
-   (drum-p [:Kit16-Electro] [:12 :cl1 :2])
+   (drum-p [:Kit16-Electro] [:k :2])
    :g
    )
+  (s/mod-p core/player  :g :use-counter true)
+
+  (s/add-p
+   core/player
+   (let [b [bing [(note :F#4) :amp 1]]]
+     (drum-p [:Kit3-Acoustic]
+             [:1 b :2 b :1]))
+   :b)
 
   (s/rm-p core/player :test)
   (s/play-p techno1 son-clave 2 3)

@@ -321,6 +321,16 @@
     )
   )
 
+(defsynth clang [freq 100 amp 1 attack 0.1 decay 1 reps 10]
+  (let [sig (ringz (impulse:ar reps) [200 400 234 889] 0.7)
+        sig (sin (sum sig))
+        sig (g-verb sig 5 2 0.7)
+        env (env-gen:kr (perc attack decay) :action FREE)
+        sig (* sig env)
+        ]
+    (out:ar [0 1] sig)
+    )
+  )
 ;; (defsynth chicago-pad2 [freq 440 cutoff 500 amp 1]
 ;;   (let [freq2 (/ (* (/ 3 2) freq) 2)
 ;;         freq3 (/ (* (/ 5 6) freq) 2)
@@ -351,15 +361,12 @@
   (let [mod-f (/ freq 2)
         idx (* 10 (sin-osc wobble))
         sig (pm-osc freq mod-f idx)
-        sig2 (var-saw freq :width (lin-lin (lf-noise0 3) -1 1 0 1))
-        sig (+ (* amp sig ) (* 0.1 sig2))]
+                                        ;sig2 (var-saw freq :width (lin-lin (lf-noise0 3) -1 1 0 1))
+        sig2 (lf-tri freq)
+        sig (+ (* amp sig ) (* 0.4 sig2))]
     (out:ar [0 1] sig)
     )
   )
-(def d (wobble-drone))
-(ctl d :freq (midi->hz (note :C2)))
-(ctl d :amp 0.3)
-(kill wobble-drone)
 
 
 
@@ -434,3 +441,72 @@
 ;;     (out 1 sig)
 ;;     )
 ;;   )
+
+(def dull-partials
+  [
+   0.56
+   0.92
+   1.19
+   1.71
+   2
+   2.74
+   3
+   3.76
+   4.07])
+(def partials
+  [
+   0.5
+   1
+   3
+   4.2
+   5.4
+   6.8])
+(defcgen bell-partials
+  "Bell partial generator"
+  [freq {:default 440 :doc "The fundamental frequency for the partials"}
+   dur  {:default 1.0 :doc "Duration multiplier. Length of longest partial will
+                            be dur seconds"}
+   partials {:default [0.5 1 2 4] :doc "sequence of frequencies which are
+                                        multiples of freq"}]
+  "Generates a series of progressively shorter and quieter enveloped sine waves
+  for each of the partials specified. The length of the envolope is proportional
+  to dur and the fundamental frequency is specified with freq."
+  (:ar
+   (apply +
+          (map
+           (fn [partial proportion]
+             (let [env      (env-gen (perc 0.01 (* dur proportion)))
+                   vol      (/ proportion 2)
+                   overtone (* partial freq)]
+               (* env vol (sin-osc overtone))))
+           partials ;; current partial
+           (iterate #(/ % 2) 1.0)  ;; proportions (1.0  0.5 0.25)  etc
+           ))))
+
+
+(definst dull-bell [freq 220 dur 1.0 amp 1.0]
+  (let [snd (* amp (bell-partials freq dur dull-partials))]
+    (detect-silence snd :action FREE)
+    snd))
+
+(definst pretty-bell [note 60 dur 1.0 mul 1.0]
+  (let [
+        freq (midicps note)
+        snd (* mul (bell-partials freq dur partials))
+        ]
+    (detect-silence snd :action FREE)
+    snd))
+
+(defsynth risset [pan 0 freq 400 amp 0.1 dur 2 atk 0.01]
+  (let [amps [1 0.67 1 1.8 2.67 1.67 1.46 1.33 1.33 1 1.33]
+        durs [1 0.9 0.65 0.55 0.325 0.35 0.25 0.2 0.15 0.1 0.075]
+        frqs [0.56 0.56 0.92 0.92 1.19 1.7 2 2.74 3 3.76 4.07]
+        dets [0 1 0 1.7 0 0 0 0 0 0 0]
+        src (mix (map (fn [a du f de]
+                        (let [env (env-gen (perc 0.005 (* dur du) a -4.5))]
+                          (* amp env (sin-osc:ar (* freq (+ de f))))))
+                      amps durs frqs dets))
+        src (* src (env-gen (perc (* atk dur) (* (- 1 atk) dur)) :action FREE))]
+    (out:ar [0 1] (pan2 src pan))
+    )
+  )

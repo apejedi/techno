@@ -20,9 +20,9 @@
       )
     )
 
-  (let [comp track2
+  (let [comp track1
         parts (keys comp)]
-    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1.4))
     )
   )
 
@@ -131,12 +131,12 @@
    :kicks (let [k "Kick-01" s "Snr03"]
             (build-from-kits
              [:Kit16-Electro]
-             [[k [dub-kick [100 :amp 1]]] :3]
+             [[k [dub-kick [100 :amp 0.6]]] :3]
              0.25))
-   :sdst (let [c1 "ClHat02" c2 "ClHat01" a [:amp 0]]
-           (build-from-kits
+   :sdst (let [a [:amp 0.5]]
+           (drum-p
             [:Kit16-Electro]
-            [[c1] :2 [c1] :2 [c1] :1 [c1] [c2] [c1] :5]
+            [:c1 a :2 :c1 a :2 :c1 a :1 :c1 a :c2 a :c1 a :5]
             0.25))
    :hat (drum-p [:Kit16-Electro]
                 [:2 :o :1])
@@ -338,11 +338,11 @@
   {:a (let [n :F3]
         (s/phrase-p
          plk-bass
-         [n n n n n :1 n n :8]
+         [n n n n n :1 n n]
          0.25 0 [:amp 0.7 :t 1.5]))
-   :b (build-from-kits
+   :b (drum-p
        [:Kit3-Acoustic]
-       [["Kick"] :3 [[kick [:sustain 1 :noise 1 :amp 0.5]] "SdSt-07"] :3]
+       [:k :3 [kick [:sustain 1 :noise 1 :amp 0.5] :sdst] :3]
        0.25)
    :c (s/phrase-p
        overpad

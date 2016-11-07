@@ -2,7 +2,6 @@
   (:use [overtone.core]
         [techno.sequencer :as s]
         )
-
   (:require [techno.core :as core]
             [clojure.tools.reader.edn :as edn]
             [clojure.tools.reader.reader-types :as readers]
@@ -38,16 +37,54 @@
             (/ 80 60))))))
   )
 
+
+(defn- find-match [raw text]
+  (let [raw-r (clojure.java.io/reader (.getBytes (string/replace raw " " "")))
+        text-r (clojure.java.io/reader (.getBytes text))
+        cur (StringBuilder.)]
+    (.mark raw-r 100000)
+    (loop [r (.read raw-r) t (.read text-r) cur cur]
+      ;(println (str "cur: "(.toString cur)) (str "r: " (if (> r -1) (char r) r)) (str "t: " (if (> t -1) (char t) t)))
+      (if (or (= -1 t) (= -1 r))
+        (if (> (.length cur) 0)
+          (.toString cur)
+          raw)
+        (if (= r t)
+          (recur (.read raw-r) (.read text-r) (.append cur (char t)))
+          (if (not (= -1 (.indexOf [9 32 10 59] t)))
+            (let [c (loop [c t]
+                      (if (and (= t 59) (not (= c 10)))
+                        (do (.append cur (char c)) (recur (.read text-r)))
+                        (if (and (not (= -1 (.indexOf [9 32 10] t))) (not (= -1 (.indexOf [9 32 10] c))))
+                          (do (.append cur (char c)) (recur (.read text-r)))
+                          c)))]
+              (recur r c cur))
+            (recur
+             (do (.reset raw-r) (.read raw-r))
+             (.read text-r)
+             (do (.setLength cur 0) cur)))
+          ))
+        )
+    )
+  )
+
 (defn get-patterns-from-string [data & [sketch return-map?]]
-  (let [data (string/replace
+  (let [text data
+        data (string/replace
               (string/replace data " #(" " \\#(")
               " @" " \\@")
         ;r (readers/source-logging-push-back-reader data)
         r (readers/indexing-push-back-reader data)
-        get-val (fn [body]
-                  (string/replace
-                   (string/replace body #"\\# ([^\s]+)" "#$1")
-                   #"\\@ ([^\s]+)" "@$1"))
+        get-val (fn [raw start end]
+                  (find-match
+                   (string/replace
+                    (string/replace raw #"\\# ([^\s]+)" "#$1")
+                    #"\\@ ([^\s]+)" "@$1")
+                   (string/join "\n"
+                    (subvec
+                     (string/split-lines text)
+                     (dec start)
+                     (dec end)))))
         start (readers/get-line-number r)]
     (loop [cur (edn/read {:eof false} r) patterns {}
            start start end (readers/get-line-number r)]
@@ -55,16 +92,16 @@
         (let [[e f g h] cur
               [a b c d] (map str [e f g h])
               patterns (cond (and (.contains a "add-p") (.startsWith c "("))
-                             (assoc patterns d (get-val c))
+                             (assoc patterns d (get-val c start end))
                              (and (= "def" a) (= \{ (first c))
                                   (or (not sketch) (nil? sketch) (= b sketch)))
                              (reduce
                               (fn [m [k v]]
-                                (assoc m (str k) (get-val (str v))))
+                                (assoc m (str k) (get-val (str v) start end)))
                               patterns
                               g)
                              (= "swap!" a)
-                             (assoc patterns (str (keyword b)) (get-val c))
+                             (assoc patterns (str (keyword b)) (get-val c start end))
                              (= "comment" a)
                              (merge patterns (get-patterns-from-string (apply str (rest cur)) nil true))
                              (= "do" a)

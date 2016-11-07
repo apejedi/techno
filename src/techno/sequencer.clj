@@ -604,7 +604,8 @@
                          (assoc-in p [id key attr] val)
                          p
                          )
-                       ))))
+                       )))
+  nil)
 
 (defn mod-actions [sequencer pattern f]
   (if (and (contains? (get @patterns (to-sc-id sequencer)) pattern)
