@@ -44,7 +44,7 @@
         cur (StringBuilder.)]
     (.mark raw-r 100000)
     (loop [r (.read raw-r) t (.read text-r) cur cur]
-      ;(println (str "cur: "(.toString cur)) (str "r: " (if (> r -1) (char r) r)) (str "t: " (if (> t -1) (char t) t)))
+      ;; (println (str "cur: "(.toString cur)) (str "r: " (if (> r -1) (char r) r)) (str "t: " (if (> t -1) (char t) t)))
       (if (or (= -1 t) (= -1 r))
         (if (> (.length cur) 0)
           (.toString cur)
@@ -78,8 +78,10 @@
         get-val (fn [raw start end]
                   (find-match
                    (string/replace
-                    (string/replace raw #"\\# ([^\s]+)" "#$1")
-                    #"\\@ ([^\s]+)" "@$1")
+                    (string/replace
+                     (string/replace raw #"\\# ([^\s]+)" "#$1")
+                     #"\\@ ([^\s]+)" "@$1")
+                    #"," "")
                    (string/join "\n"
                     (subvec
                      (string/split-lines text)
