@@ -300,14 +300,13 @@
 
 
 
-
-  (let [base {1.75 []}
+  (let [base {2.25 []}
         z [zap [(midi->hz (note :C4))]]
         t [bing [(note :C5) 0.001 0.1 1.5]]
         k [kick []]
         snr [snare [:freq 100 :sustain 0.5 :amp 1]]
         parts {
-               :kick [(drum-p [:Kit4-Electro] [:k2 :2])]
+               :kick [(drum-p [:Kit4-Electro] [:k2 :5])]
                ;; :zap [(drum-p [:Kit4-Electro] [z :3 z z :2 z])]
                ;:clp [(drum-p [:Kit16-Electro] [:cl1 :2 :cl1 :2 :cl1 :2]) [true 0 0.25]]
                ;:cl [(drum-p [:Kit4-Electro] [:c1 :2 :c1 :2 :c1 :1 :c2 :c2 :c1 :5])]
@@ -315,8 +314,8 @@
                                         ;:hat [(drum-p [:Kit4-Electro] [:7 :o1])]
                ;:t [(drum-p [:KurzweilKit07 :Kit4-Electro] [:1 :t2 :t2 :1 :t1])]
                ;:tamb [(drum-p [:Kit8-Vinyl] [:tam :tam :1 :tam :1 :tam]) [false 1 0.25]]
-               ;; :snr [(drum-p [:Kit8-Vinyl] [:3 :snr2 :1]) [false 0 0.25]]
-               ;; :clhat [(drum-p [:Kit8-Vinyl] [:c1]) [false 0 0.25]]
+               :snr [(drum-p [:Kit8-Vinyl] [:3 :snr2]) [false 0 0.25]]
+               :clhat [(drum-p [:Kit3-Acoustic] [:cr3 :cr3 :cr3 :cr3 :cr3 :cr3]) [false 0 0.25]]
                }
         rm [:tamb]]
     (doseq [[k [v args]] parts]
@@ -332,21 +331,29 @@
     )
   )
 
+  (s/add-p
+   core/player
+   (drum-p
+    [:Kit3-Acoustic]
+    [:cr3 :cr3 :cr3 :cr3 :cr3 :cr3]
+    0.25))
 
 
 
 
-  (let [patterns [(euclid-p 3 8 :k)
-                  (euclid-p 11 16 :o 5)
-                  (euclid-p 6 8 :c 3)
-                  (euclid-p 2 8 :s2 3)
+
+  (let [patterns [(euclid-p 3 12 :k)
+                  (euclid-p 4 12 :o)
+                  (euclid-p 1 6 :s 2)
+                  ;; (euclid-p 2 8 :s2 7)
+                  ;; (euclid-p 2 8 :s2 7)
                   ]]
-    ;(s/rm-p core/player :all)
+    (s/rm-p core/player :all)
     (dotimes [i (count patterns)]
       (s/add-p
        core/player
        (drum-p
-        [:Kit15-Electro]
+        [:Kit16-Electro]
         (nth patterns i)
         0.25 [])
        (keyword (str i))))
@@ -368,8 +375,13 @@
              true true 0.5 0.5 1)
    :main)
 
-  (s/rm-p core/player :main)
+  (s/rm-p core/player :cr)
 
+  (test-drums
+   {:main [:2 :k :s :1 :k]
+    ;:cr [:cr]
+    }
+   false)
 
   (s/add-p
    core/player
@@ -400,6 +412,8 @@
    (drum-p [:Kit16-Electro] [:k :2])
    :g
    )
+
+
   (s/mod-p core/player  :g :use-counter true)
 
   (s/add-p
@@ -424,10 +438,14 @@
     [[k1] :2 [cl1] [s3] :1 [f1] [t1]]
     )
    :main)
+  (s/add-p
+   core/player
+   (drum-p [:Kit3-Acoustic] [:cr3 :cr3 :cr3 :cr3])
+   :cr)
 
   (s/rm-p core/player :sd)
   (s/wrap-p core/player :pulse false)
-
+  )
 
   (def funky-drummer
     (let [k "Kick-03" s "Snr-04" c "ClHat-04" o "OpHat-01"]
@@ -445,7 +463,7 @@
        [:Kit16-Electro]
        [[k] :1 [o] :1 [k s] :1 [o] :1
         [k] [c] [o] :1 [k s] :1 [k o] :1]
-       0.25 [:amp 0.5]))))
+       0.25 [:amp 0.5])))
 
 (def son-clave
   (let [k "Kick-03" r "Rim" c "ClHat"]

@@ -62,22 +62,6 @@
     )
   )
 
-(defn p-size [val & [step]]
-  "Returns size of a pattern"
-  (let [val (get-val-if-ref val)
-        step (if step step 0.25)]
-    (cond
-      (fn? val) (if (some #{0}
-                          (map #(alength (.getParameterTypes %))
-                                    (-> val class .getDeclaredMethods)))
-                  (first (val))
-                  1)
-      (map? val)  (apply max (keys val))
-      (sequential? val) (inc (* (dec (count val)) step))
-      true 0
-      )
-    ))
-
 (defn get-step [pattern]
   (let [val (get-val-if-ref pattern)
         sizes (cond (map? val) (keys val)
@@ -98,6 +82,29 @@
             sizes)
     )
   )
+(defn p-size [val & [step]]
+  "Returns size of a pattern"
+  (let [val (get-val-if-ref val)
+        step (if step step 0.25)
+        ;; p-step (get-step val)
+        size (cond
+               (fn? val) (if (some #{0}
+                                   (map #(alength (.getParameterTypes %))
+                                        (-> val class .getDeclaredMethods)))
+                           (first (val))
+                           1)
+               (map? val)  (apply max (keys val))
+               (sequential? val) (inc (* (dec (count val)) step))
+               true 0
+               )
+        ;; size (if (and (> p-step step) (map? val) (= 0 (count (get val size))))
+        ;;        (+ size step)
+        ;;        size)
+        ]
+    size
+    ))
+
+
 (defsynth syncopation-synth [freq 1 uid 0]
     "A synth to randomly modulate the clock speed of a trigger synth"
     (let [trigger (dust:kr freq)]

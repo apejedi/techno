@@ -3,9 +3,9 @@
         [overtone.inst.synth]
         [techno.core :as core]
         [techno.sequencer :as s]
-        [techno.synths])
+        [techno.synths]
+        [techno.melody])
   )
-
 
 (defonce motif (atom (fn [_])))
 (swap! motif (fn [_]
@@ -151,6 +151,7 @@
                0.25 15)) :motif)
     )
 
+
   (s/add-p
    core/player
    (s/phrase-p
@@ -177,7 +178,15 @@
     )
    1
    )
-
+  (s/add-p
+   core/player
+   (s/fit-p {1.75 []}
+            (s/phrase-p
+             vintage-bass
+             [:D3 :3 :C4 :1 :B4 :6]
+             0.25 0 [:amp 1.5]))
+   :bass)
+(s/mod-p core/player :clap :use-counter true)
   (let [a [:D3 :F4]
         b [:C#3 :E4]
         c [:C3 :E4]
@@ -200,14 +209,31 @@
   (s/add-p core/player rnd-chord :motif)
 
 
-  (s/add-p
-   core/player
-   (s/phrase-p
-    bing
-    [:A4 :B4 :D3 :C3 :B3]
-    0.25 3)
-   :motif3
+  (let []
+    (s/add-p
+     core/player
+     (s/phrase-p
+      plk-bass
+      [:Eb3]
+      0.25 3)
+     :bass)
    )
+  (s/rm-p core/player :bass)
+  (def d (drone-noise (midi->hz (note :Ab2)) :amp 0.07))
+  (ctl d :amp 0.1)
+  (ctl d :freq (midi->hz (note :E)))
+  (def w (wobble-drone (midi->hz (note :E2)) :amp 0.2))
+  (ctl w :amp 0.05)
+  (ctl w :freq (midi->hz (note :C4)))
+  (ctl w :wobble 1)
+  (kill d)
+  (kill w)
+  (s/play-p
+   (s/chord-p
+    bass-synth
+    (chord :D3 :m7)))
+  (kill 86334)
+
   (s/add-p
    core/player
    (fn [b]
@@ -284,7 +310,6 @@
                                         ;:harmony
    1.6
    )
-
 
   )
 

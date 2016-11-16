@@ -4,6 +4,7 @@
         [overtone.inst.synth]
         [techno.core :as core]
         [techno.sequencer :as s]
+        [techno.melody]
         [techno.synths]
         [techno.drum-patterns]
         [techno.drums]))
@@ -234,9 +235,10 @@
             type :minor
             args [:coef 0.001 :amp 0.4 :atk 0.01 :dur 1]
             inst ks1
-            v (flatten (repeat 8 (chord-degree :v root type 4)))
-            i (flatten (repeat 8 (chord-degree :iv root type 4)))]
-        (s/arp-p inst (concat v i) args 0)
+            v (chord-degree :v root type 4)
+            i (chord-degree :iv root type 4)]
+        (s/phrase-p inst (flatten [v v v v v v v v
+                                   i i i i i i i i]) 0.25 0 args)
         )
    :b2 (fn [b]
          (if (or (= (rand-int 4) 0)
@@ -262,12 +264,12 @@
    :beat2 (s/fit-p {1.75 []}
                    (drum-p [:KurzweilKit08] [:sd1 :1 :sd1 :sd1 :sd2 :1 :sd1 :1]))
    :shkr (s/fit-p {1.75 []} (drum-p [:Kit8-Vinyl] [:shkr3 :shkr3 :shkr1 :1]))
-   ;; :congas (gen-beat (:four-beat @beats)
-   ;;           (map #(vector % [:amp 1]) (concat (vals (drum-kits :Congas))
-   ;;                                             (vals (drum-kits :Bongos))
-   ;;                                             ))
-   ;;           12
-   ;;           true true 1 0.3 0)
+   :congas (gen-beat (:four-beat @beats)
+             (map #(vector % [:amp 1]) (concat (vals (drum-kits :Congas))
+                                               (vals (drum-kits :Bongos))
+                                               ))
+             12
+             true true 1 0.3 0)
    :main1 (drum-p [:Kit10-Vinyl] [[:k1 :c1] :k4 :p4 :1 :s2 :1 :p3 :5 :s2 :3])
    :main2 (drum-p [:Kit10-Vinyl] [[:k1 :k4] :1 :p1 :k1 :k2 :p1 :k1 :1])
    :main3 (drum-p [:Kit10-Vinyl] [:k1 :1 :c1 :1 :s2 :1 :c1 :1])
@@ -349,6 +351,25 @@
        [:C4 :Ab4 :G4 :Ab4 [:release 3] :25 :C4 :G4 :F4 :G4 [:release 3] :25
         :C4 :Bb4 :A4 :Bb4 [:release 3] :25]
        0.25 1 [:amp 0.4])
+   :d (let [p (fn [_]
+                    {:phrase (s/phrase-p
+                              bpfsaw
+                              (vec (chord-degree (choose [:i :ii :v :iv]) :C3 :minor 4))
+                              0.25 0 [:coef 0.01 :dur 0.4 :amp 1 :rq 0.3])
+                     :count 0})
+                mem (atom (p nil))]
+            (fn
+              ([] [1.75 0.25])
+              ([b]
+               (let [a (get-in @mem [:phrase b])]
+                 (if (or (>= (:count @mem) 16) ;(= (rand-int 10) 3)
+                         )
+                   (swap! mem p)
+                   (swap! mem (fn [m] (assoc m :count (inc (:count m)))))
+                   )
+                 a))
+              )
+            )
    }
   )
 
@@ -536,6 +557,13 @@
                  a))
               )
             )
+   :motif2 (s/phrase-p
+            reverb-test
+            ;[[:G4 :B5] [:G4 :C6] [:G4 :B5] [:G4 :C6] :3 [:A4 :D6] [:B4 :F5] [:B4 :F5] :2 [:E4]]
+            (intervals->notes
+             (generate-intervals conjunct-motion (scale :C4 :major) 4)
+             (scale :C4 :major))
+            0.25 0 [:attack 0.1 :release 0.3 :amp 0.5])
    :harmony (s/fit-p
              {1.75 []}
              (s/phrase-p

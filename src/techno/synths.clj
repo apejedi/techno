@@ -350,13 +350,16 @@
 ;;   )
 
 
-(defsynth drone-noise [freq 440]
+(defsynth drone-noise [freq 440 amp 1]
   (let [freqs (map #(* freq %) [2 4 1])
         sig (klank [freqs (repeat (count freqs) (/ 1 (count freqs)))] (pink-noise))
-        sig (bpf sig freq)]
+        sig (bpf (tanh sig) freq)
+        sig (* sig 0.5 amp)
+        ]
     (out:ar [0 1] sig)
     )
   )
+
 (defsynth wobble-drone [freq 100 wobble 2 amp 1]
   (let [mod-f (/ freq 2)
         idx (* 10 (sin-osc wobble))
@@ -385,6 +388,37 @@
     (out:ar [0 1] sig)
     )
   )
+
+(defsynth prophet
+  "The Prophet Speaks (page 2)
+
+   Dark and swirly, this synth uses Pulse Width Modulation (PWM) to
+   create a timbre which continually moves around. This effect is
+   created using the pulse ugen which produces a variable width square
+   wave. We then control the width of the pulses using a variety of LFOs
+   - sin-osc and lf-tri in this case. We use a number of these LFO
+   modulated pulse ugens with varying LFO type and rate (and phase in
+   some cases to provide the LFO with a different starting point. We
+   then mix all these pulses together to create a thick sound and then
+   feed it through a resonant low pass filter (rlpf).
+
+   For extra bass, one of the pulses is an octave lower (half the
+   frequency) and its LFO has a little bit of randomisation thrown into
+   its frequency component for that extra bit of variety."
+
+  [amp 1 freq 440 cutoff-freq 12000 rq 0.3  attack 1 decay 2 out-bus 0 ]
+
+  (let [snd (pan2 (mix [(pulse freq (* 0.1 (/ (+ 1.2 (sin-osc:kr 1)) )))
+                        (pulse freq (* 0.8 (/ (+ 1.2 (sin-osc:kr 0.3) 0.7) 2)))
+                        (pulse freq (* 0.8 (/ (+ 1.2 (lf-tri:kr 0.4 )) 2)))
+                        (pulse freq (* 0.8 (/ (+ 1.2 (lf-tri:kr 0.4 0.19)) 2)))
+                        (* 0.5 (pulse (/ freq 2) (* 0.8 (/ (+ 1.2 (lf-tri:kr (+ 2 (lf-noise2:kr 0.2))))
+                                                           2))))]))
+        snd (normalizer snd)
+        env (env-gen (perc attack decay) :action FREE)
+        snd (rlpf (* env snd snd) cutoff-freq rq)]
+
+    (out out-bus (* amp snd))))
 ;; (defsynth voice [freq 220 type 0 vib 0 amp 1 lg 0.5 depth 4 atk 0.1 dur 2]
 ;;   (let [data [[[400 750 2400 2600 2900]  [1 0.28 0.08 0.1 0.01] [0.1 0.1 0.04 0.04 0.04]]
 ;;               [[800 1150 2900 3900 4950] (map dbamp [0 -6 -32 -20 -50]) (map dbamp [80 90 120 130 140])] ;sopranoA 1
