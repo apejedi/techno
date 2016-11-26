@@ -240,15 +240,11 @@
         (s/phrase-p inst (flatten [v v v v v v v v
                                    i i i i i i i i]) 0.25 0 args)
         )
-   :b2 (fn [b]
-         (if (or (= (rand-int 4) 0)
-                 (integer? b) (= (mod b (int b)) 0.5) (= (mod b (int b)) 0.75)
-                 )
-           (let [notes (concat (chord-degree :ii :C4 :minor 4) (chord-degree :iii :C4 :minor 4)
-                               (chord-degree :v :C4 :minor 4))]
-             [(choose [piano]) [(choose notes) :dur 1 :amp 0.2 :coef 0.05]
-              (choose [flute]) [(choose notes) :dur 1 :amp 0.15 :coef 0.05]]
-             )))
+   :b2 (s/fit-p {1.75 []}
+                (s/phrase-p
+                 piano
+                 (gen-phrase (concat (scale :C4 :minor) (scale :C5 :minor)) 12 :degree 7 :rests [:0 :1])
+                    0.25 2 [:attack 0.1 :release 0.3 :amp 0.5 :coef 0.001 :dur 1 :decay 1]))
    :c (s/phrase-p
        overpad
        (concat (chord-degree :v :C4 :minor) [:3] (chord-degree :i :C4 :minor))
@@ -541,8 +537,8 @@
   {:motif (let [p (fn [_]
                     {:phrase (s/phrase-p
                               bpfsaw
-                              (vec (chord-degree (choose [:i :ii :v :iv]) :A3 :minor 4))
-                              0.25 0 [:coef 0.01 :dur 0.4 :amp 1])
+                              (vec (chord-degree (choose [:i :v :iv]) :A3 :minor 4))
+                              0.25 0 [:coef 0.01 :dur 0.5 :amp 1])
                      :count 0})
                 mem (atom (p nil))]
             (fn
@@ -557,19 +553,32 @@
                  a))
               )
             )
-   :motif2 (s/phrase-p
-            reverb-test
-            ;[[:G4 :B5] [:G4 :C6] [:G4 :B5] [:G4 :C6] :3 [:A4 :D6] [:B4 :F5] [:B4 :F5] :2 [:E4]]
-            (intervals->notes
-             (generate-intervals conjunct-motion (scale :C4 :major) 4)
-             (scale :C4 :major))
-            0.25 0 [:attack 0.1 :release 0.3 :amp 0.5])
-   :harmony (s/fit-p
-             {1.75 []}
+   :bells (s/fit-p {1.75 []}
+                   (s/phrase-p
+                    reverb-test
+                    ;bing
+                    (gen-phrase (concat (scale :C4 :major) (scale :C5 :major)) 12 :degree 7 :rests [:0 :1 :2])
+                    0.25 2 [:attack 0.1 :release 0.3 :amp 0.5 :coef 0.001 :dur 1 :decay 1]))
+   :piano (let [a [:G4 :B4]
+                 b [:G4 :C5]]
              (s/phrase-p
-              rise-pad
-              [(chord :D4 :m7) :28 (chord :E4 :m7) :28 (chord :C4 :M7) :28]
-              0.25 0 [:coef 0.01 :t 6 :amp 0.4 :dur 4 :atk 0.7]))
+              piano
+              [a a a a a :1 b :1 a :1 b :1 a :3]
+              0.25 2 [:attack 0.1 :release 0.3 :hard 0.3 :amp 0.3 :coef 0.001 :dur 1 :decay 1]))
+   :harmony (let [mk-prog (fn [p]
+                            (conj
+                             (vec
+                              (mapcat #(vector (chord-degree % :C4 :major)) p)) :28))
+                  a (mk-prog [:ii :iii :i])
+                  b (mk-prog [:iv :iii :i])]
+              (s/fit-p
+               {1.75 []}
+               (s/phrase-p
+                rise-pad
+                a
+                ;; flute
+                ;; b
+                0.25 28 [:t 6 :amp 0.3 :dur 6 :attack 0.3 :sustain 0.2])))
    :bass (fn
            ([] [12.75 0.25])
            ([b]
@@ -583,9 +592,32 @@
    :clap (drum-p
           [:Kit5-Electro]
           [:4 :cl :3]
-          0.25 [:amp 1])
+          0.25 [:amp 1.5])
    :crash (drum-p [:Kit3-Acoustic] [:cr3 :cr3 :cr3 :cr3])
    :kick (drum-p [:Kit4-Electro] [:k2 :3])
    :tick (let [t [bing [(note :C5) 0.001 0.1 1.5]]]
-             (drum-p [:Kit4-Electro] [t :2 t :1]))
+           (drum-p [:Kit4-Electro] [t :2 t :1]))
+   :marimba (fn [b]
+           (let [cfmin  (choose (map midi->hz (scale :C5 :major)))
+                ; cfmin (* (midi->hz 64) (choose [0.5 1 2 4]))
+                 ]
+             (if (= (rand-int 2) 1)
+               [bpfsaw2
+                [:dur (choose [1 0.5])
+                 :freq (choose (map double [(/ 1 2) (/ 2 3) 1 (/ 4 3) 2 (/ 5 2) 3 4 6 8]))
+                 :detune (rand 0.1)
+                 :rqmin 0.005
+                 :rqmax 0.008
+                 :cfmin cfmin
+                 :cfmax (* cfmin (choose (range 1.008 1.025 0.001)))
+                 :atk 3
+                 :sus 1
+                 :rel 5
+                 :amp 5]]))
+              )
+   :claves (gen-beat (:four-beat @beats)
+          (map #(vector % [:amp 2]) (concat (vals (drum-kits :claves))
+                                            ))
+          12
+          true true 1 0.3 0)
    })

@@ -1,6 +1,7 @@
 (ns techno.core
   (:use [overtone.core]
         [techno.sequencer :as s]
+        [techno.ring :as r]
         )
   (:require [techno.core :as core]
             [clojure.tools.reader.edn :as edn]
@@ -19,12 +20,18 @@
   (s/set-sp player (/ 120 60))
   (s/set-st player (double (/ 1 4)
                            ))
-  (kill player)
+  (r/ring player)
+  (r/draw)
+  (r/gen-coords 500 500 5 4 player)
+  (s/dec-amp player :shkr)
+  (ctl 14 :volume 0)
+  (ctl 15 :volume 0)
+  (remove-event-handler ::server-audio-clipping-warner-vol)
   )
 
 (defn get-patterns []
   (if (and (not (nil? player)) (node-active? player))
-    (s/get-p player)
+    (keys (s/get-p player))
     )
   )
 (defn start-player []

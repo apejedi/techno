@@ -1,6 +1,7 @@
 (ns techno.melody
   (:use
-   [overtone.algo.chance]))
+   [overtone.algo.chance]
+   [overtone.music.pitch]))
 
 (defn perfect-unison [degree]
   "Identical notes. No interval jump."
@@ -66,10 +67,11 @@
                            :degree degree
                            :running-interval running-interval))))
 
-(defn generate-intervals [construct-melody scale note-count]
+(defn generate-intervals [construct-melody scale note-count & [degree]]
   "Start from the first note, construct intervals,
   end at the first or last note."
-  (let [mid-intervals (construct-intervals construct-melody scale (- note-count 2))
+  (let [degree (if degree degree (- note-count 2))
+        mid-intervals (construct-intervals construct-melody scale degree)
         scale-count (count scale)]
     (concat '(1)
             mid-intervals
@@ -78,3 +80,33 @@
 (defn intervals->notes [intervals scale]
   "Convert intervals to notes in a scale."
   (map #(nth scale (dec %)) intervals))
+
+(defn gen-phrase [scale note-count & {:keys [degree step leap fit rests max-block]
+                                      :or {leap true step false fit 1.75
+                                           max-block 2
+                                           rests [:0 :1 :2]
+                                           degree 1}}]
+  (let [notes (vec (map
+                    find-note-name
+                    (intervals->notes
+                     (generate-intervals
+                      (if step conjunct-motion disjunct-motion) scale note-count)
+                     scale)))
+        notes (loop [phrase [] left notes]
+                (let [num (rand-int (inc max-block))
+                      num (if (> num 0) num 1)
+;                      num (if (> (dec num) (count left)) 1 num)
+                      action (vec (take num left))
+                      left (if (<= num (count left))
+                             (subvec left num)
+                             (vec (rest left)))
+                      r  (rand-nth rests)
+                      phrase (conj phrase action r)]
+                  (if (> (count left) 0)
+                    (recur phrase
+                             left)
+                      phrase))
+                )]
+    notes
+    )
+  )

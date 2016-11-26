@@ -21,9 +21,8 @@
     )
   )
 (defsynth harmonic
-  [amp 0.5]
-  (let [freq     100
-        partials 20
+  [amp 0.5 freq 100]
+  (let [partials 20
         z-init   0
         offset   (line:kr 0 -0.02 60)
         snd (loop [z z-init
@@ -529,9 +528,9 @@
 (definst pretty-bell [note 60 dur 1.0 mul 1.0]
   (let [
         freq (midicps note)
-        snd (* mul (bell-partials freq dur partials))
+        snd (* mul (bell-partials freq dur partials) (env-gen (perc 0.01 1) :action FREE))
         ]
-    (detect-silence snd :action FREE)
+    ;(detect-silence snd :action FREE)
     snd))
 
 (defsynth risset [pan 0 freq 400 amp 0.1 dur 2 atk 0.01]

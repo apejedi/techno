@@ -157,11 +157,25 @@
    patterns)
   )
 
+(defn get-sequencer-data [sequencer]
+  (get @sequencer-data (to-sc-id sequencer))
+  )
+
 (defn set-st [sequencer step]
   (when (node-active? sequencer)
     (ctl (@trigger-sources (to-sc-id sequencer)) :step step)
     (ctl sequencer :step step)
+    (swap! sequencer-data
+           (fn [seq-data]
+             (assoc seq-data (to-sc-id sequencer)
+                    (assoc (get seq-data (to-sc-id sequencer) {}) :step step))
+             ))
     ;(update-pattern-size sequencer)
+    )
+  )
+(defn get-st [sequencer]
+  (when (node-active? sequencer)
+    (node-get-control sequencer :step)
     )
   )
 
@@ -492,6 +506,9 @@
      (swap! trigger-sources (fn [sources]
                               (assoc sources (to-sc-id synth) source-synth)
                               ))
+     (swap! sequencer-data (fn [data]
+                              (assoc data (to-sc-id synth) {:uid uid})
+                              ))
      (on-trigger synth uid
                  (fn [beat]
                    (handle-beat-trigger synth beat (node-get-control source-synth :step) one-shot)
@@ -593,7 +610,7 @@
 (defn get-p
   ([] patterns)
   ([sequencer]
-   (keys (get @patterns (to-sc-id sequencer) {})))
+   (get @patterns (to-sc-id sequencer) {}))
   )
 
 (defn set-sp [sequencer speed]
@@ -650,6 +667,16 @@
    (fn [[inst args]]
      (let [args (vec (mapcat #(if (not (= :amp (first %))) % []) (partition 2 args)))]
        [inst (conj args :amp amp)])))
+  )
+
+(defn mod-amp [sequencer pattern delta]
+  (mod-actions
+   sequencer pattern
+   (fn [[inst args]]
+     (let [arg-map (into {} (map vec (partition 2 args)))
+           amp (if (contains? arg-map :amp) (:amp arg-map) 0.8)
+           args (vec (mapcat #(if (not (= :amp (first %))) % []) (partition 2 args)))]
+       [inst (conj args :amp (+ amp delta))])))
   )
 
 (defn set-arg [sequencer pattern arg val]

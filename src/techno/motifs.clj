@@ -169,12 +169,23 @@
    :motif)
 
 
+  (let [mk-prog (fn [p]
+                (conj
+                 (vec
+                  (mapcat #(vector (chord-degree % :C4 :major)) p)) :28))
+      a (mk-prog [:ii :iii :i])
+      b (mk-prog [:iv :iii :i])]
+    (s/play-p
+     (s/phrase-p
+      piano
+      a
+      0.25 1 [:hard 0.3 :dur 2])))
 
   (s/play-p
    (s/phrase-p
     ks1
     [[:C4 :F4 :Ab3] :D4 [:Eb4 :G5]]
-    0.25 1 [:decay 1]
+    0.25 1 [:decay 1 :amp 0.5]
     )
    1
    )
