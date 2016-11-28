@@ -92,7 +92,7 @@
     ;;   (doseq [p (get @points offset)]
     ;;     (apply q/ellipse (conj p r r)))
     ;;   )
-;    (q/redraw)
+    (q/redraw)
     )
   )
 
