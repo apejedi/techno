@@ -344,10 +344,10 @@
 
 
   (let [patterns [(euclid-p 3 12 :k)
-                  (euclid-p 4 12 :o 5)
-                  (euclid-p 1 6 :s 2)
-                  (euclid-p 2 8 :s2 7)
-                  (euclid-p 2 8 :s2 7)
+                  ;; (euclid-p 4 12 :o 5)
+                  ;; (euclid-p 1 6 :s 2)
+                  ;; (euclid-p 2 8 :s2 7)
+                  ;; (euclid-p 2 8 :s2 7)
                   ]]
     (s/rm-p core/player :all)
     (dotimes [i (count patterns)]

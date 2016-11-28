@@ -21,7 +21,7 @@
   (s/set-st player (double (/ 1 4)
                            ))
   (r/ring player)
-  (r/draw)
+  (r/draw-state)
   (r/gen-coords 500 500 5 4 player)
   (s/dec-amp player :shkr)
   (ctl 14 :volume 0)
