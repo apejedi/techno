@@ -20,12 +20,15 @@
   (s/set-sp player (/ 120 60))
   (s/set-st player (double (/ 1 4)
                            ))
-  (r/ring player)
-  (r/draw-line 1)
+
+  (r/ring player 100 10 30)
+  (r/draw-state)
+  (r/draw-line 2)
   (r/gen-coords 500 500 5 4 player)
   (s/dec-amp player :shkr)
-  (ctl 14 :volume 1)
-  (ctl 15 :volume 1)
+  (let [v 1]
+    (ctl 14 :volume v)
+    (ctl 15 :volume v))
   (remove-event-handler ::server-audio-clipping-warner-vol)
   )
 
