@@ -346,7 +346,7 @@
   (let [patterns [(euclid-p 2 8 :k2)
                   (euclid-p 3 8 :sdst)
                   (euclid-p 3 8 :t 5)
-                  (euclid-p 2 8 :s 6)
+                  (euclid-p 2 8 :s 4)
                   (euclid-p 5 8 :p 3)
                   ]]
     (s/rm-p core/player :all)

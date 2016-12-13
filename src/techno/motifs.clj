@@ -183,7 +183,7 @@
 
   (s/play-p
    (s/phrase-p
-    piano
+    ks1
     [[:C4 :F4 :Ab3] :D4 [:Eb4 :G5]]
     0.25 3 [:decay 1 :amp 0.5 :cutoff-freq 2000]
     )
