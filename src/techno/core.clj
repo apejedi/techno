@@ -14,6 +14,16 @@
       (def player (s/get-s
                    (/ 80 60)
                    )))
+
+  (on-event [:midi :note-on]
+          (fn [m]
+            (let [note (:note m)]
+              (prophet :freq (midi->hz note)
+                       :decay 5
+                       :rq 0.6
+                       :cutoff-freq 1000)))
+          ::prophet-midi)
+
   (s/set-size player 3.75)
   (s/set-sp player 0.1)
 ;  (s/mod-p player :pattern10 :use-counter true)
@@ -21,9 +31,11 @@
   (s/set-st player (double (/ 1 4)
                            ))
 
-  (r/ring player 100 10 30)
+  (s/set-st player 0.25)
+  (r/ring player 100 15 50)
+
   (r/draw-state)
-  (r/draw-line 2)
+  (r/draw-line 5)
   (r/gen-coords 500 500 5 4 player)
   (s/dec-amp player :shkr)
   (let [v 1]

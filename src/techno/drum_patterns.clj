@@ -294,7 +294,7 @@
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :claves)))))
+                          (vals (group-samples (drum-kits :KurzweilKit08)))))
 
 
 
@@ -343,18 +343,18 @@
 
 
 
-  (let [patterns [(euclid-p 3 12 :k)
-                  (euclid-p 4 12 :o 5)
-                  (euclid-p 1 6 :s 2)
-                  ;; (euclid-p 2 8 :s2 7)
-                  ;; (euclid-p 2 8 :s2 7)
+  (let [patterns [(euclid-p 2 8 :k2)
+                  (euclid-p 3 8 :sdst)
+                  (euclid-p 3 8 :t 5)
+                  (euclid-p 2 8 :s 6)
+                  (euclid-p 5 8 :p 3)
                   ]]
     (s/rm-p core/player :all)
     (dotimes [i (count patterns)]
       (s/add-p
        core/player
        (drum-p
-        [:Kit16-Electro]
+        [:KurzweilKit08]
         (nth patterns i)
         0.25 [])
        (keyword (str i))))

@@ -304,6 +304,7 @@
         env (env-gen (perc attack decay) :action FREE)]
     (out [0 1] (* 0.8 env snd amp))))
 
+(bing (note :C4))
 
 (defsynth chicago-pad [freq 440 cutoff 500 amp 1 dur 10]
   (let [freq (+ freq (sin-osc:kr 0.1) 20)
@@ -370,8 +371,8 @@
     )
   )
 ;; (def w (wobble-drone :amp 0.4 :wobble 10))
-;; (ctl w :wobble 3.2)
-;; (ctl w :freq 200)
+;; (ctl w :wobble 0.6)
+;; (ctl w :amp 0.3)
 ;; (kill wobble-drone)
 
 
@@ -418,6 +419,7 @@
         snd (rlpf (* env snd snd) cutoff-freq rq)]
 
     (out out-bus (* amp snd))))
+
 ;; (defsynth voice [freq 220 type 0 vib 0 amp 1 lg 0.5 depth 4 atk 0.1 dur 2]
 ;;   (let [data [[[400 750 2400 2600 2900]  [1 0.28 0.08 0.1 0.01] [0.1 0.1 0.04 0.04 0.04]]
 ;;               [[800 1150 2900 3900 4950] (map dbamp [0 -6 -32 -20 -50]) (map dbamp [80 90 120 130 140])] ;sopranoA 1

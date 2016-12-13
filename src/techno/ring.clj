@@ -30,8 +30,11 @@
         step (s/get-st player)
         raw-size (+ 1 (/ (- size 1) step))
         theta (/ 6.28319 raw-size)
-        h (rand)
+        h 0.84
         ratio 0.618033988749895
+        markers (range 1 (+ size step) step)
+        patterns (conj (into [] (s/get-p player)) [:legend {:data (zipmap markers (repeat (count markers) [:d]))}])
+;        patterns (into [] (s/get-p player))
         coords  (into
                  {}
                  (map
@@ -49,18 +52,19 @@
                                            (not (nil? (first a))))
                                     (let [offset (int (/ (- o 1) step))
                                           angle (* -1 offset theta)
-                                          radius (+ init (* n d))
+                                          radius (+ init (* (if (= k :legend) (inc n) n) d))
                                           a (- x (* radius (Math/sin angle)))
                                           b (- y (* radius (Math/cos angle)))
                                           pts (get @points offset [])]
                                       (swap! points
-                                             (fn [p] (assoc p offset (conj pts [a b rgb]))))
-                                      [a b rgb])
+                                             (fn [p] (assoc p offset
+                                                           (conj pts [a b (if (= k :legend) o rgb)]))))
+                                      [a b (if (= k :legend) o rgb)])
                                     nil)) p))]
                       (swap! colors (fn [c] (assoc c k rgb)))
                       (vector k offsets)))
-                  (s/get-p player)
-                  (range 0 (count (s/get-p player)))
+                  patterns
+                  (range 0 (count patterns))
                   ))]
     ;; (swap!
     ;;  colors
@@ -98,13 +102,15 @@
             raw-size (int (/ (- size 1) step))
             prev (if (= 0 offset) raw-size (dec offset))]
         (doseq [p (get @points prev)]
-          (apply q/fill (last p))
-          (apply q/ellipse (conj (vec (take 2 p)) r r))
+          (when (sequential? (last p))
+              (apply q/fill (last p))
+              (apply q/ellipse (conj (vec (take 2 p)) r r)))
           )
 
         (apply q/fill [255 255 0])
         (doseq [p (get @points offset)]
-          (apply q/ellipse (conj (vec (take 2 p)) r r)))
+          (when (sequential? (last p))
+              (apply q/ellipse (conj (vec (take 2 p)) r r))))
         ))
     (.endDraw g))
   )
@@ -119,16 +125,19 @@
         y (/ (q/height) 2)
         coords (gen-coords x y init d @sequencer)
         labels (keys (s/get-p @sequencer))]
-    (doall
-     (map
-      (fn [[k v]]
-        (doseq [[x y rgb] v]
+    (doseq [[k v] coords]
+      (doseq [[x y rgb] v]
+        (when (sequential? rgb)
           (apply q/fill rgb)
           (q/ellipse x y r r)
           )
+        (when (not (sequential? rgb))
+          (apply q/fill [255 255 255])
+          (q/text (str rgb) x y)
+          )
         )
-      coords)
-     )
+      )
+
     (doall
      (map
       (fn [k y]
