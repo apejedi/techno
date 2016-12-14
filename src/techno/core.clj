@@ -24,14 +24,14 @@
                        :cutoff-freq 1000)))
           ::prophet-midi)
 
-  (s/set-size player 3.75)
+  (s/set-size player 2.875)
   (s/set-sp player 0.1)
 ;  (s/mod-p player :pattern10 :use-counter true)
   (s/set-sp player (/ 120 60))
   (s/set-st player (double (/ 1 4)
                            ))
 
-  (s/set-st player 0.25)
+  (s/set-st player 0.125)
   (r/ring player 100 15 50)
 
   (r/draw-state)

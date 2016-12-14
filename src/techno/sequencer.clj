@@ -86,7 +86,7 @@
   "Returns size of a pattern"
   (let [val (get-val-if-ref val)
         step (if step step 0.25)
-        ;; p-step (get-step val)
+        p-step (get-step val)
         size (cond
                (fn? val) (if (some #{0}
                                    (map #(alength (.getParameterTypes %))
@@ -97,10 +97,9 @@
                (sequential? val) (inc (* (dec (count val)) step))
                true 0
                )
-        ;; size (if (and (> p-step step) (map? val) (= 0 (count (get val size))))
-        ;;        (+ size step)
-        ;;        size)
-        ]
+        size (if (and (> p-step step) (map? val) (= 0 (count (get val size))))
+               (+ size step)
+               size)]
     size
     ))
 
@@ -161,17 +160,30 @@
   (get @sequencer-data (to-sc-id sequencer))
   )
 
+(defn set-size [sequencer size]
+  (ctl sequencer :pattern-size size)
+  (swap! sequencer-data
+         (fn [seq-data]
+           (assoc-in seq-data [(to-sc-id sequencer) :size] size)
+           ))
+  )
 (defn set-st [sequencer step]
-  (when (node-active? sequencer)
-    (ctl (@trigger-sources (to-sc-id sequencer)) :step step)
-    (ctl sequencer :step step)
-    (swap! sequencer-data
-           (fn [seq-data]
-             (assoc seq-data (to-sc-id sequencer)
-                    (assoc (get seq-data (to-sc-id sequencer) {}) :step step))
-             ))
-    ;(update-pattern-size sequencer)
-    )
+  (let [old (node-get-control (@trigger-sources (to-sc-id sequencer)) :step)
+        size (get-in @sequencer-data [(to-sc-id sequencer) :size])]
+      (when (node-active? sequencer)
+        (ctl (@trigger-sources (to-sc-id sequencer)) :step step)
+        (ctl sequencer :step step)
+        (swap! sequencer-data
+               (fn [seq-data]
+                 (assoc seq-data (to-sc-id sequencer)
+                        (assoc (get seq-data (to-sc-id sequencer) {}) :step step))
+                 ))
+                                        ;(update-pattern-size sequencer)
+        (when (> old step)
+            (set-size sequencer
+                      (+ size step)))
+        )
+      )
   )
 (defn get-st [sequencer]
   (when (node-active? sequencer)
@@ -938,13 +950,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
   synth
   )
 
-(defn set-size [sequencer size]
-  (ctl sequencer :pattern-size size)
-  (swap! sequencer-data
-         (fn [seq-data]
-           (assoc-in seq-data [(to-sc-id sequencer) :size] size)
-           ))
-  )
+
 
 (defn play-p [& args]
   "play pattern once for testing"

@@ -304,7 +304,6 @@
         env (env-gen (perc attack decay) :action FREE)]
     (out [0 1] (* 0.8 env snd amp))))
 
-(bing (note :C4))
 
 (defsynth chicago-pad [freq 440 cutoff 500 amp 1 dur 10]
   (let [freq (+ freq (sin-osc:kr 0.1) 20)
