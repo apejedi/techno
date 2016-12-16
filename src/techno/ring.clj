@@ -89,7 +89,30 @@
     )
   )
 
+(defn draw-cursor [pos]
+  (let [g (.getGraphics wheel)
+        cnt (count (keys (s/get-p @sequencer)))]
+    (.beginDraw g)
+    (ap/with-applet wheel
+      (let [init (q/state :init)
+            d (q/state :d)
+ ;           r (+ init (* pos d))
+            x (/ (q/width) 2)
+            y (/ (q/height) 2)]
+        (apply q/fill [255 255 255])
+        (q/text (str circle) x y)
+;        (q/ellipse x y r r)
+        )
+      )
+      (.endDraw g))
+  )
 
+(defn handle-key []
+  (ap/with-applet wheel
+    (let []
+      )
+    (cond (= (q/key-as-keyword) :up)))
+  )
 
 (defn draw-line [beat]
   (let [g (.getGraphics wheel)]
@@ -162,6 +185,7 @@
       :setup setup
       :draw draw
       :features [:present]
+      :key-pressed handle-key
                                         ;:size [1500 800]
       :size :fullscreen
       )
@@ -169,7 +193,7 @@
       (swap!
        (q/state-atom)
        (fn [s]
-         (assoc (assoc (assoc s :d d) :r r) :init init)
+         (assoc (assoc (assoc (assoc s :d d) :r r) :init init) :cursor 0)
          ))
       )
     (on-latest-trigger
