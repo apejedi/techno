@@ -9,13 +9,14 @@
 (defonce sequencer (atom nil))
 (defonce points (atom {}))
 (defonce colors (atom {}))
+(defonce ring-coords (atom {}))
 (declare wheel)
 
 (defn setup []
   ;(q/fullscreen)
   (q/background 0)
   (q/redraw)
-  (q/set-state! )
+;  (q/set-state! )
   (q/text-size 15)
 ;  (q/frame-rate 1)
   (q/no-loop)
@@ -34,51 +35,74 @@
         ratio 0.618033988749895
         markers (range 1 (+ size step) step)
         patterns (conj (into [] (s/get-p player)) [:legend {:data (zipmap markers (repeat (count markers) [:d]))}])
-;        patterns (into [] (s/get-p player))
-        coords  (into
-                 {}
+        gen-color (fn [circle]
+                    (let [h (mod (+ h (* circle ratio)) 1)
+                          color (Color/getHSBColor h 0.99 0.99)]
+                      [(.getRed color) (.getGreen color) (.getBlue color)]
+                      )
+                    )
+        gen-coord (fn [circle beat]
+                    (let [angle (* -1 beat theta)
+                          radius (+ init (* circle d))
+                          a (- x (* radius (Math/sin angle)))
+                          b (- y (* radius (Math/cos angle)))]
+                      [a b]))
+        coords (let [coord-map (transient {})]
                  (map
                   (fn [[k v] n]
-                    (let [p (:data v)
-                          p (if (map? p) (s/stretch-p p size) {})
-                          h (mod (+ h (* n ratio)) 1)
-                          color (Color/getHSBColor h 0.99 0.99)
-                          rgb [(.getRed color) (.getGreen color) (.getBlue color)]
-                          offsets
-                          (filter
-                           #(not (nil? %))
-                           (map (fn [[o a]]
-                                  (if (and (sequential? a)
-                                           (not (nil? (first a))))
-                                    (let [offset (int (/ (- o 1) step))
-                                          angle (* -1 offset theta)
-                                          radius (+ init (* (if (= k :legend) (inc n) n) d))
-                                          a (- x (* radius (Math/sin angle)))
-                                          b (- y (* radius (Math/cos angle)))
-                                          pts (get @points offset [])]
-                                      (swap! points
-                                             (fn [p] (assoc p offset
-                                                           (conj pts [a b (if (= k :legend) o rgb)]))))
-                                      [a b (if (= k :legend) o rgb)])
-                                    nil)) p))]
-                      (swap! colors (fn [c] (assoc c k rgb)))
-                      (vector k offsets)))
+                    (map
+                     (fn [[o a]]
+                       (let [offset (int (/ (- o 1) step))
+                             pts (get coord-map offset {})]
+                           (when (and (sequential? a)
+                                      (not (nil? (first a))))
+                             (println o)
+                             (assoc! coord-map
+                                     k (assoc pts offset (gen-coord n offset)))
+                             ))
+                        v)
+                     )
+                    (assoc! coord-map
+                            k (assoc (get coord-map k) :color (gen-color n)))
+                    )
                   patterns
-                  (range 0 (count patterns))
-                  ))]
-    ;; (swap!
-    ;;  colors
-    ;;  (fn [_]
-    ;;    (zipmap
-    ;;     (keys (s/get-p player))
-    ;;     (loop [h h vals [] cnt (count (s/get-p player))]
-    ;;       (let [h (mod (+ h ratio) 1)
-    ;;             color (Color/getHSBColor h 0.99 0.99)
-    ;;             rgb [(.getRed color) (.getGreen color) (.getBlue color)]]
-    ;;         (if (>= (count vals) cnt)
-    ;;           vals
-    ;;           (recur h (conj vals rgb) cnt)))
-    ;;       ))))
+                  (range 1 (inc (count patterns))))
+                 (persistent! coord-map)
+                 )
+;        patterns (into [] (s/get-p player))
+        ;; coords  (into
+        ;;          {}
+        ;;          (map
+        ;;           (fn [[k v] n]
+        ;;             (let [p (:data v)
+        ;;                   p (if (map? p) (s/stretch-p p size) {})
+        ;;                   h (mod (+ h (* n ratio)) 1)
+        ;;                   color (Color/getHSBColor h 0.99 0.99)
+        ;;                   rgb [(.getRed color) (.getGreen color) (.getBlue color)]
+        ;;                   offsets
+        ;;                   (filter
+        ;;                    #(not (nil? %))
+        ;;                    (map (fn [[o a]]
+        ;;                           (if (and (sequential? a)
+        ;;                                    (not (nil? (first a))))
+        ;;                             (let [offset (int (/ (- o 1) step))
+        ;;                                   angle (* -1 offset theta)
+        ;;                                   radius (+ init (* (if (= k :legend) (inc n) n) d))
+        ;;                                   a (- x (* radius (Math/sin angle)))
+        ;;                                   b (- y (* radius (Math/cos angle)))
+        ;;                                   pts (get @points offset [])]
+        ;;                               (swap! points
+        ;;                                      (fn [p] (assoc p offset
+        ;;                                                    (conj pts [a b (if (= k :legend) o rgb)]))))
+        ;;                               [a b (if (= k :legend) o rgb)])
+        ;;                             nil)) p))]
+        ;;               (swap! ring-coords (fn [r] (assoc r n offsets)))
+        ;;               (swap! colors (fn [c] (assoc c k rgb)))
+        ;;               (vector k offsets)))
+        ;;           patterns
+        ;;           (range 0 (count patterns))
+        ;;           ))
+        ]
     coords
     )
   )
@@ -89,29 +113,45 @@
     )
   )
 
-(defn draw-cursor [pos]
+(defn draw-cursor []
   (let [g (.getGraphics wheel)
-        cnt (count (keys (s/get-p @sequencer)))]
+        pos (q/state :cursor)
+        r (q/state :r)]
     (.beginDraw g)
     (ap/with-applet wheel
-      (let [init (q/state :init)
-            d (q/state :d)
- ;           r (+ init (* pos d))
-            x (/ (q/width) 2)
-            y (/ (q/height) 2)]
-        (apply q/fill [255 255 255])
-        (q/text (str circle) x y)
-;        (q/ellipse x y r r)
-        )
+      (let [display (q/state :display-cursor)]
+        (when display
+          (q/fill 255 255 255)
+          (doseq [[x y] (get @ring-coords pos)]
+            (q/ellipse x y r r)
+            )
+          ))
       )
       (.endDraw g))
   )
 
 (defn handle-key []
   (ap/with-applet wheel
-    (let []
+    (let [cursor (q/state :cursor)
+          cnt (count (keys (s/get-p @sequencer)))
+          state (q/state-atom)
+          key (q/key-as-keyword)
+          new (+ cursor (cond (= key :up) 1
+                              (= key :down) -1
+                              true 0))
+          display-cursor (q/state :display-cursor)]
+      (swap!
+       state
+       (fn [s]
+         (cond
+           (and (or (= :up key) (= :down key)) (>= new 0) (< new cnt))
+           (assoc s :cursor new)
+           (= 10 (q/key-code))
+           (assoc s :display-cursor (not display-cursor))
+           true s)))
+      (draw-cursor)
       )
-    (cond (= (q/key-as-keyword) :up)))
+    )
   )
 
 (defn draw-line [beat]
@@ -151,11 +191,11 @@
     (doseq [[k v] coords]
       (doseq [[x y rgb] v]
         (when (sequential? rgb)
-          (apply q/fill rgb)
+o          (apply q/fill rgb)
           (q/ellipse x y r r)
           )
         (when (not (sequential? rgb))
-          (apply q/fill [255 255 255])
+          (q/fill 255 255 255)
           (q/text (str rgb) x y)
           )
         )
@@ -193,7 +233,7 @@
       (swap!
        (q/state-atom)
        (fn [s]
-         (assoc (assoc (assoc (assoc s :d d) :r r) :init init) :cursor 0)
+         (assoc (assoc (assoc (assoc s :d d) :r r) :init init) :cursor 0 :display-cursor false)
          ))
       )
     (on-latest-trigger

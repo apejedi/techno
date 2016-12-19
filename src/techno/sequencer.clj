@@ -86,7 +86,7 @@
   "Returns size of a pattern"
   (let [val (get-val-if-ref val)
         step (if step step 0.25)
-        p-step (get-step val)
+        ;p-step (get-step val)
         size (cond
                (fn? val) (if (some #{0}
                                    (map #(alength (.getParameterTypes %))
@@ -97,9 +97,10 @@
                (sequential? val) (inc (* (dec (count val)) step))
                true 0
                )
-        size (if (and (> p-step step) (map? val) (= 0 (count (get val size))))
-               (+ size step)
-               size)]
+        ;; size (if (and (> p-step step) (map? val) (= 0 (count (get val size))))
+        ;;        (+ size step)
+        ;;        size)
+        ]
     size
     ))
 
