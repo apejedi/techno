@@ -32,7 +32,7 @@
                            ))
 
   (s/set-st player 0.125)
-  (r/ring player 100 15 50)
+  (r/ring player 50 10 30)
 
   (r/draw-state)
   (r/draw-line 5)
