@@ -24,8 +24,6 @@
 
 
 (defn gen-coords [x y init d player]
-  (swap! points (fn [_] {}))
-  (swap! colors (fn [_] {}))
   (let [data (s/get-sequencer-data player)
         size (:size data)
         step (s/get-st player)
@@ -48,61 +46,30 @@
                           b (- y (* radius (Math/cos angle)))]
                       [a b]))
         coords (let [coord-map (transient {})]
-                 (map
-                  (fn [[k v] n]
-                    (map
-                     (fn [[o a]]
-                       (let [offset (int (/ (- o 1) step))
-                             pts (get coord-map offset {})]
-                           (when (and (sequential? a)
-                                      (not (nil? (first a))))
-                             (println o)
-                             (assoc! coord-map
-                                     k (assoc pts offset (gen-coord n offset)))
-                             ))
-                        v)
+                 (doall
+                  (map
+                   (fn [[k v] n]
+                     (let [data (get v :data)
+                           data (if (map? data) data {})
+                           data (s/stretch-p data size)]
+                         (doseq [[o a] data]
+                           (let [offset (int (/ (- o 1) step))
+                                 pts (get coord-map k {})]
+                             (when (and (sequential? a)
+                                        (not (nil? (first a))))
+                               (assoc! coord-map
+                                       k (assoc pts offset (gen-coord n offset)))
+                               ))
+                           ))
+                     (assoc! coord-map
+                             k (assoc (get coord-map k) :color
+                                      (if (= k :legend)
+                                        [255 255 255]
+                                        (gen-color n))))
                      )
-                    (assoc! coord-map
-                            k (assoc (get coord-map k) :color (gen-color n)))
-                    )
-                  patterns
-                  (range 1 (inc (count patterns))))
-                 (persistent! coord-map)
-                 )
-;        patterns (into [] (s/get-p player))
-        ;; coords  (into
-        ;;          {}
-        ;;          (map
-        ;;           (fn [[k v] n]
-        ;;             (let [p (:data v)
-        ;;                   p (if (map? p) (s/stretch-p p size) {})
-        ;;                   h (mod (+ h (* n ratio)) 1)
-        ;;                   color (Color/getHSBColor h 0.99 0.99)
-        ;;                   rgb [(.getRed color) (.getGreen color) (.getBlue color)]
-        ;;                   offsets
-        ;;                   (filter
-        ;;                    #(not (nil? %))
-        ;;                    (map (fn [[o a]]
-        ;;                           (if (and (sequential? a)
-        ;;                                    (not (nil? (first a))))
-        ;;                             (let [offset (int (/ (- o 1) step))
-        ;;                                   angle (* -1 offset theta)
-        ;;                                   radius (+ init (* (if (= k :legend) (inc n) n) d))
-        ;;                                   a (- x (* radius (Math/sin angle)))
-        ;;                                   b (- y (* radius (Math/cos angle)))
-        ;;                                   pts (get @points offset [])]
-        ;;                               (swap! points
-        ;;                                      (fn [p] (assoc p offset
-        ;;                                                    (conj pts [a b (if (= k :legend) o rgb)]))))
-        ;;                               [a b (if (= k :legend) o rgb)])
-        ;;                             nil)) p))]
-        ;;               (swap! ring-coords (fn [r] (assoc r n offsets)))
-        ;;               (swap! colors (fn [c] (assoc c k rgb)))
-        ;;               (vector k offsets)))
-        ;;           patterns
-        ;;           (range 0 (count patterns))
-        ;;           ))
-        ]
+                   patterns
+                   (range 1 (inc (count patterns)))))
+                 (persistent! coord-map))]
     coords
     )
   )
@@ -164,16 +131,16 @@
             size (get (s/get-sequencer-data @sequencer) :size)
             raw-size (int (/ (- size 1) step))
             prev (if (= 0 offset) raw-size (dec offset))]
-        (doseq [p (get @points prev)]
-          (when (sequential? (last p))
-              (apply q/fill (last p))
-              (apply q/ellipse (conj (vec (take 2 p)) r r)))
+        (doseq [[k v] @points]
+          (when (not (= :legend k))
+            (apply q/fill (get v :color))
+            (when (contains? v prev)
+              (apply q/ellipse (conj (vec (get v prev)) r r)))
+            (apply q/fill [255 255 0])
+            (when (contains? v offset)
+              (apply q/ellipse (conj (vec (get v offset)) r r)))
+            )
           )
-
-        (apply q/fill [255 255 0])
-        (doseq [p (get @points offset)]
-          (when (sequential? (last p))
-              (apply q/ellipse (conj (vec (take 2 p)) r r))))
         ))
     (.endDraw g))
   )
@@ -186,30 +153,27 @@
         r (q/state :r)
         x (/ (q/width) 2)
         y (/ (q/height) 2)
-        coords (gen-coords x y init d @sequencer)
-        labels (keys (s/get-p @sequencer))]
+        coords (gen-coords x y init d @sequencer)]
+    (swap! points (fn [_] coords))
     (doseq [[k v] coords]
-      (doseq [[x y rgb] v]
-        (when (sequential? rgb)
-o          (apply q/fill rgb)
-          (q/ellipse x y r r)
-          )
-        (when (not (sequential? rgb))
-          (q/fill 255 255 255)
-          (q/text (str rgb) x y)
-          )
+      (apply q/fill (get v :color))
+      (doseq [[o [x y]] v]
+        (when (and (not (= k :legend)) (number? o))
+          (q/ellipse x y r r))
+        (when (and (= :legend k) (number? o))
+          (q/text (str o) x y))
         )
       )
 
     (doall
      (map
-      (fn [k y]
-        (apply q/fill (get @colors k))
+      (fn [[k v] y]
+        (apply q/fill (get v :color))
         ;(q/ellipse (- (q/width) 100) y r r)
         (q/text (str k) (- (q/width) 100 r 10) y)
         )
-      labels
-      (range (- (q/height) 40) (- (- (q/height) 40) (* 40 (inc (count labels)))) -40)
+      coords
+      (range (- (q/height) 40) (- (- (q/height) 40) (* 40 (inc (count coords)))) -40)
       ))
     nil
     )
