@@ -430,6 +430,7 @@
   ([sequencer pattern] (add-p sequencer pattern (gensym "pat") {:wrap true}))
   ([sequencer pattern key] (add-p sequencer pattern key {:wrap true}))
   ([sequencer pattern key attrs]
+   (println "added")
    (when (and (node-active? sequencer) (not (nil? pattern)))
      (let [id (to-sc-id sequencer)
            cur-val (get @patterns id {})
@@ -453,6 +454,7 @@
            (add-watch pattern watcher-key (fn [& args] (update-pattern-size sequencer)))
            )
          )
+       (event ::pattern-added :data pattern)
        )))
   )
 
@@ -762,17 +764,8 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
       (dissoc pat tail)
       pat)
     )
-  ;; (vec (reduce (fn [res cur]
-  ;;                (if (or (and (sequential? cur) (= (first cur) :space)) (keyword? cur))
-  ;;                  (concat res (vec (repeat
-  ;;                                    (cond (sequential? cur) (second cur)
-  ;;                                          true (-> cur name Integer/parseInt))
-  ;;                                           nil)))
-  ;;                  (conj (vec res) cur))
-  ;;                )
-  ;;              []
-  ;;              pattern))
   )
+
 (defn arp-p [in notes & [args space reps]]
   "build arpeggio (arp-p bass [60 62 66] [:amp 0.5] & space)"
   (build-rest-p

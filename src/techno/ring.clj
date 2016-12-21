@@ -1,6 +1,7 @@
 (ns techno.ring
   (:use [techno.sequencer :as s]
-        [overtone.sc.trig])
+        [overtone.sc.trig]
+        [overtone.libs.event :only [on-event event]])
   (:require [quil.core :as q]
             [quil.applet :as ap]
             )
@@ -74,7 +75,7 @@
     )
   )
 
-(defn draw-state []
+(defn draw-state [& args]
   (ap/with-applet wheel
     (q/redraw)
     )
@@ -82,18 +83,32 @@
 
 (defn draw-cursor []
   (let [g (.getGraphics wheel)
-        pos (q/state :cursor)
+        key (nth (keys @points) (q/state :cursor))
+        old (nth (keys @points) (q/state :old-cursor))
         r (q/state :r)]
     (.beginDraw g)
     (ap/with-applet wheel
       (let [display (q/state :display-cursor)]
         (when display
-          (q/fill 255 255 255)
-          (doseq [[x y] (get @ring-coords pos)]
-            (q/ellipse x y r r)
+          (apply q/fill (get-in @points [old :color]))
+          (doseq [[o [x y]] (get @points old)]
+            (when (not (= :color o))
+                (q/ellipse x y r r))
             )
-          ))
-      )
+          (q/fill 255 255 255)
+          (doseq [[o [x y]] (get @points key)]
+            (when (not (= :color o))
+                (q/ellipse x y r r))
+            )
+          )
+        (when (not display)
+          (apply q/fill (get-in @points [key :color]))
+          (doseq [[o [x y]] (get @points key)]
+            (when (not (= :color o))
+                (q/ellipse x y r r))
+            )
+          )
+        ))
       (.endDraw g))
   )
 
@@ -112,9 +127,10 @@
        (fn [s]
          (cond
            (and (or (= :up key) (= :down key)) (>= new 0) (< new cnt))
-           (assoc s :cursor new)
-           (= 10 (q/key-code))
-           (assoc s :display-cursor (not display-cursor))
+           (assoc (assoc s :cursor new) :old-cursor cursor)
+           (and (or (= :left key) (= :right key)))
+           1
+           (= 10 (q/key-code)) (assoc s :display-cursor (not display-cursor))
            true s)))
       (draw-cursor)
       )
@@ -130,9 +146,11 @@
             offset (dec (int beat))
             size (get (s/get-sequencer-data @sequencer) :size)
             raw-size (int (/ (- size 1) step))
-            prev (if (= 0 offset) raw-size (dec offset))]
+            prev (if (= 0 offset) raw-size (dec offset))
+            cursor (nth (keys @points) (q/state :cursor))
+            display-cursor (q/state :display-cursor)]
         (doseq [[k v] @points]
-          (when (not (= :legend k))
+          (when (and (not (= :legend k)) (or (not display-cursor) (not (= k cursor))))
             (apply q/fill (get v :color))
             (when (contains? v prev)
               (apply q/ellipse (conj (vec (get v prev)) r r)))
@@ -155,6 +173,7 @@
         y (/ (q/height) 2)
         coords (gen-coords x y init d @sequencer)]
     (swap! points (fn [_] coords))
+    (q/clear)
     (doseq [[k v] coords]
       (apply q/fill (get v :color))
       (doseq [[o [x y]] v]
@@ -197,11 +216,13 @@
       (swap!
        (q/state-atom)
        (fn [s]
-         (assoc (assoc (assoc (assoc s :d d) :r r) :init init) :cursor 0 :display-cursor false)
+         (assoc (assoc (assoc (assoc (assoc s :d d) :r r) :init init) :cursor 0 :display-cursor false) :old-cursor 0)
          ))
       )
     (on-latest-trigger
      player uid
      draw-line :draw-line)
+    ;; (on-event ::pattern-added
+    ;;  draw-state ::draw-state)
     )
   )
