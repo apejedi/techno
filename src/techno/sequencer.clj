@@ -625,6 +625,8 @@
   ([] patterns)
   ([sequencer]
    (get @patterns (to-sc-id sequencer) {}))
+  ([sequencer pattern]
+   (get-in @patterns [(to-sc-id sequencer) pattern] {}))
   )
 
 (defn set-sp [sequencer speed]

@@ -341,7 +341,7 @@
   (let [patterns [[1 4 :k [:Kit4-Electro]]
                   [12 20 :c [:Kit16-Electro]]
                   ]]
-    (s/rm-p core/player :all)
+;    (s/rm-p core/player :all)
     (doseq [[fill slots action kits] patterns]
       (s/add-p
        core/player
