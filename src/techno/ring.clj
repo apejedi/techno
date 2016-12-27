@@ -5,7 +5,12 @@
   (:require [quil.core :as q]
             [quil.applet :as ap]
             )
-  (:import [java.awt Color]))
+  (:import [java.awt Color]
+           [javax.swing JComboBox JTextArea JFrame JTextField]
+           [controlP5 ControlP5]
+           (java.awt Dimension BorderLayout Font Color)
+           (java.awt.event ActionListener ActionEvent)))
+
 
 (defonce sequencer (atom nil))
 (defonce points (atom {}))
@@ -16,13 +21,31 @@
 (defn setup []
   ;(q/fullscreen)
   (q/background 0)
-  (q/redraw)
+;  (q/redraw)
 ;  (q/set-state! )
   (q/text-size 15)
 ;  (q/frame-rate 1)
-  (q/no-loop)
+ (q/no-loop)
   )
 
+
+(defn get-coord [circle beat]
+  (ap/with-applet wheel
+    (let [init (q/state :init)
+          d (q/state :d)
+          step (s/get-st @sequencer)
+          size (get (s/get-sequencer-data @sequencer) :size)
+          raw-size (+ 1 (/ (- size 1) step))
+          theta (/ 6.28319 raw-size)
+          angle (* -1 beat theta)
+          radius (+ init (* circle d))
+          x (/ (q/width) 2)
+          y (/ (q/height) 2)
+          a (- x (* radius (Math/sin angle)))
+          b (- y (* radius (Math/cos angle)))]
+        [a b])
+    )
+  )
 
 (defn gen-coords [x y init d player]
   (let [data (s/get-sequencer-data player)
@@ -51,7 +74,7 @@
                   (map
                    (fn [[k v] n]
                      (let [data (get v :data)
-                           data (if (map? data) data {})
+                           data (if (map? data) data {1 []})
                            data (s/stretch-p data size)]
                          (doseq [[o a] data]
                            (let [offset (int (/ (- o 1) step))
@@ -81,15 +104,50 @@
     )
   )
 
+(defn draw-action []
+  (let [frame (JFrame. "Beat Action")
+        text-box (JTextField. 20)
+        kits (map name (keys techno.drums/drum-kits))
+        kit (JComboBox. (into-array String kits))
+        sounds (JComboBox. (into-array String (map name (keys (get techno.drums/drum-kits (keyword (first kits)))))))
+        key-handler (fn [^String selected]
+                      (.removeAllItems sounds)
+                      (doseq [s (keys (get techno.drums/drum-kits (keyword selected)))]
+                        (.addItem sounds (name s)))
+                      )
+        add-action (fn [^String selected]
+                     )]
+    (.setSize sounds (Dimension. 100 300))
+    (.addActionListener kit
+                        (reify ActionListener
+                          (actionPerformed [this e]
+                            (key-handler (.getSelectedItem (.getSource e)))
+                            )
+                          ))
+    (doto (.getContentPane frame)
+      (.add kit BorderLayout/WEST)
+      (.add sounds BorderLayout/EAST)
+      (.add text-box BorderLayout/SOUTH))
+    (doto frame
+      (.pack)
+      (.setVisible true)
+      )
+    )
+  )
+
 (defn draw-cursor []
-  (let [g (.getGraphics wheel)
-        key (nth (keys @points) (q/state :cursor))
-        old (nth (keys @points) (q/state :old-cursor))
-        r (q/state :r)]
+  (let [g (.getGraphics wheel)]
     (.beginDraw g)
     (ap/with-applet wheel
-      (let [display (q/state :display-cursor)]
+      (let [display (q/state :display-cursor)
+            [circle beat] (q/state :cursor)
+            [old-circle old-beat] (q/state :old-cursor)
+            key (nth (keys @points) circle)
+            old (nth (keys @points) old-circle)
+            r (q/state :r)]
         (when display
+          (q/fill 0 0 0)
+          (apply q/ellipse (conj (apply get-coord (vector (inc old-circle) old-beat)) r r))
           (apply q/fill (get-in @points [old :color]))
           (doseq [[o [x y]] (get @points old)]
             (when (not (= :color o))
@@ -100,8 +158,12 @@
             (when (not (= :color o))
                 (q/ellipse x y r r))
             )
+          (q/fill 255 0 125)
+          (apply q/ellipse (conj (apply get-coord (vector (inc circle) beat)) r r))
           )
         (when (not display)
+          (q/fill 0 0 0)
+          (apply q/ellipse (conj (apply get-coord (vector (inc circle) beat)) (+ r 5) (+ r 5)))
           (apply q/fill (get-in @points [key :color]))
           (doseq [[o [x y]] (get @points key)]
             (when (not (= :color o))
@@ -114,25 +176,57 @@
 
 (defn handle-key []
   (ap/with-applet wheel
-    (let [cursor (q/state :cursor)
+    (let [[circle slot] (q/state :cursor)
           cnt (count (keys (s/get-p @sequencer)))
+          step (s/get-st @sequencer)
+          step (if step step 0.25)
+          size (get (s/get-sequencer-data @sequencer) :size 0)
+          raw-size (+ 1 (/ (- size 1) step))
           state (q/state-atom)
           key (q/key-as-keyword)
-          new (+ cursor (cond (= key :up) 1
-                              (= key :down) -1
-                              true 0))
+          new (vector (+ circle (cond (= key :up) 1
+                                      (= key :down) -1
+                                      true 0))
+                      (+ slot (cond (= key :left) -1
+                                      (= key :right) 1
+                                      true 0)))
           display-cursor (q/state :display-cursor)]
-      (swap!
-       state
-       (fn [s]
-         (cond
-           (and (or (= :up key) (= :down key)) (>= new 0) (< new cnt))
-           (assoc (assoc s :cursor new) :old-cursor cursor)
-           (and (or (= :left key) (= :right key)))
-           1
-           (= 10 (q/key-code)) (assoc s :display-cursor (not display-cursor))
-           true s)))
-      (draw-cursor)
+      (when (or (= :left key) (= :right key) (= :up key) (= :down key) (= 10 (q/key-code)))
+          (swap!
+           state
+           (fn [s]
+             (cond
+               (and display-cursor (or (= :left key) (= :right key) (= :up key) (= :down key))
+                    (>= (first new) 0) (< (first new) cnt) (>= (second new) 0) (<= (second new) raw-size))
+               (assoc (assoc s :cursor new) :old-cursor [circle slot])
+               (= 10 (q/key-code)) (assoc s :display-cursor (not display-cursor))
+               true s)))
+          (draw-cursor))
+      (when (and display-cursor (= :e key))
+
+        )
+      (when (= :e key)
+        (draw-action)
+        )
+      ;; (when (= :w key)
+      ;;   (let [cp5 (q/state :cp5)
+      ;;         box (.getController cp5 "action")
+      ;;         init (nil? box)
+      ;;         box (if init (.addMultiList cp5 "action") box)
+      ;;         ;[x y] (get-coord (inc circle) slot)
+      ;;         ]
+      ;;     (when init
+      ;;       (.setPosition box 100 100)
+      ;;       (.setSize box 500 500)
+      ;;       ;; (.setItemHeight box 30)
+      ;;       ;; (.setBarHeight  box 30)
+      ;;       (.setColorActive box 1)
+      ;;       (.add (.add (.add box "level1" 1) "level11" 11) "level111" 111)
+      ;;       )
+      ;;     (.show box)
+      ;;     (draw-state)
+      ;;     )
+      ;;   )
       )
     )
   )
@@ -147,7 +241,7 @@
             size (get (s/get-sequencer-data @sequencer) :size)
             raw-size (int (/ (- size 1) step))
             prev (if (= 0 offset) raw-size (dec offset))
-            cursor (nth (keys @points) (q/state :cursor))
+            cursor (nth (keys @points) (first (q/state :cursor)))
             display-cursor (q/state :display-cursor)]
         (doseq [[k v] @points]
           (when (and (not (= :legend k)) (or (not display-cursor) (not (= k cursor))))
@@ -171,6 +265,7 @@
         r (q/state :r)
         x (/ (q/width) 2)
         y (/ (q/height) 2)
+        step (s/get-st @sequencer)
         coords (gen-coords x y init d @sequencer)]
     (swap! points (fn [_] coords))
     (q/clear)
@@ -180,7 +275,7 @@
         (when (and (not (= k :legend)) (number? o))
           (q/ellipse x y r r))
         (when (and (= :legend k) (number? o))
-          (q/text (str o) x y))
+          (q/text (str (+ 1 (* o step))) x y))
         )
       )
 
@@ -216,8 +311,17 @@
       (swap!
        (q/state-atom)
        (fn [s]
-         (assoc (assoc (assoc (assoc (assoc s :d d) :r r) :init init) :cursor 0 :display-cursor false) :old-cursor 0)
+         (merge s
+                {:d d
+                 :r r
+                 :init init
+                 :cursor [0 0]
+                 :display-cursor false
+                 :old-cursor [0 0]
+       ;          :cp5 (ControlP5. wheel)
+                 })
          ))
+      ;(.setAutoDraw (q/state :cp5) true)
       )
     (on-latest-trigger
      player uid

@@ -294,7 +294,7 @@
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :KurzweilKit08)))))
+                          (vals (group-samples (drum-kits :Kit5-Electro)))))
 
 
 
@@ -307,23 +307,18 @@
         k [kick []]
         snr [snare [:freq 100 :sustain 0.5 :amp 1]]
         parts {
-               :kick [(drum-p [:Kit4-Electro] [:k2 :5])]
-               ;; :zap [(drum-p [:Kit4-Electro] [z :3 z z :2 z])]
-               ;:clp [(drum-p [:Kit16-Electro] [:cl1 :2 :cl1 :2 :cl1 :2]) [true 0 0.25]]
-               ;:cl [(drum-p [:Kit4-Electro] [:c1 :2 :c1 :2 :c1 :1 :c2 :c2 :c1 :5])]
-                                        ;:kick2 [(drum-p [:Kit4-Electro] [:k2 :3 :k2 :3 :k2 :k2 :2 :k2 :3])]
-                                        ;:hat [(drum-p [:Kit4-Electro] [:7 :o1])]
-               ;:t [(drum-p [:KurzweilKit07 :Kit4-Electro] [:1 :t2 :t2 :1 :t1])]
-               ;:tamb [(drum-p [:Kit8-Vinyl] [:tam :tam :1 :tam :1 :tam]) [false 1 0.25]]
-               :snr [(drum-p [:Kit8-Vinyl] [:3 :snr2]) [false 0 0.25]]
-               :clhat [(drum-p [:Kit3-Acoustic] [:cr3 :cr3 :cr3 :cr3 :cr3 :cr3]) [false 0 0.25]]
+               :kick [(drum-p [:Kit17-Electro] [:k1 :5])]
+               :toms [(drum-p [:Kit5-Electro] [:1 :t2 :t2 :7])]
+               :crash [(drum-p [:Kit3-Acoustic] [:cr3 :cr4 :cr4 :1 [:o1 :o2] :5])]
+               :snr [(drum-p [:Kit3-Acoustic] [:3 :s2 :1 :s2 :4])]
                }
         rm [:tamb]]
     (doseq [[k [v args]] parts]
       (let [args (if args args [false 0 0.25])]
-          (s/add-p core/player
-                   (apply s/fit-p (concat (vector base v)
-                                          args))
+        (s/add-p core/player
+                 v
+                   ;; (apply s/fit-p (concat (vector base v)
+                   ;;                        args))
                    k))
     )
   ;(s/set-arg @core/s-player :sdst :amp 0.4)
@@ -343,22 +338,22 @@
 
 
 
-  (let [patterns [(euclid-p 2 8 :k2)
-                  (euclid-p 3 8 :sdst)
-                  (euclid-p 3 8 :t 5)
-                  (euclid-p 2 8 :s 4)
-                  (euclid-p 5 8 :p 3)
+  (let [patterns [[1 4 :k [:Kit4-Electro]]
+                  [12 20 :c [:Kit16-Electro]]
                   ]]
     (s/rm-p core/player :all)
-    (dotimes [i (count patterns)]
+    (doseq [[fill slots action kits] patterns]
       (s/add-p
        core/player
        (drum-p
-        [:KurzweilKit08]
-        (nth patterns i)
+        kits
+        (euclid-p fill slots action)
         0.25 [])
-       (keyword (str i))))
+        action))
     )
+
+  (s/set-st core/player 0.125)
+
 
   (s/set-amp core/player :2 0.6)
 
@@ -378,17 +373,9 @@
 
   (s/rm-p core/player :cr)
 
-  (test-drums
-   {:main [:2 :k :s :1 :k]
-    ;:cr [:cr]
-    }
-   false)
 
-  (s/add-p
-   core/player
-   (s/fit-p {2.75 []}
-    (drum-p [:Kit3-Acoustic]
-            [:t1 :t5 :1 :s3]) false 0) :k2 {:use-counter true})
+
+  (s/rm-p player :kick)
 
 
   (kill trigger-synth)
@@ -397,16 +384,32 @@
         sounds (group-samples (drum-kits :Kit3-Acoustic))
         actions [[bing []]]
         samples (map #(vector % [])
-                     (vals (merge (get sounds :SdSt)
-                                  (get sounds :ClHat)
+                     (vals (merge ;(get sounds :SdSt)
+                                  ;(get sounds :ClHat)
                                   (get sounds :Snr)))
                      )
         beat (gen-beat base
                 samples
-                8 true true 1 0.1 0)]
-    (s/add-p core/player beat :g)
+                8 true true 0.3 0.4 0)
+        beat (drum-p [:Kit6-Electro]
+                     )
+        ]
+    (s/add-p core/player beat :snr)
     )
 
+  (let [patterns [[:k :k nil nil :k2 nil nil nil :k nil nil [:k :o] nil nil nil :k nil nil]
+                  [nil :c nil :c nil :c nil nil :c nil :c nil :c nil :c nil [:c :t2] nil :c nil nil :c nil :c]
+                  [:s2 :s nil :s2 nil nil :s nil nil :t :s nil nil nil :s nil nil :s]
+                  ]]
+    (doseq [p patterns]
+        (s/add-p core/player
+         (drum-p [:Kit12-Vinyl]
+                 p)
+         (some #(if (not (nil? %)) % false) p)
+         )
+        )
+    )
+  (s/rm-p core/player :o)
 
   (s/add-p
    core/player

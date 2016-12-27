@@ -235,7 +235,6 @@
 
 
 
-
 (defsynth whistle [freq1 200 freq2 300 dur 5 freq1-sus 0.4 freq2-sus 0.4 mod 10 amp 1]
   (let [[a b c] [(* freq1-sus dur) (* (- 1 freq1-sus freq2-sus 0.1) dur) (* freq2-sus dur)]
         env (env-gen:kr
@@ -280,10 +279,13 @@
         sig (tanh sig)
         sig (+ sig (rlpf sig (x-line (* freq 100) (* freq 10) 0.15)) sin sub)
         sig (tanh (/ sig 2.3))
-        sig (* (moog-ff sig (x-line (* freq 150) (* freq 30) 0.1) 0.1) amp)]
+        sig (* (moog-ff sig (x-line (* freq 150) (* freq 30) 0.1) 0.1) amp)
+        ]
     (out [0 1] sig)
    )
   )
+
+
 (defsynth bass-synth [freq 200 attack 0.1 amp 1 release 1 detune 3]
   (let [freq-v (+
                 (lin-exp (lf-noise0:kr 2) -1 1 0.1 detune)
@@ -330,6 +332,7 @@
     (out:ar [0 1] sig)
     )
   )
+
 ;; (defsynth chicago-pad2 [freq 440 cutoff 500 amp 1]
 ;;   (let [freq2 (/ (* (/ 3 2) freq) 2)
 ;;         freq3 (/ (* (/ 5 6) freq) 2)

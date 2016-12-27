@@ -172,31 +172,46 @@
   (let [mk-prog (fn [p]
                 (conj
                  (vec
-                  (mapcat #(vector (chord-degree % :C4 :major)) p)) :28))
+                  (mapcat #(vector (chord-degree % :C4 :major)) p))))
       a (mk-prog [:ii :iii :i])
       b (mk-prog [:iv :iii :i])]
     (s/play-p
      (s/phrase-p
       piano
-      a
+      (concat a b)
       0.25 1 [:hard 0.3 :dur 2])))
 
-  (s/play-p
-   (s/phrase-p
-    ks1
-    [[:C4 :F4 :Ab3] :D4 [:Eb4 :G5]]
-    0.25 3 [:decay 1 :amp 0.5 :cutoff-freq 2000]
-    )
-   1
-   )
   (s/add-p
    core/player
-   (s/fit-p {1.75 []}
-            (s/phrase-p
-             vintage-bass
-             [:D3 :3 :C4 :1 :B4 :6]
-             0.25 0 [:amp 1.5]))
+   (s/phrase-p
+    prophet
+    [:Ab4 :C#5 [:Bb4 :B3]]
+    0.25 0 [:sustain 0.5 :decay 0.1 :attack 0.1 :amp 0.5 :cutoff-freq 2000]
+    )
+   :phrase
+   )
+
+  (s/add-p
+   core/player
+   (s/phrase-p
+    bass-synth
+    [:C#2 :F#5 [:Bb2 :B3] :A3]
+    0.25 3 [:sustain 2 :decay 0.1 :attack 1 :amp 0.3 :cutoff-freq 4000]
+    )
+   :phrase2
+   )
+
+
+  (s/add-p
+   core/player
+   (s/phrase-p
+    bass-synth
+    [:F3 :C#3 :Bb2 :B3]
+    0.25 0 [:amp 1.5 :attack 0.01 :release 0.5])
    :bass)
+
+  (s/rm-p core/player :phrase2)
+
 (s/mod-p core/player :clap :use-counter true)
   (let [a [:D3 :F4]
         b [:C#3 :E4]
@@ -204,10 +219,11 @@
         e [:B3 :D4]]
     (s/play-p
      (s/phrase-p
-      bass-synth
+      reverb-test
       [a a a a a a b b b b b c c c c c e e e e e]
       ;[c e]
-      0.25 1 [:attack 0.1 :release 0.3])
+      0.25 0 [:attack 0.1 :release 0.3])
+     1.3
      )
     )
 

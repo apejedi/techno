@@ -86,7 +86,7 @@
   "Returns size of a pattern"
   (let [val (get-val-if-ref val)
         step (if step step 0.25)
-        ;p-step (get-step val)
+        p-step (get-step val)
         size (cond
                (fn? val) (if (some #{0}
                                    (map #(alength (.getParameterTypes %))
@@ -97,9 +97,9 @@
                (sequential? val) (inc (* (dec (count val)) step))
                true 0
                )
-        ;; size (if (and (> p-step step) (map? val) (= 0 (count (get val size))))
-        ;;        (+ size step)
-        ;;        size)
+        size (if (and (> p-step step) (map? val) (= 0 (count (get val size))))
+               (+ size step)
+               size)
         ]
     size
     ))
@@ -179,7 +179,7 @@
                  (assoc seq-data (to-sc-id sequencer)
                         (assoc (get seq-data (to-sc-id sequencer) {}) :step step))
                  ))
-                                        ;(update-pattern-size sequencer)
+        ;(update-pattern-size sequencer)
         (when (> old step)
             (set-size sequencer
                       (+ size step)))
@@ -430,7 +430,6 @@
   ([sequencer pattern] (add-p sequencer pattern (gensym "pat") {:wrap true}))
   ([sequencer pattern key] (add-p sequencer pattern key {:wrap true}))
   ([sequencer pattern key attrs]
-   (println "added")
    (when (and (node-active? sequencer) (not (nil? pattern)))
      (let [id (to-sc-id sequencer)
            cur-val (get @patterns id {})
@@ -763,6 +762,23 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     (if (nil? (get pat tail))
       (dissoc pat tail)
       pat)
+    )
+  )
+
+(defn p-shift [pattern shift-by]
+  (let [to-int #(if (= (mod % (int %)) 0.0)
+                  (int %) %)
+        step (get-step pattern)
+        size (p-size pattern step)
+        n-pattern (if (map? pattern) (map #(get pattern (to-int %) nil) (range 1 (+ size step) step))
+                       pattern)
+        n-pattern (if (sequential? n-pattern)
+                    (take (count n-pattern)
+                           (drop (if (pos? shift-by) (- (count n-pattern) shift-by) (* -1 shift-by)) (cycle n-pattern)))
+                    pattern)]
+    (if (map? pattern)
+      (build-rest-p n-pattern)
+      n-pattern)
     )
   )
 

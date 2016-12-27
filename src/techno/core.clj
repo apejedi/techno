@@ -28,12 +28,12 @@
   (s/set-sp player 0.1)
 ;  (s/mod-p player :pattern10 :use-counter true)
   (s/set-sp player (/ 120 60))
-  (s/set-st player (double (/ 1 4)
+  (s/set-st player (double (/ 1 8)
                            ))
-
-  (s/set-st player 0.125)
+  (s/set-st player 0.25)
   (r/ring player 100 15 50)
 
+  (s/rm-p player :kick)
   (r/draw-state)
   (r/draw-line 5)
   (r/gen-coords 500 500 5 4 player)
