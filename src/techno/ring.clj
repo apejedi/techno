@@ -1,14 +1,15 @@
 (ns techno.ring
   (:use [techno.sequencer :as s]
+        [techno.drums :only [drum-kits]]
         [overtone.sc.trig]
         [overtone.libs.event :only [on-event event]])
   (:require [quil.core :as q]
             [quil.applet :as ap]
             )
   (:import [java.awt Color]
-           [javax.swing JComboBox JTextArea JFrame JTextField JButton]
+           [javax.swing JComboBox JTextArea GroupLayout JFrame JTextField JButton]
 ;           [controlP5 ControlP5]
-           (java.awt Dimension FlowLayout Font Color)
+           (java.awt Dimension Font Color)
            (java.awt.event ActionListener ActionEvent)))
 
 
@@ -126,23 +127,23 @@
 
 (defn draw-action []
   (let [frame (JFrame. "Beat Action")
-        text-box (JTextArea. (str (get-cur-action)) 5 20)
-        kits (map name (keys techno.drums/drum-kits))
+        text-box (JTextArea.)
+        kits (map name (keys drum-kits))
         kit (JComboBox. (into-array String kits))
-        sounds (JComboBox. (into-array String (map name (keys (get techno.drums/drum-kits (keyword (first kits)))))))
+        sounds (JComboBox. (into-array String (map name (keys (get drum-kits (keyword (first kits)))))))
         add (JButton. "Add")
         key-handler (fn [^String selected]
                       (.removeAllItems sounds)
-                      (doseq [s (keys (get techno.drums/drum-kits (keyword selected)))]
+                      (doseq [s (keys (get drum-kits (keyword selected)))]
                         (.addItem sounds (name s))))
         show-action (fn []
                       (let [action (get-cur-action)
                             action (vec (map
                                          #(if (= overtone.sc.sample.PlayableSample (type %))
-                                            (str "(get-in drum-kits " (find-in techno.drums/drum-kits (keyword (:name %))) ")")
+                                            (str "(get-in drum-kits "
+                                                 (find-in drum-kits (keyword (:name %))) ")")
                                             %)
                                          action))]
-                        (println action)
                         (.setText text-box (clojure.string/replace (str action) "\"" ""))))
         add-action (fn []
                      (ap/with-applet wheel
@@ -153,17 +154,22 @@
                              k (keyword (.getSelectedItem kit))
                              snd (keyword (.getSelectedItem sounds))
                              action (get-cur-action)
-                             action (clojure.string/replace (str (vec (conj action "(get-in drum-kits [" k snd "]) [] "))) "\"" "")]
+                             action (clojure.string/replace
+                                     (str (vec (conj action "(get-in drum-kits [" k snd "]) [] "))) "\"" "")]
                          (.setText text-box action)
                          )))]
+    (.setLayout frame nil)
     (doto text-box
       (.setEditable true)
       (.setBackground Color/BLACK)
       (.setForeground Color/GREEN)
       (.setEditable false)
-      (.setFont (Font. "Monospaced" Font/PLAIN 14))
-      )
-    (.setSize sounds (Dimension. 100 300))
+      (.setFont (Font. "Monospaced" Font/PLAIN 14)))
+    (.setBounds kit 10 10 100 20)
+    (.setBounds sounds 120 10 100 20)
+    (.setBounds add 240 10 60 20)
+    (.setBounds text-box 10 70 300 200)
+;    (.setSize sounds (Dimension. 100 300))
     (.addActionListener kit
                         (reify ActionListener
                           (actionPerformed [this e]
@@ -179,14 +185,14 @@
                           (actionPerformed [this e]
                             (add-action)
                             )))
-    (doto (.getContentPane frame)
-      (.setLayout (FlowLayout.))
+
+    (doto frame
       (.add kit)
       (.add sounds)
+      (.add add)
       (.add text-box)
-      (.add add))
-    (doto frame
-      (.pack)
+      (.setSize 400 300)
+;      (.pack)
       (.setVisible true)
       )
     )
