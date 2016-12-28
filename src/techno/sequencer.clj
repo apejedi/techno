@@ -647,6 +647,25 @@
                        )))
   nil)
 
+(defn set-action [sequencer pattern key new]
+  (if (and (contains? (get @patterns (to-sc-id sequencer)) pattern)
+           (map? (get-val-if-ref (get-in @patterns [(to-sc-id sequencer) pattern :data]))))
+    (swap! patterns (fn [p]
+                      (let [id (to-sc-id sequencer)
+                            cur-data (get-in p [id pattern :data])
+                            is-atom (instance? clojure.lang.Atom cur-data)
+                            data (get-val-if-ref (if cur-data cur-data {}))
+                            data (assoc data key new)]
+                        (if (not (nil? key))
+                          (if is-atom
+                            (do (swap! cur-data (fn [_] data))
+                                p)
+                            (assoc-in p [id pattern :data]
+                                      data))
+                          p)
+                        ))))
+  )
+
 (defn mod-actions [sequencer pattern f]
   (if (and (contains? (get @patterns (to-sc-id sequencer)) pattern)
            (map? (get-val-if-ref (get-in @patterns [(to-sc-id sequencer) pattern :data]))))

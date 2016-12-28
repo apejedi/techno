@@ -33,6 +33,11 @@
   (s/set-st player 0.25)
   (r/ring player 100 15 50)
 
+  (sweet :dur 0.2)
+  (s/set-action
+   player
+   :harmony
+   1 [sweet []])
   (s/rm-p player :kick)
   (r/draw-state)
   (r/draw-line 5)

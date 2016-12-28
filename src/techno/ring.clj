@@ -125,6 +125,26 @@
          ))
   )
 
+(defn eval-action [action]
+  (ap/with-applet wheel
+    (let [[circle beat] (q/state :cursor)
+          pattern (nth (keys @points) circle)
+          step (s/get-st @sequencer)
+          beat (+ 1 (* beat step))
+          beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)]
+      (load-string
+       (str " (import java.util.concurrent.ThreadLocalRandom) (use
+        '[overtone.inst.synth]
+        '[techno.core :as core]
+        '[techno.sequencer :as s]
+        '[techno.synths]
+        '[techno.drum-patterns]
+        '[techno.drums]
+        '[techno.melody]) (s/set-action core/player " pattern " " beat " " action ")"))
+      ))
+  )
+
+
 (defn draw-action []
   (let [frame (JFrame. "Beat Action")
         text-box (JTextArea.)
@@ -136,15 +156,23 @@
                       (.removeAllItems sounds)
                       (doseq [s (keys (get drum-kits (keyword selected)))]
                         (.addItem sounds (name s))))
+        get-action-str (fn [action]
+                         (let [action (vec (map
+                                            #(cond (= overtone.sc.sample.PlayableSample (type %))
+                                                   (list 'get-in 'drum-kits
+                                                        (find-in drum-kits (keyword
+                                                                            (clojure.string/replace (:name %) " " ""))))
+                                                   (or (= (type %) overtone.studio.inst.Inst)
+                                                       (= (type %) overtone.sc.synth.Synth))
+                                                   (:name %)
+                                                   true %)
+                                            action))
+                               action (vec (mapcat (fn [[a arg]]
+                                                     (vector a arg "\n"))
+                                                   (partition 2 action)))]
+                           (str "[" (apply str action) "]")))
         show-action (fn []
-                      (let [action (get-cur-action)
-                            action (vec (map
-                                         #(if (= overtone.sc.sample.PlayableSample (type %))
-                                            (str "(get-in drum-kits "
-                                                 (find-in drum-kits (keyword (:name %))) ")")
-                                            %)
-                                         action))]
-                        (.setText text-box (clojure.string/replace (str action) "\"" ""))))
+                      (.setText text-box (get-action-str (get-cur-action))))
         add-action (fn []
                      (ap/with-applet wheel
                        (let [[circle beat] (q/state :cursor)
@@ -154,22 +182,21 @@
                              k (keyword (.getSelectedItem kit))
                              snd (keyword (.getSelectedItem sounds))
                              action (get-cur-action)
-                             action (clojure.string/replace
-                                     (str (vec (conj action "(get-in drum-kits [" k snd "]) [] "))) "\"" "")]
-                         (.setText text-box action)
-                         )))]
+                             action-text (get-action-str (vec (conj action (get-in drum-kits (vector k snd)) [])))]
+                         (.setText text-box action-text))))]
     (.setLayout frame nil)
     (doto text-box
       (.setEditable true)
       (.setBackground Color/BLACK)
       (.setForeground Color/GREEN)
-      (.setEditable false)
+      (.setEditable true)
+      (.setLineWrap true)
+      (.setWrapStyleWord true)
       (.setFont (Font. "Monospaced" Font/PLAIN 14)))
     (.setBounds kit 10 10 100 20)
     (.setBounds sounds 120 10 100 20)
     (.setBounds add 240 10 60 20)
-    (.setBounds text-box 10 70 300 200)
-;    (.setSize sounds (Dimension. 100 300))
+    (.setBounds text-box 10 70 600 200)
     (.addActionListener kit
                         (reify ActionListener
                           (actionPerformed [this e]
@@ -185,13 +212,12 @@
                           (actionPerformed [this e]
                             (add-action)
                             )))
-
     (doto frame
       (.add kit)
       (.add sounds)
       (.add add)
       (.add text-box)
-      (.setSize 400 300)
+      (.setSize 700 300)
 ;      (.pack)
       (.setVisible true)
       )
