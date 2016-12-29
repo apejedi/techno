@@ -195,7 +195,7 @@
 
 
 (def lazer (let [d [zap [3000 :amp 0.3 :dur 0.1] dub-kick [300 :amp 1.5]]
-                 base (s/build-rest-p
+                 base (s/build-map-p
                [d :6 d :2 d :5])]
              (s/m-phrase
               {:refresh 0.7 :sputter 0.7 :sputter-amt 0.3}
@@ -339,8 +339,8 @@
 
 
   (let [patterns [[3 8 :k [:Kit4-Electro]]
-                  [12 20 :c [:Kit16-Electro]]
-                  [5 20 :s [:Kit7-Electro]]
+                  [0 20 :c [:Kit16-Electro]]
+                  [0 20 :s [:Kit7-Electro]]
                   ]]
 ;    (s/rm-p core/player :all)
     (doseq [[fill slots action kits] patterns]

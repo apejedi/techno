@@ -66,7 +66,7 @@
               ins
               (mapcat get-inst ins)))]
     (cond (map? pattern) (zipmap (keys pattern) (map s (vals pattern)))
-          (sequential? pattern) (s/build-rest-p (map s pattern) step)
+          (sequential? pattern) (s/build-map-p (map s pattern) step)
           )
     )
   )

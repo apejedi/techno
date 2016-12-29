@@ -126,7 +126,7 @@
            0.25 0 [:amp 0.5 :atk 0.01])
    :whistle (let [a [:freq1 (midi->hz (note :D5)) :freq2 (midi->hz (note :A6)) :dur 3 :amp 0.3]
                   b [:freq1 (midi->hz (note :A6)) :freq2 (midi->hz (note :E5)) :dur 3 :amp 0.3]]
-              (s/build-rest-p
+              (s/build-map-p
                [[whistle a] :27 [whistle b] :19]
                0.25 0))
 
@@ -618,7 +618,7 @@
                  :amp 5]]))
               )
    :claves (gen-beat (:four-beat @beats)
-          (map #(vector % [:amp 2]) (concat (vals (drum-kits :claves))
+          (map #(vector % [:amp 1.3]) (concat (vals (drum-kits :claves))
                                             ))
           12
           true true 1 0.3 0)

@@ -752,7 +752,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     )
   )
 
-(defn build-rest-p [pattern & [step]]
+(defn build-map-p [pattern & [step]]
   (let [to-int #(if (= (mod % (int %)) 0.0)
                   (int %) %)
         pat (reduce (fn [res cur]
@@ -798,14 +798,14 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                            (drop (if (pos? shift-by) (- (count n-pattern) shift-by) (* -1 shift-by)) (cycle n-pattern)))
                     pattern)]
     (if (map? pattern)
-      (build-rest-p n-pattern)
+      (build-map-p n-pattern)
       n-pattern)
     )
   )
 
 (defn arp-p [in notes & [args space reps]]
   "build arpeggio (arp-p bass [60 62 66] [:amp 0.5] & space)"
-  (build-rest-p
+  (build-map-p
        (apply concat
               (map #(vector [in (cons % (if (nil? args) [] args))]
                             [:space (if (nil? space) 1 space)]

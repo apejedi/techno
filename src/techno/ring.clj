@@ -333,15 +333,6 @@
              true s)))
         (when (and (not (nil? text-box)) (.isVisible text-box) (not (= 10 (q/key-code))))
           (.setText text-box (get-action-str (get-cur-action))))
-        ;; (ap/with-applet wheel
-        ;;   (let [g (.getGraphics wheel)
-        ;;         [circle slot] (q/state :cursor)]
-        ;;     (.beginDraw g)
-        ;;     (q/fill 0 0 0)
-        ;;     (q/rect 100 50 300 100)
-        ;;     (q/fill 255 255 255)
-        ;;     (q/text (str (nth (keys @points) circle) " " (+ 1 (* slot step)) " " slot " " raw-size) 100 100)
-        ;;     (.endDraw g)))
         (draw-cursor))
       (when (= :e key)
         (draw-action)
