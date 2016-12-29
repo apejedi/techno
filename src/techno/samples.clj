@@ -81,3 +81,5 @@
       (or (= x nil) (= y nil) ) nil
       (= x y) (cons x (lcs xs ys))
       :else (longest (lcs (cons x xs) ys) (lcs xs (cons y ys)))))))
+
+(def drum-kits (create-sample-map (str (.getCanonicalPath (clojure.java.io/file ".")) "\\musicradar-drum-samples\\Drum Kits") true))

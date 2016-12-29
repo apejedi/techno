@@ -5,6 +5,7 @@
         [techno.core :as core]
         [techno.sequencer :as s]
         [techno.melody]
+        [techno.samples]
         [techno.synths]
         [techno.drum-patterns]
         [techno.drums]))

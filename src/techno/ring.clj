@@ -1,6 +1,6 @@
 (ns techno.ring
   (:use [techno.sequencer :as s]
-        [techno.drums :only [drum-kits]]
+        [techno.samples :only [drum-kits]]
         [overtone.sc.trig]
         [overtone.libs.event :only [on-event event]])
   (:require [quil.core :as q]
@@ -121,9 +121,25 @@
           beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)
           data (get (s/get-p @sequencer pattern) :data)
           action (if (map? data) (get data beat []) [])]
-         action
-         ))
+      action
+      ))
   )
+
+(defn get-action-str [action]
+  (let [action (vec (map
+                     #(cond (= overtone.sc.sample.PlayableSample (type %))
+                            (list 'get-in 'drum-kits
+                                  (find-in drum-kits (keyword
+                                                      (clojure.string/replace (:name %) " " ""))))
+                            (or (= (type %) overtone.studio.inst.Inst)
+                                (= (type %) overtone.sc.synth.Synth))
+                            (:name %)
+                            true %)
+                     action))
+        action (vec (mapcat (fn [[a arg]]
+                              (vector a arg "\n"))
+                            (partition 2 action)))]
+    (str "[" (apply str action) "]")))
 
 (defn eval-action [action]
   (ap/with-applet wheel
@@ -131,17 +147,41 @@
           pattern (nth (keys @points) circle)
           step (s/get-st @sequencer)
           beat (+ 1 (* beat step))
-          beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)]
+          beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)
+          action (clojure.string/replace action "\n" "")]
+      ;; (let [g (.getGraphics wheel)
+;;             [circle slot] (q/state :cursor)]
+;;         (.beginDraw g)
+;;         (q/fill 0 0 0)
+;;         (q/rect 100 50 300 100)
+;;         (q/fill 255 255 255)
+;;         (q/text (str " (import java.util.concurrent.ThreadLocalRandom) (use
+;;         '[overtone.inst.synth]
+;;         '[techno.core :as core]
+;;         '[techno.sequencer :as s]
+;;         '[techno.synths]
+;;         '[techno.drum-patterns]
+;;         '[techno.drums]
+;;         '[techno.melody])
+;; (s/set-action core/player
+;; " pattern " " beat " " action ")") 100 100)
+;;         (.endDraw g))
+
       (load-string
        (str " (import java.util.concurrent.ThreadLocalRandom) (use
+'[overtone.core]
         '[overtone.inst.synth]
         '[techno.core :as core]
         '[techno.sequencer :as s]
         '[techno.synths]
         '[techno.drum-patterns]
         '[techno.drums]
-        '[techno.melody]) (s/set-action core/player " pattern " " beat " " action ")"))
+        '[techno.samples]
+        '[techno.melody])
+(s/set-action core/player
+" pattern " " beat " " action ")"))
       ))
+  (draw-state)
   )
 
 
@@ -152,25 +192,11 @@
         kit (JComboBox. (into-array String kits))
         sounds (JComboBox. (into-array String (map name (keys (get drum-kits (keyword (first kits)))))))
         add (JButton. "Add")
+        eval (JButton. "Eval")
         key-handler (fn [^String selected]
                       (.removeAllItems sounds)
                       (doseq [s (keys (get drum-kits (keyword selected)))]
                         (.addItem sounds (name s))))
-        get-action-str (fn [action]
-                         (let [action (vec (map
-                                            #(cond (= overtone.sc.sample.PlayableSample (type %))
-                                                   (list 'get-in 'drum-kits
-                                                        (find-in drum-kits (keyword
-                                                                            (clojure.string/replace (:name %) " " ""))))
-                                                   (or (= (type %) overtone.studio.inst.Inst)
-                                                       (= (type %) overtone.sc.synth.Synth))
-                                                   (:name %)
-                                                   true %)
-                                            action))
-                               action (vec (mapcat (fn [[a arg]]
-                                                     (vector a arg "\n"))
-                                                   (partition 2 action)))]
-                           (str "[" (apply str action) "]")))
         show-action (fn []
                       (.setText text-box (get-action-str (get-cur-action))))
         add-action (fn []
@@ -185,6 +211,9 @@
                              action-text (get-action-str (vec (conj action (get-in drum-kits (vector k snd)) [])))]
                          (.setText text-box action-text))))]
     (.setLayout frame nil)
+    (ap/with-applet wheel
+      (swap! (q/state-atom)
+             (fn [s] (assoc s :action-text text-box))))
     (doto text-box
       (.setEditable true)
       (.setBackground Color/BLACK)
@@ -192,10 +221,13 @@
       (.setEditable true)
       (.setLineWrap true)
       (.setWrapStyleWord true)
-      (.setFont (Font. "Monospaced" Font/PLAIN 14)))
-    (.setBounds kit 10 10 100 20)
-    (.setBounds sounds 120 10 100 20)
-    (.setBounds add 240 10 60 20)
+      (.setFont (Font. "Monospaced" Font/PLAIN 14))
+      (.setCaretColor Color/white))
+
+    (.setBounds kit 10 10 150 20)
+    (.setBounds sounds 160 10 150 20)
+    (.setBounds add 330 10 60 20)
+    (.setBounds eval 400 10 60 20)
     (.setBounds text-box 10 70 600 200)
     (.addActionListener kit
                         (reify ActionListener
@@ -212,10 +244,16 @@
                           (actionPerformed [this e]
                             (add-action)
                             )))
+    (.addActionListener eval
+                        (reify ActionListener
+                          (actionPerformed [this e]
+                            (eval-action (.getText text-box))
+                            )))
     (doto frame
       (.add kit)
       (.add sounds)
       (.add add)
+      (.add eval)
       (.add text-box)
       (.setSize 700 300)
 ;      (.pack)
@@ -276,43 +314,38 @@
           new (vector (+ circle (cond (= key :up) 1
                                       (= key :down) -1
                                       true 0))
-                      (+ slot (cond (= key :left) -1
+                      (cond (and (= key :right) (>= (inc slot) raw-size)) 0
+                            (and (= key :left) (< (dec slot) 0)) (dec raw-size)
+                        true (+ slot (cond (= key :left) -1
                                       (= key :right) 1
-                                      true 0)))
-          display-cursor (q/state :display-cursor)]
+                                      true 0))))
+          display-cursor (q/state :display-cursor)
+          text-box (q/state :action-text)]
       (when (or (= :left key) (= :right key) (= :up key) (= :down key) (= 10 (q/key-code)))
-          (swap!
-           state
-           (fn [s]
-             (cond
-               (and display-cursor (or (= :left key) (= :right key) (= :up key) (= :down key))
-                    (>= (first new) 0) (< (first new) cnt) (>= (second new) 0) (<= (second new) raw-size))
-               (assoc (assoc s :cursor new) :old-cursor [circle slot])
-               (= 10 (q/key-code)) (assoc s :display-cursor (not display-cursor))
-               true s)))
-          (draw-cursor))
+        (swap!
+         state
+         (fn [s]
+           (cond
+             (and display-cursor (or (= :left key) (= :right key) (= :up key) (= :down key))
+                  (>= (first new) 0) (<= (first new) cnt) (>= (second new) 0) (<= (second new) raw-size))
+             (assoc (assoc s :cursor new) :old-cursor [circle slot])
+             (= 10 (q/key-code)) (assoc s :display-cursor (not display-cursor))
+             true s)))
+        (when (and (not (nil? text-box)) (.isVisible text-box) (not (= 10 (q/key-code))))
+          (.setText text-box (get-action-str (get-cur-action))))
+        ;; (ap/with-applet wheel
+        ;;   (let [g (.getGraphics wheel)
+        ;;         [circle slot] (q/state :cursor)]
+        ;;     (.beginDraw g)
+        ;;     (q/fill 0 0 0)
+        ;;     (q/rect 100 50 300 100)
+        ;;     (q/fill 255 255 255)
+        ;;     (q/text (str (nth (keys @points) circle) " " (+ 1 (* slot step)) " " slot " " raw-size) 100 100)
+        ;;     (.endDraw g)))
+        (draw-cursor))
       (when (= :e key)
         (draw-action)
         )
-      ;; (when (= :w key)
-      ;;   (let [cp5 (q/state :cp5)
-      ;;         box (.getController cp5 "action")
-      ;;         init (nil? box)
-      ;;         box (if init (.addMultiList cp5 "action") box)
-      ;;         ;[x y] (get-coord (inc circle) slot)
-      ;;         ]
-      ;;     (when init
-      ;;       (.setPosition box 100 100)
-      ;;       (.setSize box 500 500)
-      ;;       ;; (.setItemHeight box 30)
-      ;;       ;; (.setBarHeight  box 30)
-      ;;       (.setColorActive box 1)
-      ;;       (.add (.add (.add box "level1" 1) "level11" 11) "level111" 111)
-      ;;       )
-      ;;     (.show box)
-      ;;     (draw-state)
-      ;;     )
-      ;;   )
       )
     )
   )
@@ -404,6 +437,7 @@
                  :cursor [0 0]
                  :display-cursor false
                  :old-cursor [0 0]
+                 :action-text nil
        ;          :cp5 (ControlP5. wheel)
                  })
          ))

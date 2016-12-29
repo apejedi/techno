@@ -9,6 +9,23 @@
             [clojure.string :as string]))
 (defonce s-player (atom nil))
 (declare player)
+
+(load-string "
+(import java.util.concurrent.ThreadLocalRandom) (use
+        '[overtone.inst.synth]
+        '[techno.core :as core]
+        '[techno.sequencer :as s]
+        '[techno.synths]
+        '[techno.drum-patterns]
+        '[techno.drums]
+        '[techno.melody])
+
+(s/set-action
+ core/player
+ :kick
+ 1
+ [(get-in drum-kits [:Kit4-Electro :CYCdh_ElecK01-Kick02.wav])[]
+  ])")
 (comment
   (if (or (nil? player) (not (node-active? player)))
       (def player (s/get-s
@@ -34,10 +51,9 @@
   (r/ring player 100 15 50)
 
   (sweet :dur 0.2)
-  (s/set-action
-   player
-   :harmony
-   1 [sweet []])
+  (eval-action
+   "[sweet []]")
+
   (s/rm-p player :kick)
   (r/draw-state)
   (r/draw-line 5)

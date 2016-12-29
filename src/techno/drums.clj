@@ -12,7 +12,7 @@
 
 
 
-(def drum-kits (create-sample-map (str (.getCanonicalPath (clojure.java.io/file ".")) "\\musicradar-drum-samples\\Drum Kits") true))
+;(def drum-kits (create-sample-map (str (.getCanonicalPath (clojure.java.io/file ".")) "\\musicradar-drum-samples\\Drum Kits") true))
 
 
 ;;Functions to generate patterns
