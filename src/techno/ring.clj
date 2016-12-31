@@ -112,15 +112,16 @@
     )
   )
 
-(defn get-cur-action []
+(defn get-cur-action [& [circle beat]]
   (ap/with-applet wheel
-    (let [[circle beat] (q/state :cursor)
+    (let [[circle beat] (if (not (nil? circle)) [circle beat] (q/state :cursor))
           pattern (nth (keys @points) circle)
           step (s/get-st @sequencer)
+          size (get (s/get-sequencer-data @sequencer) :size)
           beat (+ 1 (* beat step))
           beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)
           data (get (s/get-p @sequencer pattern) :data)
-          action (if (map? data) (get data beat []) [])]
+          action (if (map? data) (get (s/stretch-p data size) beat []) [])]
       action
       ))
   )
@@ -179,7 +180,7 @@
         '[techno.samples]
         '[techno.melody])
 (s/set-action core/player
-" pattern " " beat " " action ")"))
+" pattern " " beat " " action " true)"))
       ))
   (draw-state)
   )
@@ -188,9 +189,9 @@
 (defn draw-action []
   (let [frame (JFrame. "Beat Action")
         text-box (JTextArea.)
-        kits (map name (keys drum-kits))
+        kits (sort (map name (keys drum-kits)))
         kit (JComboBox. (into-array String kits))
-        sounds (JComboBox. (into-array String (map name (keys (get drum-kits (keyword (first kits)))))))
+        sounds (JComboBox. (into-array String (sort (map name (keys (get drum-kits (keyword (first kits))))))))
         add (JButton. "Add")
         eval (JButton. "Eval")
         key-handler (fn [^String selected]
@@ -225,9 +226,9 @@
       (.setCaretColor Color/white))
 
     (.setBounds kit 10 10 150 20)
-    (.setBounds sounds 160 10 150 20)
-    (.setBounds add 330 10 60 20)
-    (.setBounds eval 400 10 60 20)
+    (.setBounds sounds 160 10 200 20)
+    (.setBounds add 380 10 60 20)
+    (.setBounds eval 450 10 60 20)
     (.setBounds text-box 10 70 600 200)
     (.addActionListener kit
                         (reify ActionListener
@@ -273,29 +274,31 @@
             old (nth (keys @points) old-circle)
             r (q/state :r)]
         (when display
-          (q/fill 0 0 0)
-          (apply q/ellipse (conj (apply get-coord (vector (inc old-circle) old-beat)) r r))
-          (apply q/fill (get-in @points [old :color]))
-          (doseq [[o [x y]] (get @points old)]
-            (when (not (= :color o))
+          (locking wheel
+            (q/fill 0 0 0)
+            (apply q/ellipse (conj (apply get-coord (vector (inc old-circle) old-beat)) r r))
+            (apply q/fill (get-in @points [old :color]))
+            (doseq [[o [x y]] (get @points old)]
+              (when (not (= :color o))
                 (q/ellipse x y r r))
-            )
-          (q/fill 255 255 255)
-          (doseq [[o [x y]] (get @points key)]
-            (when (not (= :color o))
+              )
+            (q/fill 255 255 255)
+            (doseq [[o [x y]] (get @points key)]
+              (when (not (= :color o))
                 (q/ellipse x y r r))
-            )
-          (q/fill 255 0 125)
-          (apply q/ellipse (conj (apply get-coord (vector (inc circle) beat)) r r))
+              )
+            (q/fill 255 0 125)
+            (apply q/ellipse (conj (apply get-coord (vector (inc circle) beat)) r r)))
           )
         (when (not display)
-          (q/fill 0 0 0)
-          (apply q/ellipse (conj (apply get-coord (vector (inc circle) beat)) (+ r 5) (+ r 5)))
-          (apply q/fill (get-in @points [key :color]))
-          (doseq [[o [x y]] (get @points key)]
-            (when (not (= :color o))
+          (locking wheel
+            (q/fill 0 0 0)
+            (apply q/ellipse (conj (apply get-coord (vector (inc circle) beat)) (+ r 5) (+ r 5)))
+            (apply q/fill (get-in @points [key :color]))
+            (doseq [[o [x y]] (get @points key)]
+              (when (not (= :color o))
                 (q/ellipse x y r r))
-            )
+              ))
           )
         ))
       (.endDraw g))
@@ -303,6 +306,14 @@
 
 (defn handle-key []
   (ap/with-applet wheel
+    ;; (let [g (.getGraphics wheel)]
+    ;;   (.beginDraw g)
+    ;;   (q/fill 0 0 0)
+    ;;   (q/rect 100 50 300 100)
+    ;;   (q/fill 255 255 255)
+    ;;   (q/text (str "key event: " (q/key-code)) 100 100)
+    ;;   (.endDraw g))
+
     (let [[circle slot] (q/state :cursor)
           cnt (count (keys (s/get-p @sequencer)))
           step (s/get-st @sequencer)
@@ -320,8 +331,13 @@
                                       (= key :right) 1
                                       true 0))))
           display-cursor (q/state :display-cursor)
-          text-box (q/state :action-text)]
+          text-box (q/state :action-text)
+          key-event @(:key-event (meta wheel))
+          cur-action (get-action-str (get-cur-action))]
       (when (or (= :left key) (= :right key) (= :up key) (= :down key) (= 10 (q/key-code)))
+        (when (.isControlDown key-event)
+          (eval-action "[]")
+          )
         (swap!
          state
          (fn [s]
@@ -331,9 +347,15 @@
              (assoc (assoc s :cursor new) :old-cursor [circle slot])
              (= 10 (q/key-code)) (assoc s :display-cursor (not display-cursor))
              true s)))
+        (when (.isControlDown key-event)
+          (eval-action cur-action)
+          )
         (when (and (not (nil? text-box)) (.isVisible text-box) (not (= 10 (q/key-code))))
           (.setText text-box (get-action-str (get-cur-action))))
         (draw-cursor))
+      (when (and (= 127 (q/key-code)) (.isControlDown key-event))
+        (eval-action "[]")
+        )
       (when (= :e key)
         (draw-action)
         )
@@ -353,16 +375,17 @@
             prev (if (= 0 offset) raw-size (dec offset))
             cursor (nth (keys @points) (first (q/state :cursor)))
             display-cursor (q/state :display-cursor)]
-        (doseq [[k v] @points]
-          (when (and (not (= :legend k)) (or (not display-cursor) (not (= k cursor))))
-            (apply q/fill (get v :color))
-            (when (contains? v prev)
-              (apply q/ellipse (conj (vec (get v prev)) r r)))
-            (apply q/fill [255 255 0])
-            (when (contains? v offset)
-              (apply q/ellipse (conj (vec (get v offset)) r r)))
-            )
-          )
+        (locking wheel
+          (doseq [[k v] @points]
+            (when (and (not (= :legend k)) (or (not display-cursor) (not (= k cursor))))
+              (apply q/fill (get v :color))
+              (when (contains? v prev)
+                (apply q/ellipse (conj (vec (get v prev)) r r)))
+              (apply q/fill [255 255 0])
+              (when (contains? v offset)
+                (apply q/ellipse (conj (vec (get v offset)) r r)))
+              )
+            ))
         ))
     (.endDraw g))
   )
@@ -429,6 +452,7 @@
                  :display-cursor false
                  :old-cursor [0 0]
                  :action-text nil
+                 :key-event nil
        ;          :cp5 (ControlP5. wheel)
                  })
          ))

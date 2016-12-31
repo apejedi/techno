@@ -338,9 +338,9 @@
 
 
 
-  (let [patterns [[3 8 :k [:Kit4-Electro]]
-                  [0 20 :c [:Kit16-Electro]]
-                  [0 20 :s [:Kit7-Electro]]
+  (let [patterns [[3 6 :k [:Kit4-Electro]]
+                  [1 20 :c [:Kit16-Electro]]
+                  [1 20 :s [:Kit7-Electro]]
                   ]]
 ;    (s/rm-p core/player :all)
     (doseq [[fill slots action kits] patterns]
@@ -350,7 +350,8 @@
         kits
         (euclid-p fill slots action)
         0.25 [])
-        action))
+        action)
+      )
     )
 
   (s/set-st core/player 0.125)

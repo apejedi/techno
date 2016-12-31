@@ -181,6 +181,12 @@
       (concat a b)
       0.25 1 [:hard 0.3 :dur 2])))
 
+  (s/play-p
+   (let [a (map #(vector :freq1 (midi->hz %1)
+                         :freq2 (midi->hz %2) :amp 0.8) (chord :C4 :m7) (chord :G4 :m7))]
+     [[whistle (nth a 0) whistle (nth a 1) whistle (nth a 2)]]
+     ))
+
   (s/add-p
    core/player
    (s/phrase-p

@@ -242,7 +242,9 @@
                        [a b c 0.01] :exponential)
              :action FREE)
         osc-a (* amp 0.5 (sin-osc env))
-        ticks (impulse:ar 20)]
+        ;osc-a (hpf (lpf osc-a freq2) freq1)
+        ;ticks (impulse:ar 20)
+        ]
     (out:ar [0 1] osc-a)
     )
   )

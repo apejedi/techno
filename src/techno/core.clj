@@ -10,22 +10,7 @@
 (defonce s-player (atom nil))
 (declare player)
 
-(load-string "
-(import java.util.concurrent.ThreadLocalRandom) (use
-        '[overtone.inst.synth]
-        '[techno.core :as core]
-        '[techno.sequencer :as s]
-        '[techno.synths]
-        '[techno.drum-patterns]
-        '[techno.drums]
-        '[techno.melody])
 
-(s/set-action
- core/player
- :kick
- 1
- [(get-in drum-kits [:Kit4-Electro :CYCdh_ElecK01-Kick02.wav])[]
-  ])")
 (comment
   (if (or (nil? player) (not (node-active? player)))
       (def player (s/get-s
