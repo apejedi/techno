@@ -2,6 +2,7 @@
   (:use [techno.sequencer :as s]
         [techno.samples :only [drum-kits]]
         [overtone.sc.trig]
+        [overtone.music.pitch]
         [overtone.libs.event :only [on-event event]])
   (:require [quil.core :as q]
             [quil.applet :as ap]
@@ -11,7 +12,6 @@
 ;           [controlP5 ControlP5]
            (java.awt Dimension Font Color)
            (java.awt.event ActionListener ActionEvent)))
-
 
 (defonce sequencer (atom nil))
 (defonce points (atom {}))
@@ -126,8 +126,33 @@
       ))
   )
 
-(defn get-action-str [action]
-  (let [action (vec (map
+(defn get-action-str [action & [samples]]
+  (let [action (vec
+                (mapcat
+                 (fn [[a arg]]
+                   (let [note-arg
+                         (if (or (instance? overtone.studio.inst.Inst a)
+                                 (instance? overtone.sc.synth.Synth a))
+                           (cond (some #(= (:name %) "freq") (:params a)) :freq
+                                 (some #(= (:name %) "note") (:params a)) :note
+                                 true false) false)
+                         arg (if note-arg
+                               (loop [arg arg cur (first arg) prev nil final []]
+                                 (if (> (count arg) 0)
+                                   (recur (rest arg)
+                                          (first (rest arg)) cur
+                                          (conj final
+                                                (if (= prev note-arg)
+                                                  (cond (= note-arg :freq) (list 'midi->hz (list 'note (find-note-name (hz->midi cur))))
+                                                        (= note-arg :note) (list 'note (find-note-name cur)))
+                                                  cur)))
+                                   final))
+                               arg)
+                         ]
+                     (vector a arg "\n"))
+                   )
+                 (partition 2 action)))
+        action (vec (map
                      #(cond (= overtone.sc.sample.PlayableSample (type %))
                             (list 'get-in 'drum-kits
                                   (find-in drum-kits (keyword
@@ -135,12 +160,10 @@
                             (or (= (type %) overtone.studio.inst.Inst)
                                 (= (type %) overtone.sc.synth.Synth))
                             (:name %)
+                            (sequential? %) (vec %)
                             true %)
-                     action))
-        action (vec (mapcat (fn [[a arg]]
-                              (vector a arg "\n"))
-                            (partition 2 action)))]
-    (str "[" (apply str action) "]")))
+                     action))]
+    (str "[ " (apply str action) " ]")))
 
 (defn eval-action [action]
   (ap/with-applet wheel
@@ -194,6 +217,7 @@
         sounds (JComboBox. (into-array String (sort (map name (keys (get drum-kits (keyword (first kits))))))))
         add (JButton. "Add")
         eval (JButton. "Eval")
+        insert (JButton. "Insert")
         key-handler (fn [^String selected]
                       (.removeAllItems sounds)
                       (doseq [s (keys (get drum-kits (keyword selected)))]
@@ -229,6 +253,7 @@
     (.setBounds sounds 160 10 200 20)
     (.setBounds add 380 10 60 20)
     (.setBounds eval 450 10 60 20)
+    (.setBounds insert 520 10 60 20)
     (.setBounds text-box 10 70 600 200)
     (.addActionListener kit
                         (reify ActionListener
@@ -274,7 +299,7 @@
             old (nth (keys @points) old-circle)
             r (q/state :r)]
         (when display
-          (locking wheel
+          (locking g
             (q/fill 0 0 0)
             (apply q/ellipse (conj (apply get-coord (vector (inc old-circle) old-beat)) r r))
             (apply q/fill (get-in @points [old :color]))
@@ -291,7 +316,7 @@
             (apply q/ellipse (conj (apply get-coord (vector (inc circle) beat)) r r)))
           )
         (when (not display)
-          (locking wheel
+          (locking g
             (q/fill 0 0 0)
             (apply q/ellipse (conj (apply get-coord (vector (inc circle) beat)) (+ r 5) (+ r 5)))
             (apply q/fill (get-in @points [key :color]))
@@ -330,6 +355,7 @@
                         true (+ slot (cond (= key :left) -1
                                       (= key :right) 1
                                       true 0))))
+          pattern (nth (keys @points) circle)
           display-cursor (q/state :display-cursor)
           text-box (q/state :action-text)
           key-event @(:key-event (meta wheel))
@@ -349,6 +375,23 @@
              true s)))
         (when (.isControlDown key-event)
           (eval-action cur-action)
+          )
+        (when (and (or (= :left key) (= :right key)) (.isShiftDown key-event))
+          (s/add-p @sequencer
+           (s/p-shift
+            (:data (s/get-p @sequencer pattern))
+            (cond (= :left key) -1
+                  (= :right key) 1))
+           pattern)
+          ;; (let [g (.getGraphics wheel)
+          ;;       [circle slot] (q/state :cursor)]
+          ;;   (.beginDraw g)
+          ;;   (q/fill 0 0 0)
+          ;;   (q/rect 100 50 300 100)
+          ;;   (q/fill 255 255 255)
+          ;;   (q/text (str ) 100 100)
+          ;;   (.endDraw g))
+          (draw-state)
           )
         (when (and (not (nil? text-box)) (.isVisible text-box) (not (= 10 (q/key-code))))
           (.setText text-box (get-action-str (get-cur-action))))
@@ -375,7 +418,7 @@
             prev (if (= 0 offset) raw-size (dec offset))
             cursor (nth (keys @points) (first (q/state :cursor)))
             display-cursor (q/state :display-cursor)]
-        (locking wheel
+        (locking g
           (doseq [[k v] @points]
             (when (and (not (= :legend k)) (or (not display-cursor) (not (= k cursor))))
               (apply q/fill (get v :color))
@@ -399,29 +442,30 @@
         x (/ (q/width) 2)
         y (/ (q/height) 2)
         step (s/get-st @sequencer)
-        coords (gen-coords x y init d @sequencer)]
-    (swap! points (fn [_] coords))
-    (q/clear)
-    (doseq [[k v] coords]
-      (apply q/fill (get v :color))
-      (doseq [[o [x y]] v]
-        (when (and (not (= k :legend)) (number? o))
-          (q/ellipse x y r r))
-        (when (and (= :legend k) (number? o))
-          (q/text (str (+ 1 (* o step))) x y))
-        )
-      )
-
-    (doall
-     (map
-      (fn [[k v] y]
-        (apply q/fill (get v :color))
-        ;(q/ellipse (- (q/width) 100) y r r)
-        (q/text (str k) (- (q/width) 100 r 10) y)
-        )
-      coords
-      (range (- (q/height) 40) (- (- (q/height) 40) (* 40 (inc (count coords)))) -40)
-      ))
+        coords (gen-coords x y init d @sequencer)
+        g (.getGraphics wheel)]
+    (locking g
+      (swap! points (fn [_] coords))
+      (q/clear)
+        (doseq [[k v] coords]
+          (apply q/fill (get v :color))
+          (doseq [[o [x y]] v]
+            (when (and (not (= k :legend)) (number? o))
+              (q/ellipse x y r r))
+            (when (and (= :legend k) (number? o))
+              (q/text (str (+ 1 (* o step))) x y))
+            )
+          )
+        (doall
+         (map
+          (fn [[k v] y]
+            (apply q/fill (get v :color))
+                                        ;(q/ellipse (- (q/width) 100) y r r)
+            (q/text (str k) (- (q/width) 100 r 10) y)
+            )
+          coords
+          (range (- (q/height) 40) (- (- (q/height) 40) (* 40 (inc (count coords)))) -40)
+          )))
     nil
     )
   )

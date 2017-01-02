@@ -231,7 +231,7 @@
            (and (sequential? data))
            (if (<= orig-beat (count data)) (nth data (dec orig-beat))))]
      ;; (println cur-beat)
-     ;; (if (> (count beat-actions) 0)
+     ;; (if (and (> (count beat-actions) 0) (fn? (first beat-actions)))
      ;;   (println "playing "
      ;;            (reduce (fn [a b] (str (to-str a) " " (to-str b) " ")) beat-actions)
      ;;            " for beat " cur-beat " raw-beat" orig-beat))
@@ -251,7 +251,8 @@
                          (assoc pattern name n)
                          ))
                      )
-                   (do (apply instrument args)
+                   (do
+                     (apply instrument args)
                        false))
                  )
              ret (if (map? p) p ret)]
@@ -766,6 +767,13 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
       (dissoc pat tail)
       pat)
     )
+  )
+
+(defn build-rest-p [pattern & [step]]
+  (let [step (if step step (get-step pattern))
+        offsets (sort (keys pattern))]
+    (loop [])
+      )
   )
 
 (defn p-shift [pattern shift-by]

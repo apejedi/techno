@@ -151,7 +151,14 @@
                0.25 15)) :motif)
     )
 
+  (s/add-p
+   core/player
+   {1 [(fn [& args]
+           (doseq [n (chord-degree (choose [:ii :iv :v]) :C4 :minor)] (overpad n) )) []]}
+   :test)
 
+  (apply (fn [& args]
+           (doseq [n (chord-degree (choose [:ii :iv :v]) :C4 :minor)] (overpad n) )) [])
   (s/add-p
    core/player
    (s/phrase-p
@@ -187,6 +194,8 @@
      [[whistle (nth a 0) whistle (nth a 1) whistle (nth a 2)]]
      ))
 
+
+(s/add-p core/player {1 [tick []] 6.25 []} :total)
   (s/add-p
    core/player
    (s/phrase-p

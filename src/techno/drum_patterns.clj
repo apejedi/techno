@@ -335,24 +335,38 @@
     0.25))
 
 
+  (doseq [p [:drum1 :drum2 :drum3 :drum4
+             :motif1 :motif2 :motif3
+             :harmony1 :harmony2 :harmony3]]
+    (s/add-p
+     core/player
+     {2.25 []}
+     p))
 
 
 
-  (let [patterns [[3 6 :k [:Kit4-Electro]]
-                  [1 20 :c [:Kit16-Electro]]
-                  [1 20 :s [:Kit7-Electro]]
-                  ]]
+
+  (let [patterns [[1 4 :kick [:Kit4-Electro]]
+                  [1 4 :snr [:Kit7-Electro]]
+                  [1 4 :clhat [:Kit15-Electro]]
+                  [1 4 :clap [:Kit7-Electro]]
+                  [1 4 :ophat [:Kit4-Electro]]
+                  [1 24 :harmony [:Kit4-Electro]]]]
 ;    (s/rm-p core/player :all)
     (doseq [[fill slots action kits] patterns]
       (s/add-p
        core/player
        (drum-p
         kits
-        (euclid-p fill slots action)
+        (euclid-p fill slots action (rand-int 24))
         0.25 [])
         action)
       )
     )
+
+  (s/add-p core/player
+           (drum-p [:Kit15-Electro] (euclid-p 5 18 :o) 0.25)
+           :hat)
 
   (s/set-st core/player 0.125)
 

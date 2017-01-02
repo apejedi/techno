@@ -33,7 +33,7 @@
   (s/set-st player (double (/ 1 8)
                            ))
   (s/set-st player 0.25)
-  (r/ring player 100 15 50)
+  (r/ring player 100 10 30)
 
   (sweet :dur 0.2)
   (eval-action
