@@ -346,8 +346,8 @@
    ;:motif
    )
 
-  (s/play-p
-                                        ;core/player
+  (s/add-p
+   core/player
    (let [a (chord :C4 :M7)
          b (chord :B3 :M7)
          ]
@@ -358,9 +358,10 @@
        :0 b b b b b :1
        ]
       0.25 2 [:dur 0.8 :amp 0.5 :vib 0]))
-                                        ;:harmony
-   1.6
+   :harmony
+  ; 1.6
    )
+
 
   )
 
