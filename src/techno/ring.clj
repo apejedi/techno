@@ -2,6 +2,7 @@
   (:use [techno.sequencer :as s]
         [techno.samples :only [drum-kits]]
         [overtone.sc.trig]
+        [overtone.sc.node]
         [overtone.music.pitch]
         [overtone.libs.event :only [on-event event]])
   (:require [quil.core :as q]
@@ -172,7 +173,8 @@
           step (s/get-st @sequencer)
           beat (+ 1 (* beat step))
           beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)
-          action (clojure.string/replace action "\n" "")]
+          action (clojure.string/replace action "\n" "")
+          body (get (s/get-p @sequencer pattern) :body {})]
       ;; (let [g (.getGraphics wheel)
 ;;             [circle slot] (q/state :cursor)]
 ;;         (.beginDraw g)
@@ -204,6 +206,7 @@
         '[techno.melody])
 (s/set-action core/player
 " pattern " " beat " " action " true)"))
+      (s/mod-p @sequencer pattern :body (assoc body beat action))
       ))
   (draw-state)
   )
@@ -217,7 +220,7 @@
         sounds (JComboBox. (into-array String (sort (map name (keys (get drum-kits (keyword (first kits))))))))
         add (JButton. "Add")
         eval (JButton. "Eval")
-        insert (JButton. "Insert")
+        pos (JTextField.)
         key-handler (fn [^String selected]
                       (.removeAllItems sounds)
                       (doseq [s (keys (get drum-kits (keyword selected)))]
@@ -238,9 +241,8 @@
     (.setLayout frame nil)
     (ap/with-applet wheel
       (swap! (q/state-atom)
-             (fn [s] (assoc s :action-text text-box))))
+             (fn [s] (assoc (assoc s :action-text text-box) :action-pos pos))))
     (doto text-box
-      (.setEditable true)
       (.setBackground Color/BLACK)
       (.setForeground Color/GREEN)
       (.setEditable true)
@@ -248,12 +250,16 @@
       (.setWrapStyleWord true)
       (.setFont (Font. "Monospaced" Font/PLAIN 14))
       (.setCaretColor Color/white))
+    (doto pos
+      (.setBackground Color/BLACK)
+      (.setForeground Color/GREEN)
+      (.setFont (Font. "Monospaced" Font/PLAIN 14)))
 
     (.setBounds kit 10 10 150 20)
     (.setBounds sounds 160 10 200 20)
     (.setBounds add 380 10 60 20)
     (.setBounds eval 450 10 60 20)
-    (.setBounds insert 520 10 60 20)
+    (.setBounds pos 520 10 160 20)
     (.setBounds text-box 10 70 600 200)
     (.addActionListener kit
                         (reify ActionListener
@@ -281,6 +287,7 @@
       (.add add)
       (.add eval)
       (.add text-box)
+      (.add pos)
       (.setSize 700 300)
 ;      (.pack)
       (.setVisible true)
@@ -330,80 +337,89 @@
   )
 
 (defn handle-key []
-  (ap/with-applet wheel
-    ;; (let [g (.getGraphics wheel)]
-    ;;   (.beginDraw g)
-    ;;   (q/fill 0 0 0)
-    ;;   (q/rect 100 50 300 100)
-    ;;   (q/fill 255 255 255)
-    ;;   (q/text (str "key event: " (q/key-code)) 100 100)
-    ;;   (.endDraw g))
-
-    (let [[circle slot] (q/state :cursor)
-          cnt (count (keys (s/get-p @sequencer)))
-          step (s/get-st @sequencer)
-          step (if step step 0.25)
-          size (get (s/get-sequencer-data @sequencer) :size 0)
-          raw-size (+ 1 (/ (- size 1) step))
-          state (q/state-atom)
-          key (q/key-as-keyword)
-          new (vector (+ circle (cond (= key :up) 1
-                                      (= key :down) -1
-                                      true 0))
-                      (cond (and (= key :right) (>= (inc slot) raw-size)) 0
-                            (and (= key :left) (< (dec slot) 0)) (dec raw-size)
-                        true (+ slot (cond (= key :left) -1
-                                      (= key :right) 1
-                                      true 0))))
-          pattern (nth (keys @points) circle)
-          display-cursor (q/state :display-cursor)
-          text-box (q/state :action-text)
-          key-event @(:key-event (meta wheel))
-          cur-action (get-action-str (get-cur-action))]
-      (when (or (= :left key) (= :right key) (= :up key) (= :down key) (= 10 (q/key-code)))
-        (when (.isControlDown key-event)
-          (eval-action "[]")
-          )
-        (swap!
-         state
-         (fn [s]
-           (cond
-             (and display-cursor (or (= :left key) (= :right key) (= :up key) (= :down key))
-                  (>= (first new) 0) (<= (first new) cnt) (>= (second new) 0) (<= (second new) raw-size))
-             (assoc (assoc s :cursor new) :old-cursor [circle slot])
-             (= 10 (q/key-code)) (assoc s :display-cursor (not display-cursor))
-             true s)))
-        (when (.isControlDown key-event)
-          (eval-action cur-action)
-          )
-        (when (and (or (= :left key) (= :right key)) (.isShiftDown key-event))
-          (s/add-p @sequencer
-           (s/p-shift
-            (:data (s/get-p @sequencer pattern))
-            (cond (= :left key) -1
-                  (= :right key) 1))
-           pattern)
+  (when (and (not (.exitCalled wheel)) (node-active? @sequencer))
+      (ap/with-applet wheel
+        ;; (let [g (.getGraphics wheel)]
+        ;;   (.beginDraw g)
+        ;;   (q/fill 0 0 0)
+        ;;   (q/rect 100 50 300 100)
+        ;;   (q/fill 255 255 255)
+        ;;   (q/text (str "key event: " (q/key-code)) 100 100)
+        ;;   (.endDraw g))
+        (let [[circle slot] (q/state :cursor)
+              cnt (count (keys (s/get-p @sequencer)))
+              step (s/get-st @sequencer)
+              step (if step step 0.25)
+              size (get (s/get-sequencer-data @sequencer) :size 0)
+              raw-size (+ 1 (/ (- size 1) step))
+              state (q/state-atom)
+              key (q/key-as-keyword)
+              new (vector (+ circle (cond (= key :up) 1
+                                          (= key :down) -1
+                                          true 0))
+                          (cond (and (= key :right) (>= (inc slot) raw-size)) 0
+                                (and (= key :left) (< (dec slot) 0)) (dec raw-size)
+                                true (+ slot (cond (= key :left) -1
+                                                   (= key :right) 1
+                                                   true 0))))
+              beat (+ 1 (* (second new) step))
+              beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)
+              pattern (nth (keys @points) circle)
+              new-pattern (nth (keys @points) (first new))
+              display-cursor (q/state :display-cursor)
+              text-box (q/state :action-text)
+              pos-box (q/state :action-pos)
+              key-event @(:key-event (meta wheel))
+              cur-action (get-action-str (get-cur-action))]
           ;; (let [g (.getGraphics wheel)
-          ;;       [circle slot] (q/state :cursor)]
-          ;;   (.beginDraw g)
-          ;;   (q/fill 0 0 0)
-          ;;   (q/rect 100 50 300 100)
-          ;;   (q/fill 255 255 255)
-          ;;   (q/text (str ) 100 100)
-          ;;   (.endDraw g))
-          (draw-state)
+          ;;           [circle slot] (q/state :cursor)]
+          ;;       (.beginDraw g)
+          ;;       (q/fill 0 0 0)
+          ;;       (q/rect 100 50 300 100)
+          ;;       (q/fill 255 255 255)
+          ;;       (q/text (str (= 82 (q/key-code)) (.isControlDown key-event) key) 100 100)
+          ;;       (.endDraw g))
+          (when (or (= :left key) (= :right key) (= :up key) (= :down key) (= 10 (q/key-code)))
+            (when (.isControlDown key-event)
+              (eval-action "[]"))
+            (swap!
+             state
+             (fn [s]
+               (cond
+                 (and display-cursor (or (= :left key) (= :right key) (= :up key) (= :down key))
+                      (>= (first new) 0) (<= (first new) cnt) (>= (second new) 0) (<= (second new) raw-size))
+                 (assoc (assoc s :cursor new) :old-cursor [circle slot])
+                 (= 10 (q/key-code)) (assoc s :display-cursor (not display-cursor))
+                 true s)))
+            (when (.isControlDown key-event)
+              (eval-action cur-action))
+            (when (and (or (= :left key) (= :right key)) (.isShiftDown key-event))
+              (s/add-p @sequencer
+                       (s/p-shift
+                        (:data (s/get-p @sequencer pattern))
+                        (cond (= :left key) -1
+                              (= :right key) 1))
+                       pattern)
+              (draw-state)
+              )
+            (when (and (not (nil? text-box)) (not (nil? pos-box)) (.isVisible text-box) (not (= 10 (q/key-code))))
+              (.setText text-box (if (contains? (get (s/get-p @sequencer pattern) :body {}) beat)
+                                   (get-in (s/get-p @sequencer pattern) [:body beat])
+                                   (get-action-str (get-cur-action))))
+              (.setText pos-box (str new-pattern " " beat))
+              )
+            (draw-cursor))
+          (when (and (= 127 (q/key-code)) (.isControlDown key-event))
+            (eval-action "[]")
+            )
+          (when (and (= 82 (q/key-code)) (.isControlDown key-event))
+            (draw-state)
+            )
+          (when (= :e key)
+            (draw-action)
+            )
           )
-        (when (and (not (nil? text-box)) (.isVisible text-box) (not (= 10 (q/key-code))))
-          (.setText text-box (get-action-str (get-cur-action))))
-        (draw-cursor))
-      (when (and (= 127 (q/key-code)) (.isControlDown key-event))
-        (eval-action "[]")
-        )
-      (when (= :e key)
-        (draw-action)
-        )
-      )
-    )
+        ))
   )
 
 (defn draw-line [beat]
@@ -496,6 +512,7 @@
                  :display-cursor false
                  :old-cursor [0 0]
                  :action-text nil
+                 :action-pos nil
                  :key-event nil
        ;          :cp5 (ControlP5. wheel)
                  })

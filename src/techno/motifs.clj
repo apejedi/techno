@@ -157,6 +157,15 @@
            (doseq [n (chord-degree (choose [:ii :iv :v]) :C4 :minor)] (overpad n) )) []]}
    :test)
 
+  (s/add-p
+   core/player
+   (s/phrase-p
+    bing
+    (vec (map #(nth (scale :C4 :minor) (mod % 7))
+              [1 5 3 7]))
+    0.125 1 [:decay 1])
+   :harmony2)
+
   (apply (fn [& args]
            (doseq [n (chord-degree (choose [:ii :iv :v]) :C4 :minor)] (overpad n) )) [])
   (s/add-p

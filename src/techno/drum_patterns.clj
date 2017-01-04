@@ -346,12 +346,13 @@
 
 
 
-  (let [patterns [[1 4 :kick [:Kit4-Electro]]
-                  [1 4 :snr [:Kit7-Electro]]
-                  [1 4 :clhat [:Kit15-Electro]]
-                  [1 4 :clap [:Kit7-Electro]]
-                  [1 4 :ophat [:Kit4-Electro]]
-                  [1 24 :harmony [:Kit4-Electro]]]]
+  (let [patterns [[1 8 :kick [:Kit4-Electro]]
+                  [1 8 :snr [:Kit7-Electro]]
+                  [1 8 :drum1 [:Kit15-Electro]]
+                  [1 8 :drum2 [:Kit7-Electro]]
+                  [1 8 :drum3 [:Kit4-Electro]]
+                  [1 48 :harmony1 [:Kit4-Electro]]
+                  [1 48 :harmony2 [:Kit4-Electro]]]]
 ;    (s/rm-p core/player :all)
     (doseq [[fill slots action kits] patterns]
       (s/add-p
@@ -359,7 +360,7 @@
        (drum-p
         kits
         (euclid-p fill slots action (rand-int 24))
-        0.25 [])
+        0.125 [])
         action)
       )
     )
