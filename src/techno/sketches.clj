@@ -625,23 +625,19 @@
    })
 
 
-;; {
-;; 1  [ nil [] ]
-;; 1.25  [ CYCdh_ElecK01-Kick02.wav [] ][ prophet (:freq 246.94165062806206 :cutoff-freq 800) ][ prophet (:freq 369.9944227116344 :cutoff-freq 800) ][ prophet (:freq 293.6647679174076 :cutoff-freq 800) ][ prophet (:freq 440.0 :cutoff-freq 800) ][ nil [] ]
-;; 1.5  [ CYCdh_ElecK01-Kick01.wav [] ][ nil [] ]
-;; 1.75  [ nil [] ][ CYCdh_ElecK04-Snr02.wav [] ]
-;; 2  [ nil [] ]
-;; 2.25  [ CYCdh_ElecK01-Kick01.wav [] ]
-;; 2.5  [ CYCdh_ElecK04-Snr02.wav [] ]
-;; 2.75  [ nil [] ][ nil [] ]
-;; 3  [ CYCdh_ElecK04-Snr02.wav [] ]
-;; 3.25
-;; 3.5  [ prophet (:freq 261.6255653005986 :cutoff-freq 700) ][ prophet (:freq 391.99543598174927 :cutoff-freq 700) ][ prophet (:freq 329.6275569128699 :cutoff-freq 700) ][ prophet (:freq 493.8833012561241 :cutoff-freq 700) ]
-;; 3.75  [ CYCdh_ElecK04-Snr02.wav [] ]
-;; 4  [ nil [] ][ nil [] ]
-;; 4.25
-;; 4.5
-;; 4.75  [ nil [] ][ CYCdh_ElecK04-Snr02.wav [] ]
-;; 5  [ nil [] ]
-;; 5.25  [ nil [] ][ nil [] ]
-;; }
+(def synth-pop
+  {:drum1 (s/build-map-p
+           [:5 [ (get-in drum-kits [:Kit7-Electro :CYCdh_ElecK04-Kick01.wav])[]] :2] 0.125)
+   :drum2 (s/build-map-p
+           [:1 [ (get-in drum-kits [:Kit7-Electro :CYCdh_ElecK04-Cymbal01.wav])[]] :6] 0.125)
+   :drum3 (s/build-map-p
+            [:15 [ (get-in drum-kits [:Kit4-Electro :CYCdh_ElecK01-Kick02.wav])[]]
+             :13 [ (get-in drum-kits [:Kit4-Electro :CYCdh_ElecK01-Snr02.wav])[]]
+             :1 [ (get-in drum-kits [:Kit4-Electro :CYCdh_ElecK01-Kick02.wav])[]]
+             :3 [ (get-in drum-kits [:Kit4-Electro :CYCdh_ElecK01-Snr03.wav])[]]:12] 0.125)
+   :melody1 (s/build-map-p
+             [[ bpfsaw[:decay 2 :dur 1 :atk 0.01 :note (note :C4)]]
+              :1 [ bpfsaw[:decay 2 :dur 1 :atk 0.01 :note (note :D4)]]
+              :3 [ bpfsaw[:decay 2 :dur 1 :atk 0.01 :note (note :A4)]] :1] 0.125)
+
+   })

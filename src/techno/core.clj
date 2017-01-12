@@ -1,9 +1,8 @@
 (ns techno.core
   (:use [overtone.core]
-        [techno.sequencer :as s]
         [techno.ring :as r]
         )
-  (:require [techno.core :as core]
+  (:require [techno.sequencer :as s]
             [clojure.tools.reader.edn :as edn]
             [clojure.tools.reader.reader-types :as readers]
             [clojure.string :as string]))
@@ -55,6 +54,7 @@
     (keys (s/get-p player))
     )
   )
+
 (defn start-player []
   (let [player @s-player]
       (if (or (nil? player) (not (node-active? player)))
@@ -65,6 +65,30 @@
             (/ 80 60))))))
   )
 
+(defn get-pattern-str [pattern & [type sequencer]]
+  (let [type (if type type "rest")]
+    (if (= type "map")
+      (apply
+       str
+       (concat
+        ["{
+"]
+        (map
+         (fn [[k v]]
+           (str k " "
+                (s/get-action-str v techno.samples/drum-kits "drum-kits")
+                "
+")) (get (s/get-p player pattern) :data))
+        ["}"]))
+      (str
+              "(s/build-map-p
+" (vec (map #(if (sequential? %)
+               (s/get-action-str % techno.samples/drum-kits "drum-kits")
+               %)
+            (s/build-rest-p (get (s/get-p player pattern) :data)))) "
+)"))
+    )
+  )
 
 (defn- find-match [raw text]
   (let [raw-r (clojure.java.io/reader (.getBytes (string/replace raw " " "")))

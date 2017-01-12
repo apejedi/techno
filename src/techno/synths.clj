@@ -197,6 +197,23 @@
                       amp)))
   )
 
+;; (defsynth kick [amp 1]
+;;   (let [body-freq (env-gen:ar (envelope [261 120 51] [0.035 0.08]))
+;;         body-amp (env-gen:ar (linen :attack-time 0.005 :release-time 0.4) :action 2)
+;;         body (* body-amp (sin-osc:ar body-freq))
+;;         ;; pop-freq (x-line:kr 750 261 0.02)
+;;         ;; pop-amp (* (env-gen:ar (linen :attack-time 0.001 :release-time 0.021)) 0.15)
+;;         ;; pop (* (sin-osc pop-freq) pop-freq)
+;;         ;; click-amp (* (env-gen:ar (perc 0.001 0.01)) 0.15)
+;;         ;; click (* (lpf:ar (formant:ar 910 4760 2110) 3140) click-amp)
+;;         ;; snd (+ body pop click)
+;;         ;snd (tanh (+ body pop click))
+;;         ]
+;;     (out:ar [0 1] (* snd amp))
+;;     )
+;;   )
+
+
 
 (defsynth kick [freq      80
                 amp       0.8
@@ -213,6 +230,7 @@
         snd (* amp (+ (* drum drum-env) (* hit hit-env)))]
     (out:ar [0 1] snd))
   )
+
 
 (definst snare [freq  405 amp  0.3
    sustain 0.1
@@ -288,13 +306,13 @@
   )
 
 
-(defsynth bass-synth [freq 200 attack 0.1 amp 1 release 1 detune 3]
+(defsynth bass-synth [freq 200 attack 0.1 amp 1 release 1 detune 3 bwr 1]
   (let [freq-v (+
                 (lin-exp (lf-noise0:kr 2) -1 1 0.1 detune)
                   freq)
         sig (var-saw [freq-v freq-v] 0 1)
         sig2 (* 0.02 (saw [freq freq]))
-        sig (resonz sig freq)
+        sig (resonz sig freq bwr)
         env (env-gen (perc attack release) :action FREE)
         sig (+ sig sig2)
         sig (* sig amp env)
@@ -302,6 +320,7 @@
     (out:ar 0 sig)
     )
   )
+
 
 (defsynth bing [note 72 attack 0.02 decay  0.3 amp 1]
   (let [snd (sin-osc (midicps note))
@@ -323,6 +342,7 @@
     (out [0 1] snd)
     )
   )
+
 
 (defsynth clang [freq 100 amp 1 attack 0.1 decay 1 reps 10]
   (let [sig (ringz (impulse:ar reps) [200 400 234 889] 0.7)

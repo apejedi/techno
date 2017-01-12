@@ -325,7 +325,15 @@
    :motif2)
   (s/rm-p core/player :motif2)
 
-  (bass-synth (midi->hz (note (choose (scale :F#2 :locrian)))) :release 3)
+  (let [notes (atom (s/x-seq (scale :B4 :minor)))]
+    (s/add-p
+     core/player
+     (fn [b]
+       (reset! notes (rest @notes))
+       [(choose [bpfsaw piano]) [(first @notes) :dur 0.7 :atk 0.1]])
+     :motif))
+
+(s/set-st core/player 0.25)
 
   (s/play-p
    ;core/player
@@ -361,7 +369,6 @@
    :harmony
   ; 1.6
    )
-
 
   )
 

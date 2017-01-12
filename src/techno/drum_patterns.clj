@@ -45,6 +45,32 @@
     )
   )
 
+(defn drum-s [kits snd]
+  (let [sounds (reduce into [] (map #(drum-kits %) kits))
+        s-map {:t "Tom" :k "Kick" :c "ClHat" :cl "Clap"
+               :cy "Cymbal" :cr "Crash" :r "Rim" :ri "Ride" :p "Perc"
+               :h "HfHat" :f "Fx" :o "OpHat" :sd "SdSt" :s "Snr"}]
+    (some (fn [s]
+            (let [re #"(?i)([a-z]+)[^0-9a-z]*([0-9]+)"
+                  [res name-in n-in] (last (re-seq re (cond (string? snd) snd
+                                                            (keyword? snd) (let [[_ k n] (re-find #"(?i)([a-z]+)(\d+)*" (name snd))]
+                                                                            (str
+                                                                             (if (contains? s-map (keyword k))
+                                                                               (get s-map (keyword k)) (name k))
+                                                                             n)))))
+                  [cur cur-in curn-in] (last (re-seq re (name (first s))))
+                  name-in (if (nil? name-in) in name-in)
+                  cur-in (if (< (count (re-seq re (name (first s)))) 2)  (name (first s)) cur-in)]
+              (if (and (.contains
+                        (.toLowerCase cur-in) (.toLowerCase name-in))
+                       (or (nil? curn-in) (nil? n-in)
+                           (.contains
+                            (.toLowerCase curn-in) (.toLowerCase n-in)))) (last s)))
+            )
+          sounds)
+   )
+  )
+
 (defn drum-p [kits & patterns]
   (let [args (last patterns)
         step (first (filter number? patterns))
@@ -344,13 +370,14 @@
      p))
 
 
+  (s/get-action-str [sweet])
 
-
-  (let [patterns [[1 8 :kick [:Kit4-Electro]]
-                  [1 8 :snr [:Kit7-Electro]]
-                  [1 8 :drum1 [:Kit15-Electro]]
+  (let [patterns [[1 8 :drum1 [:Kit4-Electro]]
                   [1 8 :drum2 [:Kit7-Electro]]
-                  [1 8 :drum3 [:Kit4-Electro]]
+                  [1 8 :drum3 [:Kit15-Electro]]
+                  [1 8 :drum4 [:Kit7-Electro]]
+                  [1 48 :melody1 [:Kit4-Electro]]
+                  [1 48 :melody2 [:Kit4-Electro]]
                   [1 48 :harmony1 [:Kit4-Electro]]
                   [1 48 :harmony2 [:Kit4-Electro]]]]
 ;    (s/rm-p core/player :all)
@@ -365,6 +392,7 @@
       )
     )
 
+
   (s/add-p core/player
            (drum-p [:Kit15-Electro] (euclid-p 5 18 :o) 0.25)
            :hat)
@@ -374,7 +402,23 @@
 
   (s/set-amp core/player :2 0.6)
 
-
+  (s/add-p
+   core/player
+   (fn ([] [7 0.125])
+     ([b]
+      (let [beat (int (/ (mod b (int b)) 0.125))
+            bar (int b)
+            action (cond (= beat 6) [(drum-s [:Kit17-Electro] :k2) []]
+                         (and (odd? bar) (= beat 4)) [(drum-s [:Kit17-Electro] :s2) []]
+                         (and (< bar 5) (odd? bar)) [(drum-s [:Kit6-Electro] :cl2) [] (drum-s [:Kit6-Electro] :cl1) []]
+                         )
+            action (if (even? beat) (concat action [(drum-s [:Kit4-Electro] :op1) []]) action)
+            action (if (and (odd? bar) (even? beat)) (concat action [(drum-s [:Kit5-Electro] :fx2) [] (drum-s [:Kit5-Electro] :fx1) []]) action)
+            ]
+        action
+        )
+      ))
+   :stream-test)
 
   (s/add-p
    core/player
@@ -433,6 +477,7 @@
    (drum-p [:Kit16-Electro] [:k :2])
    :g
    )
+
 
 
   (s/mod-p core/player  :g :use-counter true)

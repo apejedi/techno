@@ -1,11 +1,11 @@
 (ns techno.ring
-  (:use [techno.sequencer :as s]
-        [techno.samples :only [drum-kits]]
+  (:use [techno.samples :only [drum-kits]]
         [overtone.sc.trig]
         [overtone.sc.node]
         [overtone.music.pitch]
         [overtone.libs.event :only [on-event event]])
-  (:require [quil.core :as q]
+  (:require [techno.sequencer :as s]
+            [quil.core :as q]
             [quil.applet :as ap]
             )
   (:import [java.awt Color]
@@ -20,13 +20,6 @@
 (defonce ring-coords (atom {}))
 (declare wheel)
 
-(defn find-in [coll x]
-                  (some
-                   (fn [[k v]]
-                     (cond (= k x) [k]
-                           (map? v) (if-let [r (find-in v x)]
-                                      (into [k] r))))
-                   coll))
 (defn setup []
   ;(q/fullscreen)
   (q/background 0)
@@ -36,7 +29,6 @@
 ;  (q/frame-rate 1)
  (q/no-loop)
   )
-
 
 (defn get-coord [circle beat]
   (ap/with-applet wheel
@@ -84,6 +76,8 @@
                    (fn [[k v] n]
                      (let [data (get v :data)
                            data (if (map? data) data {1 []})
+                           data (apply dissoc data (filter #(> % (get v :size 1)) (keys data)))
+                           pattern-size (/ (dec (get v :size 0)) step)
                            data (s/stretch-p data size)]
                          (doseq [[o a] data]
                            (let [offset (int (/ (- o 1) step))
@@ -92,8 +86,11 @@
                                         (not (nil? (first a))))
                                (assoc! coord-map
                                        k (assoc pts offset (gen-coord n offset)))
-                               ))
-                           ))
+                               )))
+                         (assoc! coord-map k
+                                 (assoc (get coord-map k {}) :bound
+                                        (gen-coord n pattern-size)))
+                         )
                      (assoc! coord-map
                              k (assoc (get coord-map k) :color
                                       (if (= k :legend)
@@ -127,44 +124,9 @@
       ))
   )
 
-(defn get-action-str [action & [samples]]
-  (let [action (vec
-                (mapcat
-                 (fn [[a arg]]
-                   (let [note-arg
-                         (if (or (instance? overtone.studio.inst.Inst a)
-                                 (instance? overtone.sc.synth.Synth a))
-                           (cond (some #(= (:name %) "freq") (:params a)) :freq
-                                 (some #(= (:name %) "note") (:params a)) :note
-                                 true false) false)
-                         arg (if note-arg
-                               (loop [arg arg cur (first arg) prev nil final []]
-                                 (if (> (count arg) 0)
-                                   (recur (rest arg)
-                                          (first (rest arg)) cur
-                                          (conj final
-                                                (if (= prev note-arg)
-                                                  (cond (= note-arg :freq) (list 'midi->hz (list 'note (find-note-name (hz->midi cur))))
-                                                        (= note-arg :note) (list 'note (find-note-name cur)))
-                                                  cur)))
-                                   final))
-                               arg)
-                         ]
-                     (vector a arg "\n"))
-                   )
-                 (partition 2 action)))
-        action (vec (map
-                     #(cond (= overtone.sc.sample.PlayableSample (type %))
-                            (list 'get-in 'drum-kits
-                                  (find-in drum-kits (keyword
-                                                      (clojure.string/replace (:name %) " " ""))))
-                            (or (= (type %) overtone.studio.inst.Inst)
-                                (= (type %) overtone.sc.synth.Synth))
-                            (:name %)
-                            (sequential? %) (vec %)
-                            true %)
-                     action))]
-    (str "[ " (apply str action) " ]")))
+(defn get-action-str [action ]
+  (s/get-action-str action drum-kits "drum-kits"))
+
 
 (defn eval-action [action]
   (ap/with-applet wheel
@@ -175,24 +137,6 @@
           beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)
           action (clojure.string/replace action "\n" "")
           body (get (s/get-p @sequencer pattern) :body {})]
-      ;; (let [g (.getGraphics wheel)
-;;             [circle slot] (q/state :cursor)]
-;;         (.beginDraw g)
-;;         (q/fill 0 0 0)
-;;         (q/rect 100 50 300 100)
-;;         (q/fill 255 255 255)
-;;         (q/text (str " (import java.util.concurrent.ThreadLocalRandom) (use
-;;         '[overtone.inst.synth]
-;;         '[techno.core :as core]
-;;         '[techno.sequencer :as s]
-;;         '[techno.synths]
-;;         '[techno.drum-patterns]
-;;         '[techno.drums]
-;;         '[techno.melody])
-;; (s/set-action core/player
-;; " pattern " " beat " " action ")") 100 100)
-;;         (.endDraw g))
-
       (load-string
        (str " (import java.util.concurrent.ThreadLocalRandom) (use
 '[overtone.core]
@@ -221,6 +165,7 @@
         add (JButton. "Add")
         eval (JButton. "Eval")
         pos (JTextField.)
+        templates (JComboBox. (into-array String ["chord" "rand"]))
         key-handler (fn [^String selected]
                       (.removeAllItems sounds)
                       (doseq [s (keys (get drum-kits (keyword selected)))]
@@ -260,7 +205,8 @@
     (.setBounds add 380 10 60 20)
     (.setBounds eval 450 10 60 20)
     (.setBounds pos 520 10 160 20)
-    (.setBounds text-box 10 70 600 200)
+    (.setBounds templates 10 70 150 20)
+    (.setBounds text-box 10 130 600 200)
     (.addActionListener kit
                         (reify ActionListener
                           (actionPerformed [this e]
@@ -281,6 +227,20 @@
                           (actionPerformed [this e]
                             (eval-action (.getText text-box))
                             )))
+    (.addActionListener templates
+                        (reify ActionListener
+                          (actionPerformed [this e]
+                            (let [selected (.getSelectedItem (.getSource e))]
+                              (.setText
+                               text-box
+                               (cond (= selected "chord") "(s/chord-p\ninst\n (chord) [])"
+                                     (= selected "rand") "(let [coll (atom (s/x-seq []))]\n
+[(fn [] (reset! coll (rest @coll)) \n
+(doseq [n (chord-degree (first @coll) :B3 :minor)] \n
+(overpad :note n))\n
+) []])"))
+                              )
+                            )))
     (doto frame
       (.add kit)
       (.add sounds)
@@ -288,6 +248,7 @@
       (.add eval)
       (.add text-box)
       (.add pos)
+      (.add templates)
       (.setSize 700 300)
 ;      (.pack)
       (.setVisible true)
@@ -304,40 +265,49 @@
             [old-circle old-beat] (q/state :old-cursor)
             key (nth (keys @points) circle)
             old (nth (keys @points) old-circle)
-            r (q/state :r)]
+            r (q/state :r)
+            [x y] (get-coord (inc circle) beat)
+            [bx by] (get-in @points [key :bound])
+            ;; step (s/get-st @sequencer)
+            ;; size (/ (dec (get (s/get-p @sequencer key) :size 0)) step)
+            ;; [bx by] (get-coord (inc circle) size)
+            ]
         (when display
-          (locking g
-            (q/fill 0 0 0)
-            (apply q/ellipse (conj (apply get-coord (vector (inc old-circle) old-beat)) r r))
-            (apply q/fill (get-in @points [old :color]))
-            (doseq [[o [x y]] (get @points old)]
-              (when (not (= :color o))
-                (q/ellipse x y r r))
-              )
-            (q/fill 255 255 255)
-            (doseq [[o [x y]] (get @points key)]
-              (when (not (= :color o))
-                (q/ellipse x y r r))
-              )
-            (q/fill 255 0 125)
-            (apply q/ellipse (conj (apply get-coord (vector (inc circle) beat)) r r)))
+          (q/fill 0 0 0)
+          (apply q/ellipse (conj (apply get-coord (vector (inc old-circle) old-beat)) r r))
+          (apply q/fill (get-in @points [old :color]))
+          (doseq [[o [x y]] (get @points old)]
+            (when (not (= :color o))
+              (q/ellipse x y r r))
+            )
+          (q/fill 255 255 255)
+          (doseq [[o [x y]] (get @points key)]
+            (when (not (= :color o))
+              (q/ellipse x y r r))
+            )
+          (q/fill 124 252 0)
+          (q/ellipse bx by r r)
+          (q/fill 255 0 125)
+          (q/ellipse x y r r)
+
           )
         (when (not display)
           (locking g
             (q/fill 0 0 0)
-            (apply q/ellipse (conj (apply get-coord (vector (inc circle) beat)) (+ r 5) (+ r 5)))
+            (q/ellipse x y (+ r 5) (+ r 5))
+            (q/ellipse bx by (+ r 5) (+ r 5))
             (apply q/fill (get-in @points [key :color]))
             (doseq [[o [x y]] (get @points key)]
-              (when (not (= :color o))
+              (when (and (not (= :color o)) (not (= :bound o)))
                 (q/ellipse x y r r))
               ))
           )
         ))
-      (.endDraw g))
+    (.endDraw g))
   )
 
 (defn handle-key []
-  (when (and (not (.exitCalled wheel)) (node-active? @sequencer))
+  (when (and (node-active? @sequencer) (not (.exitCalled wheel)))
       (ap/with-applet wheel
         ;; (let [g (.getGraphics wheel)]
         ;;   (.beginDraw g)
@@ -362,6 +332,8 @@
                                 true (+ slot (cond (= key :left) -1
                                                    (= key :right) 1
                                                    true 0))))
+              cur-beat (+ 1 (* slot step))
+              beat (if (= (mod cur-beat (int cur-beat)) 0.0) (int cur-beat) cur-beat)
               beat (+ 1 (* (second new) step))
               beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)
               pattern (nth (keys @points) circle)
@@ -370,14 +342,15 @@
               text-box (q/state :action-text)
               pos-box (q/state :action-pos)
               key-event @(:key-event (meta wheel))
-              cur-action (get-action-str (get-cur-action))]
+              cur-action (get-cur-action)
+              cur-body (get (s/get-p @sequencer pattern) :body {})]
           ;; (let [g (.getGraphics wheel)
           ;;           [circle slot] (q/state :cursor)]
           ;;       (.beginDraw g)
           ;;       (q/fill 0 0 0)
           ;;       (q/rect 100 50 300 100)
           ;;       (q/fill 255 255 255)
-          ;;       (q/text (str (= 82 (q/key-code)) (.isControlDown key-event) key) 100 100)
+          ;;       (q/text (str key (q/key-code)) 100 100)
           ;;       (.endDraw g))
           (when (or (= :left key) (= :right key) (= :up key) (= :down key) (= 10 (q/key-code)))
             (when (.isControlDown key-event)
@@ -392,7 +365,10 @@
                  (= 10 (q/key-code)) (assoc s :display-cursor (not display-cursor))
                  true s)))
             (when (.isControlDown key-event)
-              (eval-action cur-action))
+              (s/set-action @sequencer new-pattern beat cur-action)
+              (when (contains? cur-body cur-beat)
+               (s/mod-p @sequencer new-pattern :body
+                        (assoc cur-body beat (get cur-body cur-beat)))))
             (when (and (or (= :left key) (= :right key)) (.isShiftDown key-event))
               (s/add-p @sequencer
                        (s/p-shift
@@ -409,11 +385,15 @@
               (.setText pos-box (str new-pattern " " beat))
               )
             (draw-cursor))
-          (when (and (= 127 (q/key-code)) (.isControlDown key-event))
+          (when (and (= 120 (q/key-code)) (.isControlDown key-event))
             (eval-action "[]")
             )
           (when (and (= 82 (q/key-code)) (.isControlDown key-event))
             (draw-state)
+            )
+          (when (and (= 83 (q/key-code)) (.isControlDown key-event))
+            (s/mod-p @sequencer new-pattern :size beat)
+            ;(s/stretch-p @sequencer new-pattern beat)
             )
           (when (= :e key)
             (draw-action)
@@ -447,7 +427,7 @@
             ))
         ))
     (.endDraw g))
-  )
+ )
 
 
 
@@ -459,29 +439,31 @@
         y (/ (q/height) 2)
         step (s/get-st @sequencer)
         coords (gen-coords x y init d @sequencer)
-        g (.getGraphics wheel)]
-    (locking g
-      (swap! points (fn [_] coords))
-      (q/clear)
-        (doseq [[k v] coords]
-          (apply q/fill (get v :color))
-          (doseq [[o [x y]] v]
-            (when (and (not (= k :legend)) (number? o))
-              (q/ellipse x y r r))
-            (when (and (= :legend k) (number? o))
-              (q/text (str (+ 1 (* o step))) x y))
-            )
+        g (.getGraphics wheel)
+        f (q/state :current-fn)]
+
+    (reset! points coords)
+    (q/clear)
+    (doseq [[k v] coords]
+      (apply q/fill (get v :color))
+      (doseq [[o [x y]] v]
+        (when (and (not (= k :legend)) (number? o))
+          (q/ellipse x y r r)
           )
-        (doall
-         (map
-          (fn [[k v] y]
-            (apply q/fill (get v :color))
+        (when (and (= :legend k) (number? o))
+          (q/text (str (+ 1 (* o step))) x y))
+        )
+      )
+    (doall
+     (map
+      (fn [[k v] y]
+        (apply q/fill (get v :color))
                                         ;(q/ellipse (- (q/width) 100) y r r)
-            (q/text (str k) (- (q/width) 100 r 10) y)
-            )
-          coords
-          (range (- (q/height) 40) (- (- (q/height) 40) (* 40 (inc (count coords)))) -40)
-          )))
+        (q/text (str k) (- (q/width) 100 r 10) y)
+        )
+      coords
+      (range (- (q/height) 40) (- (- (q/height) 40) (* 40 (inc (count coords)))) -40)
+      ))
     nil
     )
   )
@@ -514,14 +496,15 @@
                  :action-text nil
                  :action-pos nil
                  :key-event nil
+                 :current-fn "draw"
        ;          :cp5 (ControlP5. wheel)
                  })
          ))
       ;(.setAutoDraw (q/state :cp5) true)
       )
-    (on-latest-trigger
-     player uid
-     draw-line :draw-line)
+    ;; (on-latest-trigger
+    ;;  player uid
+    ;;  draw-line :draw-line)
     ;; (on-event ::pattern-added
     ;;  draw-state ::draw-state)
     )

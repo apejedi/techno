@@ -19,6 +19,14 @@
 
 (declare sync-s)
 
+(defn x-seq [coll & [orig]]
+  (let [cur (shuffle coll)]
+    (lazy-seq
+     (cons (first cur)
+           (x-seq (if (> (count cur) 1) (rest cur) (shuffle orig))
+                  (if (nil? orig) coll orig))))
+    )
+  )
 
 (defn sputter
   "Returns a list where some elements may have been repeated.
@@ -191,6 +199,55 @@
     (node-get-control sequencer :step)
     )
   )
+(defn find-in [coll x]
+  (some
+   (fn [[k v]]
+     (cond (= k x) [k]
+           (map? v) (if-let [r (find-in v x)]
+                      (into [k] r))))
+   coll))
+(defn get-action-str [action samples sample-var]
+  (let [sample-var (symbol sample-var)
+        action (vec
+                (mapcat
+                 (fn [[a arg]]
+                   (let [note-arg
+                         (if (or (instance? overtone.studio.inst.Inst a)
+                                 (instance? overtone.sc.synth.Synth a))
+                           (cond (some #(= (:name %) "freq") (:params a)) :freq
+                                 (some #(= (:name %) "note") (:params a)) :note
+                                 true false) false)
+                         arg (if note-arg
+                               (loop [arg arg cur (first arg) prev nil final []]
+                                 (if (> (count arg) 0)
+                                   (recur (rest arg)
+                                          (first (rest arg)) cur
+                                          (conj final
+                                                (if (= prev note-arg)
+                                                  (cond (= note-arg :freq) (list 'midi->hz (list 'note (find-note-name (hz->midi cur))))
+                                                        (= note-arg :note) (list 'note (find-note-name cur)))
+                                                  cur)))
+                                   final))
+                               arg)
+                         ]
+                     (vector a arg "
+"))
+                   )
+                 (partition 2 action)))
+        action (vec (map
+                     #(cond (and (not (nil? samples))
+                                 (= overtone.sc.sample.PlayableSample (type %)))
+                            (list 'get-in sample-var
+                                  (find-in samples (keyword
+                                                      (clojure.string/replace (:name %) " " ""))))
+                            (or (= (type %) overtone.studio.inst.Inst)
+                                (= (type %) overtone.sc.synth.Synth))
+                            (:name %)
+                            (sequential? %) (vec %)
+                            true %)
+                     action))
+        action (if (= [] (first action)) [] action)]
+    (str "[ " (apply str action) " ]")))
 
 (defn pp-pattern [pattern]
   (let [pattern (if (fn? pattern) (merge-p pattern) pattern)]
@@ -279,7 +336,8 @@
     (if (number? seq-size)
       (doseq [[k p] (get @patterns id)]
         (let [val (get-val-if-ref (p :data))
-              size (p-size val step)
+                                        ;size (p-size val step)
+              size (:size p)
               raw-size (if (sequential? val) size (+ 1 (/ (- size 1) step)))
               min-wrap (get p :min-wrap 0)
               wrap (and (get p :wrap true)
@@ -442,7 +500,9 @@
        (swap! patterns
               (fn [p]
                 (assoc p id
-                       (assoc cur-val key (merge {:data pattern} attrs))
+                       (assoc cur-val key
+                              (merge {:data pattern
+                                      :size (p-size pattern (get-st sequencer))} attrs))
                        )))
        (swap! pattern-counters
               (fn [c]
@@ -769,11 +829,39 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     )
   )
 
-(defn build-rest-p [pattern & [step]]
+(defn build-rest-p [pattern & [step samples sample-var]]
   (let [step (if step step (get-step pattern))
-        offsets (sort (keys pattern))]
-    (loop [])
-      )
+        size (p-size pattern step)
+        offsets (sort (filter #(let [a (get pattern %)]
+                                 (or (and (sequential? a) (not (nil? (first a))))
+                                     (= 1 %) (= (double size) %)))
+                              (range 1 (+ size step) step)))]
+    (loop [p [] beats offsets prev (first offsets) cur (first offsets) next (second offsets)]
+      (let [cur-action (get pattern cur)
+            is-head (= 1 cur)
+            is-action (and (sequential? cur-action) (not (nil? (first cur-action))))
+            is-next-action (and (sequential? (get pattern next))
+                                (not (nil? (first (get pattern next)))))
+            has-rest (and (number? next) (> (- next cur) step))
+            conj-args (if (not (nil? cur))
+                          (cond (and has-rest is-action is-next-action)
+                                (vector p cur-action
+                                        (keyword (str (int (dec (/ (- next cur) step))))))
+                                (and is-head (not is-action))
+                                (vector p (keyword (str (int (/ (- next cur) step)))))
+                                (not is-action) ;is tail
+                                (vector
+                                 p
+                                 (keyword (str (int (/ (- cur prev) step)))))
+                                true (vector p cur-action)))]
+        (if (<= (count beats) 0)
+          p
+          (recur (apply conj conj-args)
+                 (rest beats)
+                 cur
+                 next
+                 (second (rest beats)))))
+      ))
   )
 
 (defn p-shift [pattern shift-by]
@@ -817,25 +905,36 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
   )
 
 
-(defn stretch-p [pattern & [new-size]]
-  (let [step (get-step pattern)
-        tail (apply max (keys pattern))
-        quantize #(+ 1 (/ (- % 1) step))
-        new-map (zipmap (map quantize (keys pattern)) (vals pattern))
-        size (quantize tail)
-        new-size (quantize (if new-size new-size (* tail 2)))
-        beats (cycle (range 1 (inc size)))]
-    (reduce
-     (fn [p b]
-       (let [cur-beat (+ 1 (* (- b 1) step))
-             cur-beat (if (= (double (mod cur-beat (int cur-beat))) 0.0) (int cur-beat) cur-beat)
-             wrapped (double (nth beats (dec b)))
-             action (get new-map wrapped)]
-         (if (or action (= b new-size))
-           (assoc p cur-beat action)
-           p))
-       ) pattern (range (inc size) (inc new-size)))
-    )
+(defn stretch-p
+  ([sequencer pattern new-size]
+   (swap! patterns
+          (fn [p]
+            (assoc-in p
+                      [(to-sc-id sequencer) pattern :data]
+                      (stretch-p (get-in @patterns [(to-sc-id sequencer) pattern :data]) new-size))))
+   nil)
+  ([pattern new-size]
+   (let [size-arg new-size
+         step (get-step pattern)
+         tail (apply max (keys pattern))
+         quantize #(+ 1 (/ (- % 1) step))
+         new-map (zipmap (map quantize (keys pattern)) (vals pattern))
+         size (quantize tail)
+         new-size (quantize (if new-size new-size (* tail 2)))
+         beats (cycle (range 1 (inc size)))]
+     (if (>= new-size size)
+         (reduce
+          (fn [p b]
+            (let [cur-beat (+ 1 (* (- b 1) step))
+                  cur-beat (if (= (double (mod cur-beat (int cur-beat))) 0.0) (int cur-beat) cur-beat)
+                  wrapped (double (nth beats (dec b)))
+                  action (get new-map wrapped)]
+              (if (or action (= b new-size))
+                (assoc p cur-beat action)
+                p))
+            ) pattern (range (inc size) (inc new-size)))
+         (apply dissoc pattern (filter #(> % size-arg) (keys pattern))))
+     ))
   )
 
 (defn fit-p [base pattern & [fill pad step]]
@@ -862,18 +961,20 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
            (map? (get-val-if-ref (get-in @patterns [(to-sc-id sequencer) pattern :data]))))
     (swap! patterns (fn [p]
                       (let [id (to-sc-id sequencer)
-                            cur-data (get-in p [id pattern :data])
+                            entry (get-in p [id pattern])
+                            cur-data (get entry :data)
                             is-atom (instance? clojure.lang.Atom cur-data)
                             data (get-val-if-ref (if cur-data cur-data {}))
                             data (if (and stretch (> key (p-size data)))
                                    (fit-p data (assoc (stretch-p data key) key new) true)
-                                   (assoc data key new))]
+                                   (assoc data key new))
+                            entry (assoc (assoc entry :data data) :size (p-size data))]
                         (if (not (nil? key))
                           (if is-atom
-                            (do (swap! cur-data (fn [_] data))
-                                p)
-                            (assoc-in p [id pattern :data]
-                                      data))
+                            (do (reset! cur-data data)
+                                (assoc-in p [id pattern] entry))
+                            (assoc-in p [id pattern]
+                                      entry))
                           p)
                         ))))
   )
