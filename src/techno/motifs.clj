@@ -157,6 +157,8 @@
            (doseq [n (chord-degree (choose [:ii :iv :v]) :C4 :minor)] (overpad n) )) []]}
    :test)
 
+
+
   (s/add-p
    core/player
    (s/phrase-p
@@ -236,18 +238,21 @@
 
   (s/rm-p core/player :phrase2)
 
-(s/mod-p core/player :clap :use-counter true)
-  (let [a [:D3 :F4]
-        b [:C#3 :E4]
-        c [:C3 :E4]
-        e [:B3 :D4]]
+  (s/mod-p core/player :clap :use-counter true)
+
+  (let [a (vec (map note [:G2 :D3 :F#3]))
+        r (range 0 3)
+        b (shift a r -2)
+        c (shift a r 3)
+        d (shift a r 1)
+        ]
     (s/play-p
      (s/phrase-p
-      reverb-test
-      [a a a a a a b b b b b c c c c c e e e e e]
-      ;[c e]
-      0.25 0 [:attack 0.1 :release 0.3])
-     1.3
+      piano
+      [a a a a :1 (shift a [2] 1) :1 a b b b b
+       c c c c d d d d]
+      0.25 3 [:attack 0.1 :release 0.3 :dur 2])
+     1.6
      )
     )
 
@@ -333,6 +338,12 @@
        [(choose [bpfsaw piano]) [(first @notes) :dur 0.7 :atk 0.1]])
      :motif))
 
+  (let [notes [:C4 :D4 :A4 :Bb4]]
+    (s/phrase-p
+     bing
+     notes
+     [:decay 2]))
+
 (s/set-st core/player 0.25)
 
   (s/play-p
@@ -340,17 +351,28 @@
    (let [root :C4
          n 4
          [a b c d e f g]
-         (map #(chord-degree % root :minor n) [:i :ii :iii :iv :v :vi :vii])]
+         (scale root :minor)
+         ;(map #(chord-degree % root :minor n) [:i :ii :iii :iv :v :vi :vii])
+         ]
      (s/phrase-p
-      reverb-test
-                                        ;[f e d b]
-      [e a d b]
-      0.25 3
-      [:decay 3 :delay-time 0.4 :release 1 :dur 2 :amp 0.3 :coef 0.01]
-                                        ;      {:refresh 0.6 :sputter 0.5 :sputter-amt 0.25 :reverse 0}
+      bpfsaw
+      [b d b b f a c a g]
+      0.25 0
+      [:dur 0.7 :atk 0.01]
       ))
-   1.6
-   3
+   (let [root :C4
+         n 4
+         [a b c d e f g]
+         (map #(chord-degree % root :minor n) [:i :ii :iii :iv :v :vi :vii])
+         ]
+     (s/phrase-p
+      bass-synth
+      [g a b a f]
+      0.25 6
+      [:attack 0.2 :release 1.7 :cutoff-freq 1000 :amp 0.3]
+      ))
+   1.3
+   2
    ;:motif
    )
 

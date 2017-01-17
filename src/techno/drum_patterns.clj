@@ -320,11 +320,7 @@
   (s/add-p core/player untitled-b :switch)
   (s/add-p core/player t :t)
   (start-recorder (mapcat vals
-                          (vals (group-samples (drum-kits :Kit5-Electro)))))
-
-
-
-
+                          (vals (group-samples (drum-kits :KurzweilKit01)))))
 
 
   (let [base {2.25 []}
@@ -333,10 +329,8 @@
         k [kick []]
         snr [snare [:freq 100 :sustain 0.5 :amp 1]]
         parts {
-               :kick [(drum-p [:Kit17-Electro] [:k1 :5])]
-               :toms [(drum-p [:Kit5-Electro] [:1 :t2 :t2 :7])]
-               :crash [(drum-p [:Kit3-Acoustic] [:cr3 :cr4 :cr4 :1 [:o1 :o2] :5])]
-               :snr [(drum-p [:Kit3-Acoustic] [:3 :s2 :1 :s2 :4])]
+               :kick [(drum-p [:KurzweilKit04] [:k2 :3])]
+               :hat [(drum-p [:KurzweilKit04] [:c :h :o :1 :c :pd :2])]
                }
         rm [:tamb]]
     (doseq [[k [v args]] parts]
@@ -375,9 +369,6 @@
   (let [patterns [[1 8 :drum1 [:Kit4-Electro]]
                   [1 8 :drum2 [:Kit7-Electro]]
                   [1 8 :drum3 [:Kit15-Electro]]
-                  [1 8 :drum4 [:Kit7-Electro]]
-                  [1 48 :melody1 [:Kit4-Electro]]
-                  [1 48 :melody2 [:Kit4-Electro]]
                   [1 48 :harmony1 [:Kit4-Electro]]
                   [1 48 :harmony2 [:Kit4-Electro]]]]
 ;    (s/rm-p core/player :all)
@@ -423,7 +414,7 @@
   (s/add-p
    core/player
    (gen-beat (:four-beat @beats)
-             (map #(vector % [:amp 1.5]) (concat (vals (drum-kits :Congas))
+             (map #(vector % [:amp 1.5]) (concat (vals (drum-kits :Kit8-Vinyl))
                                                  ;; (vals (:Tom
                                                  ;;        (group-samples
                                                  ;;         (drum-kits :KurzweilKit08))))

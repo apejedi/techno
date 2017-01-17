@@ -143,11 +143,14 @@
 (defsynth zap [freq1 5000 freq2 100 dur 0.2 amp 1]
   (let [freq (x-line freq1 freq2 dur)
         env (env-gen:kr (perc (* 0.1 dur) (* 0.9 dur) amp) :action 2)
-        sig (* (lf-tri freq) env)]
+        sig (* (lf-tri freq) env)
+        f-env (x-line freq1 freq2 dur)
+        sig (lpf sig f-env)]
     (out:ar 0 sig)
     (out:ar 1 sig)
     )
   )
+
 
 (defsynth bpfsaw2 [freq 500 atk 2 sus 0 rel 3 c1 1 c2 -1
 		 detune 0.2 pan 0 cfhzmin 0.1 cfhzmax 0.3

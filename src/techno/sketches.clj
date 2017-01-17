@@ -11,9 +11,9 @@
         [techno.drums]))
 
 (comment
-  (let [parts []
-        rm [:a]
-        comp tekno]
+  (let [parts [:a]
+        rm []
+        comp mystery]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -34,12 +34,12 @@
               c (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:G4])
               d (concat (mapcat #(vector % [:amp 0.2]) (chord :F4 :minor)) [:Bb4])]
           (s/phrase-p
-           piano
+           flute
            [a b a b a b a b a b
             c d c d c d c d c d c d]
            0.25
            0
-           [:coef 0.01]))
+           [:coef 0.01 :dur 0.5 :attack 0.01]))
      }
     )
 

@@ -32,7 +32,7 @@
   (s/set-st player (double (/ 1 8)
                            ))
   (s/set-st player 0.25)
-  (r/ring player 100 10 30)
+  (r/ring player 100 10 50)
 
   (sweet :dur 0.2)
   (eval-action
@@ -43,7 +43,7 @@
   (r/draw-line 5)
   (r/gen-coords 500 500 5 4 player)
   (s/dec-amp player :shkr)
-  (let [v 1]
+  (let [v 1.5]
     (ctl 14 :volume v)
     (ctl 15 :volume v))
   (remove-event-handler ::server-audio-clipping-warner-vol)

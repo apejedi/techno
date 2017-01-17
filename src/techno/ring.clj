@@ -76,8 +76,10 @@
                    (fn [[k v] n]
                      (let [data (get v :data)
                            data (if (map? data) data {1 []})
-                           data (apply dissoc data (filter #(> % (get v :size 1)) (keys data)))
-                           pattern-size (/ (dec (get v :size 0)) step)
+                           data-size (get v :size (apply max (keys data)))
+                           data (apply dissoc data
+                                       (filter #(> % data-size) (keys data)))
+                           pattern-size (/ (dec data-size) step)
                            data (s/stretch-p data size)]
                          (doseq [[o a] data]
                            (let [offset (int (/ (- o 1) step))
@@ -307,7 +309,8 @@
   )
 
 (defn handle-key []
-  (when (and (node-active? @sequencer) (not (.exitCalled wheel)))
+  (when (and (node-active? @sequencer)
+             (-> wheel .getSurface .getNative .getFrame .isDisplayable))
       (ap/with-applet wheel
         ;; (let [g (.getGraphics wheel)]
         ;;   (.beginDraw g)
@@ -393,7 +396,7 @@
             )
           (when (and (= 83 (q/key-code)) (.isControlDown key-event))
             (s/mod-p @sequencer new-pattern :size beat)
-            ;(s/stretch-p @sequencer new-pattern beat)
+            (s/stretch-p @sequencer new-pattern beat)
             )
           (when (= :e key)
             (draw-action)
@@ -403,18 +406,18 @@
   )
 
 (defn draw-line [beat]
-  (let [g (.getGraphics wheel)]
-    (.beginDraw g)
-    (ap/with-applet wheel
-      (let [r (q/state :r)
-            step (s/get-st @sequencer)
-            offset (dec (int beat))
-            size (get (s/get-sequencer-data @sequencer) :size)
-            raw-size (int (/ (- size 1) step))
-            prev (if (= 0 offset) raw-size (dec offset))
-            cursor (nth (keys @points) (first (q/state :cursor)))
-            display-cursor (q/state :display-cursor)]
-        (locking g
+  (ap/with-applet wheel
+    (let [g (.getGraphics wheel)
+          display-cursor (q/state :display-cursor)]
+      (when (not display-cursor)
+        (.beginDraw g)
+        (let [r (q/state :r)
+              step (s/get-st @sequencer)
+              offset (dec (int beat))
+              size (get (s/get-sequencer-data @sequencer) :size)
+              raw-size (int (/ (- size 1) step))
+              prev (if (= 0 offset) raw-size (dec offset))
+              cursor (nth (keys @points) (first (q/state :cursor)))]
           (doseq [[k v] @points]
             (when (and (not (= :legend k)) (or (not display-cursor) (not (= k cursor))))
               (apply q/fill (get v :color))
@@ -424,10 +427,10 @@
               (when (contains? v offset)
                 (apply q/ellipse (conj (vec (get v offset)) r r)))
               )
-            ))
-        ))
-    (.endDraw g))
- )
+            )
+          )
+        (.endDraw g))))
+  )
 
 
 
@@ -502,9 +505,9 @@
          ))
       ;(.setAutoDraw (q/state :cp5) true)
       )
-    ;; (on-latest-trigger
-    ;;  player uid
-    ;;  draw-line :draw-line)
+    (on-latest-trigger
+     player uid
+     draw-line :draw-line)
     ;; (on-event ::pattern-added
     ;;  draw-state ::draw-state)
     )
