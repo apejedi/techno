@@ -369,8 +369,11 @@
   (let [patterns [[1 8 :drum1 [:Kit4-Electro]]
                   [1 8 :drum2 [:Kit7-Electro]]
                   [1 8 :drum3 [:Kit15-Electro]]
+                  [1 16 :melody1 [:Kit7-Electro]]
+                  [1 16 :melody2 [:Kit15-Electro]]
                   [1 48 :harmony1 [:Kit4-Electro]]
-                  [1 48 :harmony2 [:Kit4-Electro]]]]
+                  [1 48 :harmony2 [:Kit4-Electro]]
+                  ]]
 ;    (s/rm-p core/player :all)
     (doseq [[fill slots action kits] patterns]
       (s/add-p
@@ -383,6 +386,7 @@
       )
     )
 
+  ((drum-s (vector (choose (keys drum-kits))) :k1))
 
   (s/add-p core/player
            (drum-p [:Kit15-Electro] (euclid-p 5 18 :o) 0.25)

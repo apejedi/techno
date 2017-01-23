@@ -20,6 +20,15 @@
 (defonce ring-coords (atom {}))
 (declare wheel)
 
+(defprotocol Item
+  (toString [this])
+  (getValue [this]))
+
+(deftype SampleItem [state]
+  Item
+  (toString [this] (:display state))
+  (getValue [this] (:value state)))
+
 (defn setup []
   ;(q/fullscreen)
   (q/background 0)
@@ -163,15 +172,25 @@
         text-box (JTextArea.)
         kits (sort (map name (keys drum-kits)))
         kit (JComboBox. (into-array String kits))
-        sounds (JComboBox. (into-array String (sort (map name (keys (get drum-kits (keyword (first kits))))))))
+        ;; sounds (JComboBox. (into-array String (sort (map name (keys (get drum-kits (keyword (first kits))))))))
+        sounds (JComboBox. (into-array
+                            SampleItem
+                            (map
+                             #(SampleItem. {:display % :value (vector (keyword (first kits)) (keyword %))})
+                             (sort (map name (keys (get drum-kits (keyword (first kits)))))))))
         add (JButton. "Add")
         eval (JButton. "Eval")
+        play (JButton. "Play")
+        filter-box (JTextField.)
         pos (JTextField.)
         templates (JComboBox. (into-array String ["chord" "rand"]))
         key-handler (fn [^String selected]
                       (.removeAllItems sounds)
                       (doseq [s (keys (get drum-kits (keyword selected)))]
-                        (.addItem sounds (name s))))
+                        (.addItem sounds
+                                  (SampleItem. {:display (name s) :value (vector (keyword selected) s)})
+                                  ;(name s)
+                                  )))
         show-action (fn []
                       (.setText text-box (get-action-str (get-cur-action))))
         add-action (fn []
@@ -181,9 +200,12 @@
                              step (s/get-st @sequencer)
                              beat (+ 1 (* beat step))
                              k (keyword (.getSelectedItem kit))
-                             snd (keyword (.getSelectedItem sounds))
+                             snd (.getSelectedItem sounds)
+                             ;snd (keyword (.getSelectedItem sounds))
                              action (get-cur-action)
-                             action-text (get-action-str (vec (conj action (get-in drum-kits (vector k snd)) [])))]
+                             action-text (get-action-str (vec (conj action (get-in drum-kits (.getValue snd)) [])))
+                             ;action-text (get-action-str (vec (conj action (get-in drum-kits (vector k snd)) [])))
+                             ]
                          (.setText text-box action-text))))]
     (.setLayout frame nil)
     (ap/with-applet wheel
@@ -204,6 +226,8 @@
 
     (.setBounds kit 10 10 150 20)
     (.setBounds sounds 160 10 200 20)
+    (.setBounds filter-box 10 35 150 20)
+    (.setBounds play 160 35 100 20)
     (.setBounds add 380 10 60 20)
     (.setBounds eval 450 10 60 20)
     (.setBounds pos 520 10 160 20)
@@ -217,12 +241,45 @@
     (.addActionListener sounds
                         (reify ActionListener
                           (actionPerformed [this e]
+                            (let [snd (.getSelectedItem sounds)
+                                  ]
+                              (when (not (nil? snd))
+                                  ((get-in drum-kits (.getValue snd))))
+                              )
                             (show-action)
                             )))
     (.addActionListener add
                         (reify ActionListener
                           (actionPerformed [this e]
                             (add-action)
+                            )))
+    (.addActionListener filter-box
+                        (reify ActionListener
+                          (actionPerformed [this e]
+                            (let [texts (clojure.string/split (.getText filter-box) #" ")]
+                              (.removeAllItems sounds)
+                              (doseq [[kit snds] drum-kits]
+                                (doseq [snd (keys snds)]
+                                  (when
+                                      (every? #(or (.contains
+                                                    (.toLowerCase (name kit))
+                                                    (.toLowerCase %))
+                                                   (.contains (.toLowerCase (name snd))
+                                                              (.toLowerCase %)))
+                                             texts)
+                                      (.addItem sounds
+                                                (SampleItem.
+                                                 {:display (name snd)
+                                                  :value (vector kit snd)})
+                                                ))))
+                              )
+                            )))
+    (.addActionListener play
+                        (reify ActionListener
+                          (actionPerformed [this e]
+                            (let [snd (.getSelectedItem sounds)]
+                              ((get-in drum-kits (.getValue snd)))
+                              )
                             )))
     (.addActionListener eval
                         (reify ActionListener
@@ -248,6 +305,8 @@
       (.add sounds)
       (.add add)
       (.add eval)
+      (.add play)
+      (.add filter-box)
       (.add text-box)
       (.add pos)
       (.add templates)

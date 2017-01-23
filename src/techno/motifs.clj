@@ -186,6 +186,34 @@
     )
    :motif)
 
+  (let [b [bass [:amp 1.3 :cutoff 4000 :t 0.3]]
+        c [bass2 [:freq 100 :amp 1.3]]]
+    (s/play-p
+     (s/build-map-p
+      [b b b b :1 b :1 b b :3]
+      0.25)
+     2 3)
+    )
+
+
+(on-event [:midi :note-on]
+            (fn [m]
+              (let [n (:data1 m)]
+                (overpad :note n
+                       :release 4
+                       :decay 2
+                       :rq 0.6
+                       :cutoff-freq 1200)
+                ))
+            ::prophet-midi)
+
+(remove-event-handler ::prophet-midi)
+
+(s/play-p
+ (s/phrase-p
+  overpad
+  [(chord :B3 :m9) :6 (chord :A3 :M7)]
+  0.25 0 [:attack 1 :release 3]))
 
   (let [mk-prog (fn [p]
                 (conj
@@ -264,7 +292,6 @@
   (s/add-p core/player untitled-f :motif)
   (s/add-p core/player rnd-chord :motif)
 
-
   (let []
     (s/add-p
      core/player
@@ -274,21 +301,13 @@
       0.25 3)
      :bass)
    )
-  (s/rm-p core/player :bass)
-  (def d (drone-noise (midi->hz (note :Ab2)) :amp 0.07))
-  (ctl d :amp 0.1)
-  (ctl d :freq (midi->hz (note :E)))
-  (def w (wobble-drone (midi->hz (note :E2)) :amp 0.2))
-  (ctl w :amp 0.05)
-  (ctl w :freq (midi->hz (note :C4)))
-  (ctl w :wobble 1)
-  (kill d)
-  (kill w)
   (s/play-p
-   (s/chord-p
-    bass-synth
-    (chord :D3 :m7)))
-  (kill 86334)
+   (s/phrase-p
+    bpfsaw
+    [:Bb4 :G4 :F4]
+    0.25 1 [:dur 1]))
+
+  (kill 957)
 
   (s/add-p
    core/player
@@ -360,7 +379,7 @@
       0.25 0
       [:dur 0.7 :atk 0.01]
       ))
-   (let [root :C4
+   (let [root :C3
          n 4
          [a b c d e f g]
          (map #(chord-degree % root :minor n) [:i :ii :iii :iv :v :vi :vii])
@@ -369,7 +388,7 @@
       bass-synth
       [g a b a f]
       0.25 6
-      [:attack 0.2 :release 1.7 :cutoff-freq 1000 :amp 0.3]
+      [:attack 0.02 :release 1.7 :cutoff-freq 1000 :amp 0.3]
       ))
    1.3
    2
@@ -385,12 +404,13 @@
       klang-test
                                         ;[a a a a a :0 b b b b b :1]
       [a a a a a
-       :0 b b b b b :1
+       :0 b b b b b :2
        ]
       0.25 2 [:dur 0.8 :amp 0.5 :vib 0]))
-   :harmony
-  ; 1.6
+   :harmony1
+   ;1.6
    )
+  (s/set-action core/player :harmony1 7.875 [])
 
   )
 

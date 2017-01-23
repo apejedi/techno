@@ -2,7 +2,8 @@
   (:use [overtone.core]
         [overtone.inst.synth]
         [techno.sequencer :only [adsr-ng]])
-  )
+
+  (:require [techno.sequencer :as s]))
 (defsynth sweet [note 60 dur 1 amp 1 vib 0.02]
   (let [freq (midicps note)
         ratios [1 3/4 1/5 2/7 11/5 5/8]
@@ -90,17 +91,14 @@
     )
   )
 
-(defsynth flute [note 60  amp 0.5  attack 0.1  decay 0.3  sustain 0.4  release 0.2 dur 3  output 0]
+(defsynth flute [note 60  amp 0.5  attack 0.1  decay 0.3  sustain 0.4  release 0.2 dur 3  output 0 trill 0]
   (let [freq (midicps note)
         [a d s r] (map #(* dur %) [attack decay sustain release])
         env  (env-gen (adsr-ng a d s r) :action FREE)
         mod1 (lin-lin:kr (sin-osc:kr 6) -1 1 (* freq 0.99) (* freq 1.01))
-        mod2 (lin-lin:kr (lf-noise2:kr 1) -1 1 0.2 1)
-        mod3 (lin-lin:kr (sin-osc:kr (ranged-rand 4 6)) -1 1 0.5 1)
+        mod3 (lin-lin:kr (sin-osc:kr trill) -1 1 0.1 1)
         sig (distort (* env (sin-osc [freq mod1])))
-        sig (* amp sig
-               ;mod2 mod3
-               )]
+        sig (* amp sig mod3)]
     (out output sig)
     ))
 
@@ -143,9 +141,7 @@
 (defsynth zap [freq1 5000 freq2 100 dur 0.2 amp 1]
   (let [freq (x-line freq1 freq2 dur)
         env (env-gen:kr (perc (* 0.1 dur) (* 0.9 dur) amp) :action 2)
-        sig (* (lf-tri freq) env)
-        f-env (x-line freq1 freq2 dur)
-        sig (lpf sig f-env)]
+        sig (* (lf-tri freq) env)]
     (out:ar 0 sig)
     (out:ar 1 sig)
     )
@@ -234,7 +230,6 @@
     (out:ar [0 1] snd))
   )
 
-
 (definst snare [freq  405 amp  0.3
    sustain 0.1
    decay  0.1
@@ -281,11 +276,11 @@
     )
   )
 
-(defsynth plk-bass [note 42 out-bus 0 dur 1 amp 1]
+(defsynth plk-bass [note 42 out-bus 0 dur 0.5 amp 1 plk 2]
   (let [freq (midicps note)
         subfreq (/ freq 2)
-        subenv (env-gen (perc 0 dur) :action FREE)
-        env (env-gen (perc 0 (/ dur 2)))
+        subenv (env-gen (perc 0 (* dur plk)) :action FREE)
+        env (env-gen (perc 0 dur ))
         plk (* (pluck (pink-noise) 1 0.2 (/ 1 subfreq)) subenv 2)
         tri (* (var-saw freq) env)
         sin (* (sin-osc freq) env)
@@ -307,6 +302,7 @@
     (out [0 1] sig)
    )
   )
+
 
 
 (defsynth bass-synth [freq 200 attack 0.1 amp 1 release 1 detune 3 bwr 1]
@@ -410,8 +406,7 @@
         env (env-gen (adsr-ng :attack a :sustain s :decay d :release r) :action 2)
         freq (* freq (midiratio (* (lf-noise0:kr 0.5) detune)))
         sig  (blip freq 3)
-        ;sig (klang [(map #(* freq %) [1 2 3]) (repeat 3 (/ 1 3))])
-        sig (lpf sig freq)
+        sig (* (bpf sig freq 0.5) 0.4)
         sig (* sig env amp)]
     (out:ar [0 1] sig)
     )
@@ -434,7 +429,7 @@
    frequency) and its LFO has a little bit of randomisation thrown into
    its frequency component for that extra bit of variety."
 
-  [amp 1 freq 440 cutoff-freq 12000 rq 0.3  attack 1 decay 2 out-bus 0 ]
+  [amp 1 freq 440 cutoff 12000 rq 0.3  attack 1 decay 2 out-bus 0 ]
 
   (let [snd (pan2 (mix [(pulse freq (* 0.1 (/ (+ 1.2 (sin-osc:kr 1)) )))
                         (pulse freq (* 0.8 (/ (+ 1.2 (sin-osc:kr 0.3) 0.7) 2)))
@@ -444,7 +439,7 @@
                                                            2))))]))
         snd (normalizer snd)
         env (env-gen (perc attack decay) :action FREE)
-        snd (rlpf (* env snd snd) cutoff-freq rq)]
+        snd (rlpf (* env snd snd) cutoff rq)]
 
     (out out-bus (* amp snd))))
 
@@ -507,6 +502,27 @@
 ;;     (out 1 sig)
 ;;     )
 ;;   )
+
+
+(defsynth horn [freq 440]
+  (let [sin (klang [[freq (/ freq 2) (* freq (/ 3 5))] [0.6 0.3 0.1]] )
+        s-aw (* (saw freq) 0.1)
+        p (* (pulse freq (lin-lin (lf-noise0:kr 10) -1 1 0.5 1)) 0.1)
+        sig (mix [sin s-aw])
+        sig (free-verb sig 0.3 0.7 0.3)
+        ]
+    (out:ar [0 1] sig)
+    )
+  )
+
+(defsynth bass2 [atk 0.001 decay 0.6 amp 1 freq 80 cutoff 2000]
+  (let [sig (* (decay2:ar (impulse:ar (/ atk 2)) atk decay)
+               (mix (pulse:ar [freq (+ freq 1)] 0.3)) amp)
+        sig (moog-ff sig cutoff 3)
+        sig (* sig (env-gen (perc atk decay) :action 2))]
+    (out:ar [0 1] sig)
+    )
+  )
 
 (def dull-partials
   [
