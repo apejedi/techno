@@ -158,7 +158,6 @@
    :test)
 
 
-
   (s/add-p
    core/player
    (s/phrase-p
@@ -196,17 +195,52 @@
     )
 
 
-(on-event [:midi :note-on]
-            (fn [m]
-              (let [n (:data1 m)]
-                (overpad :note n
-                       :release 4
-                       :decay 2
-                       :rq 0.6
-                       :cutoff-freq 1200)
-                ))
-            ::prophet-midi)
+  (let []
+      (on-event [:midi :note-on]
+                (fn [m]
+                  (let [root "D"
+                        cur-scale (map find-pitch-class-name
+                                       (scale (keyword (str root "4")) :major))
+                        info (note-info (find-note-name (:data1 m)))
+                        degree (inc (.indexOf cur-scale (:pitch-class info)))
+                        num 3
+                        degree-map (zipmap (vals DEGREE) (keys DEGREE))
+                        notes (if (contains? degree-map degree)
+                                (chord-degree (get degree-map degree)
+                                              (keyword (str root (:octave info))) :major num)
+                                [])
+                        pat (if (> (count notes) 0)
+                              (s/build-map-p
+                               (map #(let [f (midi->hz %)]
+                                       (vector
+                                        bpfsaw [:note % :release 1 :amp 0.2 :dur 0.6 :atk 0.3]
+                                        bing [:note %])
+                                       ) notes)
+                               0.25))]
+                    (when (not (nil? pat))
+                      ;(s/play-p pat)
+                      (s/add-p core/player pat (keyword (:match info)))
+                      )
+                    ))
+                ::prophet-midi)
+    (on-event [:midi :note-off]
+              (fn [m]
+                (let [n (find-note-name (:data1 m))]
+                  (when (and (sequential? (core/get-patterns))
+                             (>= (.indexOf (core/get-patterns) n) 0))
+                    (s/rm-p core/player n)))
+                )
+              ::prophet-midi-off))
 
+  (s/play-p
+   (fn
+     ([] [4.75 0.25])
+     ([b]
+      [wire-bass [:decay (scale-range (rand) 0 1 0.2 0.6)]
+       bass2 []]
+      )
+     )
+   1.3 3)
 (remove-event-handler ::prophet-midi)
 
 (s/play-p
@@ -410,6 +444,8 @@
    :harmony1
    ;1.6
    )
+  (daf-bass)
+  (kill daf-bass)
   (s/set-action core/player :harmony1 7.875 [])
 
   )

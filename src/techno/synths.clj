@@ -303,6 +303,16 @@
    )
   )
 
+(defsynth wire-bass [decay 0.5 coef 0.54 amp 1 dur 3]
+  (let [coef (lin-lin decay 0 1 -0.3 1)
+        decay (lin-lin decay 0 1 0.007 0.02)
+        sig (pluck:ar (* (white-noise) 0.1) 1 decay decay dur coef)
+        sig (* sig (env-gen:kr (perc (* 0.001 dur) (* 0.999 dur)) :action FREE))]
+    (out:ar [0 1] sig)
+    )
+  )
+
+
 
 
 (defsynth bass-synth [freq 200 attack 0.1 amp 1 release 1 detune 3 bwr 1]
@@ -398,6 +408,18 @@
 ;; (ctl w :wobble 0.6)
 ;; (ctl w :amp 0.3)
 ;; (kill wobble-drone)
+
+;; (defsynth sistres [note 60 dur 6 amp 1]
+;;   (let [freq (midicps note)
+;;         freqs (repeatedly 4
+;;                 #(exp-rand (- freq (/ freq 128)) (+ freq (/ freq 128))))
+;;         sig (splay:ar (klang:ar
+;;                        [freqs (repeat (count freqs) (double (/ 1 (count freqs))))]))
+;;         sig (* sig (lf-gauss dur 0.25 0 0 2) amp)
+;;         ]
+;;     (out:ar 0 sig)
+;;     )
+;;   )
 
 
 (defsynth rise-pad [freq 440 t 3 attack 0.5 amp 1 detune 0.1]
@@ -515,14 +537,16 @@
     )
   )
 
-(defsynth bass2 [atk 0.001 decay 0.6 amp 1 freq 80 cutoff 2000]
+
+(defsynth bass2 [atk 0.001 decay 0.6 amp 1 freq 80 cutoff 2000 cutoff2 2000]
   (let [sig (* (decay2:ar (impulse:ar (/ atk 2)) atk decay)
                (mix (pulse:ar [freq (+ freq 1)] 0.3)) amp)
-        sig (moog-ff sig cutoff 3)
+        sig (moog-ff sig (x-line:kr cutoff cutoff2 atk) 3)
         sig (* sig (env-gen (perc atk decay) :action 2))]
     (out:ar [0 1] sig)
     )
   )
+
 
 (def dull-partials
   [

@@ -14,6 +14,7 @@
 (defonce ^:private sequence-buffers (atom {}))
 (defonce ^:private pattern-counters (atom {}))
 (defonce ^:private sequencer-data (atom {}))
+(defonce ^:private midi-clip (atom {}))
 (defonce t-source-g (group "trigger sources"))
 (defonce t-synth-g (group "trigger generators" :after t-source-g))
 
