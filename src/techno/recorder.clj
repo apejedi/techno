@@ -4,7 +4,8 @@
   (:import (javax.swing JTextArea JFrame JTextField JScrollPane)
            (java.awt Dimension BorderLayout Font Color)
            (java.awt.event KeyListener KeyEvent))
-  )
+
+  (:require [techno.sequencer :as s]))
 
 
 (defonce position (atom 0))
@@ -174,7 +175,16 @@
     )
   )
 
+(defn start-record-pattern []
+  (reset! time-pattern {})
+  )
 
+(defn record-action [action player]
+  (let [beat (get (s/get-sequencer-data player) :beat 1)
+        cur (get @time-pattern beat [])]
+      (swap! time-pattern
+             (fn [p] (assoc p beat (apply conj (concat [cur] action))))))
+  )
 
 (defn- crawl [graph f]
   (doseq [[k v] graph]
