@@ -306,7 +306,7 @@
 (defsynth wire-bass [decay 0.5 coef 0.54 amp 1 dur 3]
   (let [coef (lin-lin coef 0 1 -0.3 1)
         decay (lin-lin decay 0 1 0.007 0.02)
-        sig (pluck:ar (* (white-noise) 0.1) 1 decay decay dur coef)
+        sig (pluck:ar (* (pink-noise) 0.1) 1 decay decay dur coef)
         sig (* sig (env-gen:kr (perc (* 0.001 dur) (* 0.999 dur)) :action FREE) amp)]
     (out:ar [0 1] sig)
     )
@@ -451,7 +451,7 @@
    frequency) and its LFO has a little bit of randomisation thrown into
    its frequency component for that extra bit of variety."
 
-  [amp 1 freq 440 cutoff 12000 rq 0.3  attack 1 decay 2 out-bus 0 ]
+  [amp 1 freq 440 cutoff 1500 rq 0.3  attack 1 decay 2 out-bus 0 ]
 
   (let [snd (pan2 (mix [(pulse freq (* 0.1 (/ (+ 1.2 (sin-osc:kr 1)) )))
                         (pulse freq (* 0.8 (/ (+ 1.2 (sin-osc:kr 0.3) 0.7) 2)))

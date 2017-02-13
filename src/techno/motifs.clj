@@ -221,7 +221,7 @@
                                         )
                                        ) notes)
                                0.25))]
-                    (ctl chi :freq (midi->hz (:midi-note info)))
+                    (bass2 :freq (midi->hz (:midi-note info)) :cutoff 3000 :amp 3 :decay 3)
                     ;; (rec/record-action
                     ;;  [klang-test [:freq (midi->hz (:midi-note info)) :atk 0.001 :dur 1]]
                     ;;  core/player)

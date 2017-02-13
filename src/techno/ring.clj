@@ -150,6 +150,7 @@
           body (get (s/get-p @sequencer pattern) :body {})]
       (load-string
        (str " (import java.util.concurrent.ThreadLocalRandom) (use
+'[clojure.core]
 '[overtone.core]
         '[overtone.inst.synth]
         '[techno.core :as core]
