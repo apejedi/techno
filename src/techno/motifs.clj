@@ -5,6 +5,8 @@
         [techno.sequencer :as s]
         [techno.synths]
         [techno.melody])
+  (:require
+   [techno.recorder :as rec])
   )
 
 (defonce motif (atom (fn [_])))
@@ -186,24 +188,26 @@
    :motif)
 
   (let [b [bass [:amp 1.3 :cutoff 4000 :t 0.3]]
-        c [bass2 [:freq 100 :amp 1.3]]]
+        c [bass2 [:freq 150 :amp 1.3]]]
     (s/play-p
      (s/build-map-p
-      [b b b b :1 b :1 b b :3]
+      [b b b b :1 b :1 c c :3]
       0.25)
      2 3)
     )
 
-
+  (def chi (chicago-pad :freq (midi->hz (note :C3)) :amp 0.1))
+  (kill chi)
+  (rec/start-record-pattern)
   (let []
       (on-event [:midi :note-on]
                 (fn [m]
-                  (let [root "D"
+                  (let [root "G"
                         cur-scale (map find-pitch-class-name
                                        (scale (keyword (str root "4")) :major))
                         info (note-info (find-note-name (:data1 m)))
                         degree (inc (.indexOf cur-scale (:pitch-class info)))
-                        num 3
+                        num 4
                         degree-map (zipmap (vals DEGREE) (keys DEGREE))
                         notes (if (contains? degree-map degree)
                                 (chord-degree (get degree-map degree)
@@ -213,24 +217,52 @@
                               (s/build-map-p
                                (map #(let [f (midi->hz %)]
                                        (vector
-                                        bpfsaw [:note % :release 1 :amp 0.2 :dur 0.6 :atk 0.3]
-                                        bing [:note %])
+                                        bpfsaw [:note % :dur 0.6 :atk 0.01 :rq 0.5]
+                                        )
                                        ) notes)
                                0.25))]
+                    (bpfsaw
+                     :note (:midi-note info)
+                     :atk 0.001
+                     :dur 20
+                     :rq 0.4
+                     )
+                    ;; (rec/record-action
+                    ;;  [klang-test [:freq (midi->hz (:midi-note info)) :atk 0.001 :dur 1]]
+                    ;;  core/player)
+                    ;; (s/mod-actions core/player :bass
+                    ;;                (fn [[action args]]
+                    ;;                  (if (= (:name action) "plk-bass")
+                    ;;                    (vector action [:note (:midi-note info)])
+                    ;;                    (vector action args)
+                    ;;                    )))
                     (when (not (nil? pat))
                       ;(s/play-p pat)
-                      (s/add-p core/player pat (keyword (:match info)))
+                      ;(s/add-p core/player pat (keyword (:match info)))
                       )
                     ))
                 ::prophet-midi)
     (on-event [:midi :note-off]
               (fn [m]
-                (let [n (find-note-name (:data1 m))]
-                  (when (and (sequential? (core/get-patterns))
-                             (>= (.indexOf (core/get-patterns) n) 0))
-                    (s/rm-p core/player n)))
+                (kill bpfsaw)
+                ;; (let [n (find-note-name (:data1 m))]
+                ;;   (when (and (sequential? (core/get-patterns))
+                ;;              (>= (.indexOf (core/get-patterns) n) 0))
+                ;;     (s/rm-p core/player n)))
                 )
               ::prophet-midi-off))
+  (rec/start-record-pattern)
+  (s/pp-pattern (rec/get-time-pattern))
+
+  (let [b [;bass2 [:decay 1 :cutoff2 3000]
+           plk-bass [:amp 0.4]
+           wire-bass [:amp 0.4]]
+        ]
+      (s/add-p core/player
+               (s/build-map-p
+                [b b]
+                0.25)
+               :bass))
 
   (s/play-p
    (fn

@@ -258,8 +258,12 @@
    :toms (s/fit-p {1.75 []} (drum-p [:KurzweilKit08] [:t3 :1 :t4 :t3 :1 :t4 :1]))
    :beat1 (s/fit-p {1.75 []}
                    (drum-p [:KurzweilKit07] [:1 :sd :1 :sd :1]))
-   :beat2 (s/fit-p {1.75 []}
-                   (drum-p [:KurzweilKit08] [:sd1 :1 :sd1 :sd1 :sd2 :1 :sd1 :1]))
+   :b3 (fn [b]
+         (when (= (rand-int 2) 0)
+           (doseq [n (choose-n 4 (chord-degree (choose [:i :ii :iii :iv :vi]) :C4 :minor 5))]
+             (piano :note n :dur 3 :hard 0.1 :amp 0.4)
+             ))
+         )
    :shkr (s/fit-p {1.75 []} (drum-p [:Kit8-Vinyl] [:shkr3 :shkr3 :shkr1 :1]))
    :congas (gen-beat (:four-beat @beats)
              (map #(vector % [:amp 1]) (concat (vals (drum-kits :Congas))
@@ -509,6 +513,31 @@
            bass-synth
            [[:E3 :B3] [:A3 :F3] :34]
            0.25 32 [:release 6 :amp 0.4 :detune 4])
+   :bass (fn ([] [17.75 0.25])
+           ([k]
+            (cond
+              ;; (or (and (= (mod k (int k)) 0.75) (odd? (int k)))
+              ;;     (and (integer? k) (even? k)))
+              ;; nil
+              true (let [n (note (cond (< k 9.25) :E3
+                                       (< k 13.75) :D3
+                                       true :F3))
+                         action (vector plk-bass [:note (note n) :amp 0.3] wire-bass [:amp 0.4])]
+                  action))))
+   ;; (let [action #(vector plk-bass [:note (note %) :amp 0.3] wire-bass [:amp 0.4])]
+   ;;           (reduce
+   ;;            (fn [m k]
+   ;;              (assoc m (if (= (mod k (int k)) 0.0)
+   ;;                         (int k) k)
+   ;;               (cond (< k 9.25) (action :E3)
+   ;;                     (< k 13.75) (action :D3)
+   ;;                     true (action :F3)))
+   ;;              )
+   ;;            {}
+   ;;            (range 1 18 0.25)))
+   :clap (s/build-map-p
+          [:4 [(drum-s [:Kit15-Electro] :cl1) []] :3]
+          0.25)
    :motif2 (s/phrase-p
            bass-synth
            [[:E4 :B3] [:A4 [:amp 0.3] :F4 [:amp 0.3]] :34]

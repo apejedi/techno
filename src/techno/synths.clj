@@ -286,7 +286,7 @@
         sin (* (sin-osc freq) env)
         sub (tanh (* (sum (sin-osc [subfreq (- subfreq 2) (+ subfreq 2)])) subenv))
         click (* (sum (rlpf (impulse:ar 0) [2000 8000] 1)) 1000)
-        sig (+ plk tri sub click)
+        sig (+ plk tri sub)
         sig (rlpf sig (x-line (* freq 100) (* freq 10) 0.15))
         sig (+ sig (* (moog-ff sig (* freq 20) 2.5) 0.1))
         sig (b-peak-eq sig 400 0.5 -9)
@@ -304,10 +304,10 @@
   )
 
 (defsynth wire-bass [decay 0.5 coef 0.54 amp 1 dur 3]
-  (let [coef (lin-lin decay 0 1 -0.3 1)
+  (let [coef (lin-lin coef 0 1 -0.3 1)
         decay (lin-lin decay 0 1 0.007 0.02)
         sig (pluck:ar (* (white-noise) 0.1) 1 decay decay dur coef)
-        sig (* sig (env-gen:kr (perc (* 0.001 dur) (* 0.999 dur)) :action FREE))]
+        sig (* sig (env-gen:kr (perc (* 0.001 dur) (* 0.999 dur)) :action FREE) amp)]
     (out:ar [0 1] sig)
     )
   )
@@ -344,8 +344,8 @@
         snd (rlpf snd (+ 5000 (* 100 (sin-osc:kr 0.1))) 0.1)
         snd (* 0.2 (g-verb snd 40 10 0.6 0.6 -3 -9 -11))
         snd (moog-ff snd (+ cutoff (* (sin-osc:kr 0.08) (/ cutoff 10))) 3 0)
-        snd (delay-c snd 1.5 1)
-        snd (* snd (env-gen:kr (adsr-ng (* 0.1 dur) (* 0.1 dur) (* 0.6 dur) (* 0.2 dur)) :action 2))
+        ;; snd (delay-c snd 1.5 1)
+        snd (* snd (env-gen:kr (adsr (* 0.1 dur) (* 0.1 dur) (* 0.6 dur) (* 0.2 dur)) :action 2))
         snd (* amp (allpass-c snd 0.5 0.05 0.3))
         ]
     (out [0 1] snd)

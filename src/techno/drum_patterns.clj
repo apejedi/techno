@@ -371,8 +371,8 @@
                   [1 8 :drum3 [:Kit15-Electro]]
                   [1 16 :melody1 [:Kit7-Electro]]
                   [1 16 :melody2 [:Kit15-Electro]]
-                  [1 48 :harmony1 [:Kit4-Electro]]
-                  [1 88 :harmony2 [:Kit4-Electro]]
+                  ;; [1 48 :harmony1 [:Kit4-Electro]]
+                  ;; [1 88 :harmony2 [:Kit4-Electro]]
                   ]]
 ;    (s/rm-p core/player :all)
     (doseq [[fill slots action kits] patterns]

@@ -369,6 +369,8 @@
                             (wrap-beat beat size 1)
                             beat))
               new-p (play final-beat p orig-beat)]
+          (swap! sequencer-data
+                 (fn [s] (assoc-in s [id :beat] final-beat)))
           (if (map? new-p)
             (swap! patterns
                    (fn [cur]
@@ -1022,64 +1024,68 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
   )
 
 (defn phrase-p [inst phrase step & [space args m-args]]
-  (let [base (loop [phrase phrase beat 1 pattern {} prev nil]
-           (let [args (vec (if (not (nil? args)) args []))
-                 note-arg (if (or (instance? overtone.studio.inst.Inst inst)
-                                  (instance? overtone.sc.synth.Synth inst))
-                            (cond (some #(= (:name %) "freq") (:params inst)) :freq
-                                  (some #(= (:name %) "note") (:params inst)) :note
-                                  true false))
-                 get-note #(if (number? %)
-                             (if (and (= note-arg :freq) (< % 100))
-                               (midi->hz %)
-                               %)
-                             (if (= note-arg :freq)
-                               (midi->hz (note %))
-                               (note %)))
-                 mk-action (fn [action block]
-                             (reduce
-                              (fn [a c]
-                                (if (sequential? c)
-                                  (conj (vec (butlast a)) (into (last a) c))
-                                  (conj a inst (if note-arg (conj args note-arg (get-note c))
-                                                   (cons (get-note c) args)))))
-                              action
-                              (vec block)))
-                 cur (first phrase)
-                 is-note (or (and (keyword? cur) (nil? (re-find #"^\d" (name cur)))) (number? cur))
-                 is-space? #(or (and (sequential? %) (= (first %) :space)) (and (keyword? %) (re-find #"^\d" (name %))))
-                 is-arg? #(and (sequential? %) (not (is-space? %)) (keyword? (first %)) (number? (second %)))
-                 is-arg (is-arg? cur)
-                 is-space (is-space? cur)
-                 is-block (and (not is-note) (not is-space) (not is-arg))
-                 action (get pattern beat [])
-                 action (cond
-                          is-note (conj action inst (if note-arg
-                                                      (conj args note-arg (get-note cur))
-                                                      (cons (get-note cur) args)))
-                          is-arg (conj (vec (butlast action)) (into (last action) cur))
-                          is-block (mk-action action cur)
-                          true nil)
-                 pattern (if (and (not (nil? action)) (> (count action) 0))
-                           (assoc pattern beat action) pattern)
-                 space  (cond is-space (if (sequential? cur) (second cur) (-> cur name Integer/parseInt))
-                              (not (nil? space)) space
-                              true 0)
-                 pattern (if (and (= (count (rest phrase)) 0) (> space 0))
-                           (assoc pattern (+ beat (* space step)) [])
-                           pattern)
-                 beat (if (or (is-arg? (second phrase)) (is-space? (second phrase)))
-                        beat
-                        (+ beat (* (if (and is-space (nil? prev)) space (inc space)) step))
-                        ;(+ beat (* (inc space) step))
-                        )
-                 beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)]
+  (let [;inst (if (sequential? inst) inst [inst])
+        base
+        (loop [phrase phrase beat 1 pattern {} prev nil]
+          (let [args (vec (if (not (nil? args)) args []))
+                note-arg (if (or (instance? overtone.studio.inst.Inst inst)
+                                 (instance? overtone.sc.synth.Synth inst))
+                           (cond (some #(= (:name %) "freq") (:params inst)) :freq
+                                 (some #(= (:name %) "note") (:params inst)) :note
+                                 true false))
+                get-note #(if (number? %)
+                            (if (and (= note-arg :freq) (< % 100))
+                              (midi->hz %)
+                              %)
+                            (if (= note-arg :freq)
+                              (midi->hz (note %))
+                              (note %)))
+                mk-action (fn [action block]
+                            (reduce
+                             (fn [a c]
+                               (if (sequential? c)
+                                 (conj (vec (butlast a)) (into (last a) c))
+                                 (conj a inst (if note-arg (conj args note-arg (get-note c))
+                                                  (cons (get-note c) args)))))
+                             action
+                             (vec block)))
+                cur (first phrase)
+                is-note (or (and (keyword? cur) (nil? (re-find #"^\d" (name cur)))) (number? cur))
+                is-space? #(or (and (sequential? %) (= (first %) :space)) (and (keyword? %) (re-find #"^\d" (name %))))
+                is-arg? #(and (sequential? %) (not (is-space? %)) (keyword? (first %)) (number? (second %)))
+                is-arg (is-arg? cur)
+                is-space (is-space? cur)
+                is-block (and (not is-note) (not is-space) (not is-arg))
+                action (get pattern beat [])
+                action (cond
+                         is-note
+                         ;(apply conj (concat [action] (mapcat #() inst)))
+                         (conj action inst (if note-arg
+                                             (conj args note-arg (get-note cur))
+                                             (cons (get-note cur) args)))
+                         is-arg (conj (vec (butlast action)) (into (last action) cur))
+                         is-block (mk-action action cur)
+                         true nil)
+                pattern (if (and (not (nil? action)) (> (count action) 0))
+                          (assoc pattern beat action) pattern)
+                space  (cond is-space (if (sequential? cur) (second cur) (-> cur name Integer/parseInt))
+                             (not (nil? space)) space
+                             true 0)
+                pattern (if (and (= (count (rest phrase)) 0) (> space 0))
+                          (assoc pattern (+ beat (* space step)) [])
+                          pattern)
+                beat (if (or (is-arg? (second phrase)) (is-space? (second phrase)))
+                       beat
+                       (+ beat (* (if (and is-space (nil? prev)) space (inc space)) step))
+                                        ;(+ beat (* (inc space) step))
+                       )
+                beat (if (= (mod beat (int beat)) 0.0) (int beat) beat)]
                                         ;(println "action " action " beat " beat " phrase " (rest phrase) " space " space)
-             (if (> (count (rest phrase)) 0)
-               (recur (rest phrase) beat pattern cur)
-               pattern
-               )
-             ))]
+            (if (> (count (rest phrase)) 0)
+              (recur (rest phrase) beat pattern cur)
+              pattern
+              )
+            ))]
     (if m-args
       (m-phrase m-args base step)
       base
