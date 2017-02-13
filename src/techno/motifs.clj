@@ -221,12 +221,7 @@
                                         )
                                        ) notes)
                                0.25))]
-                    (bpfsaw
-                     :note (:midi-note info)
-                     :atk 0.001
-                     :dur 20
-                     :rq 0.4
-                     )
+                    (ctl chi :freq (midi->hz (:midi-note info)))
                     ;; (rec/record-action
                     ;;  [klang-test [:freq (midi->hz (:midi-note info)) :atk 0.001 :dur 1]]
                     ;;  core/player)
@@ -244,7 +239,7 @@
                 ::prophet-midi)
     (on-event [:midi :note-off]
               (fn [m]
-                (kill bpfsaw)
+                ;(kill bass-synth)
                 ;; (let [n (find-note-name (:data1 m))]
                 ;;   (when (and (sequential? (core/get-patterns))
                 ;;              (>= (.indexOf (core/get-patterns) n) 0))

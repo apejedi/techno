@@ -387,7 +387,7 @@
     )
 
   (s/add-p core/player
-           {8.9375 []} :default)
+           {2.75 []} :clap)
 
   ((drum-s (vector (choose (keys drum-kits))) :k1))
 
