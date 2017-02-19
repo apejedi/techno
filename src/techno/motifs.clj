@@ -230,9 +230,7 @@
                                         )
                                        ) notes)
                                0.25))]
-                    (doseq [n notes]
-                      (piano :note n :dur 0.6 )
-                      )
+                    (bpfsaw2 :freq (midi->hz (:midi-note info)) :rel 5)
                     ;; (when (= 2 (:channel m))
                     ;;   (ctl 1673 :freq (midi->hz (:7midi-note info))))
                     ;; (when (= 3 (:channel m))
@@ -253,6 +251,7 @@
                       )
                     ))
                 ::prophet-midi)
+      (remove-event-handler ::prophet-midi)
     (on-event [:midi :note-off]
               (fn [m]
                 ;(kill bass-synth)
