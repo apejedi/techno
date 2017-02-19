@@ -110,7 +110,8 @@
                (+ size step)
                size)
         ]
-    size
+    (if (= (mod size (int size)) 0.0)
+      (int size) size)
     ))
 
 

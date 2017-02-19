@@ -140,6 +140,23 @@
             [:Kit16-Electro]
             [:c1 a :2 :c1 a :2 :c1 a :1 :c1 a :c2 a :c1 a :5]
             0.25))
+   :hat2 (s/build-map-p
+          [[ (get-in drum-kits [:KurzweilKit07 :CYCdh_Kurz07-ClHat01.wav])[]]
+           [ (get-in drum-kits [:KurzweilKit07 :CYCdh_Kurz07-ClHat01.wav])[]] :1
+           [ (get-in drum-kits [:KurzweilKit07 :CYCdh_Kurz07-HfHat01.wav])[]] :2
+           [ (get-in drum-kits [:KurzweilKit06 :CYCdh_Kurz06-ClHat.wav])[]
+            (get-in drum-kits [:Kit15-Electro :CYCdh_ElecK05-ClHat04.wav])[]] :1]
+          )
+   :sdst2 (s/build-map-p
+           [[ (get-in drum-kits [:KurzweilKit05 :CYCdh_Kurz05-SdSt.wav])[]] :2
+            [ (get-in drum-kits [:KurzweilKit05 :CYCdh_Kurz05-SdSt.wav])[]] :2
+            [ (get-in drum-kits [:KurzweilKit05 :CYCdh_Kurz05-SdSt.wav])[]] :3
+            [ (get-in drum-kits [:KurzweilKit05 :CYCdh_Kurz05-SdSt.wav])[]] :4
+            [ (get-in drum-kits [:KurzweilKit05 :CYCdh_Kurz05-SdSt.wav])[]] :1
+            [ (get-in drum-kits [:KurzweilKit05 :CYCdh_Kurz05-SdSt.wav])[]] :1
+            [ (get-in drum-kits [:KurzweilKit08 :CYCdh_Kurz08-SdSt01.wav])[]
+             (get-in drum-kits [:KurzweilKit08 :CYCdh_Kurz08-SdSt02.wav])[]] :1]
+           )
    :hat (drum-p [:Kit16-Electro]
                 [:2 :o :1])
    :kick2 (drum-p [:Kit4-Electro] [:k2 :3 :k2 :3 :k2 :k2 :2 :k2 :3])
@@ -155,7 +172,20 @@
             (s/phrase-p
              reverb-test
              (concat a a a a a a a a b b b b b b b b)
+             ;[a :24 b :22]
              0.25 0 [:amp 1 :t 2]))
+   :clap2 (drum-p
+           [:Kit15-Electro]
+           [:4 :cl1 :3]
+           0.25)
+   :bass (s/phrase-p
+          acid-bass
+          [:F1 :2 :B1 :2 :B1 :9]
+          0.25 0 [:dur 1 :amp 1])
+   :bass2 (s/phrase-p
+           acid-bass
+           [:C4 :D4 :E4 :C4 :D4 :3 :E4 :F4 :E4 :D4 :6]
+           0.25 2 [:dur 0.6 :amp 0.3])
    }
   )
 
@@ -241,11 +271,11 @@
         (s/phrase-p inst (flatten [v v v v v v v v
                                    i i i i i i i i]) 0.25 0 args)
         )
-   :b2 (s/fit-p {1.75 []}
-                (s/phrase-p
-                 piano
-                 (gen-phrase (concat (scale :C4 :minor) (scale :C5 :minor)) 12 :degree 7 :rests [:0 :1])
-                    0.25 2 [:attack 0.1 :release 0.3 :amp 0.5 :coef 0.001 :dur 1 :decay 1]))
+   :b2 (s/phrase-p
+        piano
+        (gen-phrase (concat (scale :C5 :minor))
+                    12 :degree 7 :rests [:0 :1])
+        0.25 2 [:attack 0.1 :release 0.3 :amp 0.5])
    :c (s/phrase-p
        overpad
        (concat (chord-degree :v :C4 :minor) [:3] (chord-degree :i :C4 :minor))
@@ -258,19 +288,37 @@
    :toms (s/fit-p {1.75 []} (drum-p [:KurzweilKit08] [:t3 :1 :t4 :t3 :1 :t4 :1]))
    :beat1 (s/fit-p {1.75 []}
                    (drum-p [:KurzweilKit07] [:1 :sd :1 :sd :1]))
-   :b3 (fn [b]
-         (when (= (rand-int 2) 0)
-           (doseq [n (choose-n 4 (chord-degree (choose [:i :ii :iii :iv :vi]) :C4 :minor 5))]
-             (piano :note n :dur 3 :hard 0.1 :amp 0.4)
-             ))
-         )
+   :piano (let [a (chord-degree :iv :C4 :minor)
+                b (chord-degree :v :C4 :minor)
+                c (chord-degree :vi :C4 :minor)]
+            (s/phrase-p
+             piano
+             [c b a a a a :0 a a a :0 b :3]
+             0.25 1 [:dur 1 :hard 0.1 :amp 0.3])
+            )
    :shkr (s/fit-p {1.75 []} (drum-p [:Kit8-Vinyl] [:shkr3 :shkr3 :shkr1 :1]))
-   :congas (gen-beat (:four-beat @beats)
-             (map #(vector % [:amp 1]) (concat (vals (drum-kits :Congas))
-                                               (vals (drum-kits :Bongos))
-                                               ))
-             12
-             true true 1 0.3 0)
+   :congas (let [p (fn [_]
+                 {:phrase (gen-beat (:four-beat @beats)
+                                    (map #(vector % [:amp 2])
+                                         (concat (vals (drum-kits :Congas))
+                                                 (vals (drum-kits :Bongos))
+                                                 ))
+                                    12
+                                    true true 1 0.3 0)
+                  :count 0})
+             mem (atom (p nil))]
+         (fn
+           ([] [(s/p-size (get @mem :phrase)) 0.25])
+           ([b]
+            (let [size (s/p-size (get @mem :phrase))
+                  a (get-in @mem [:phrase b])]
+              (cond (>= (:count @mem) 2)
+                    (swap! mem p)
+                    (= size b)
+                    (swap! mem (fn [m] (assoc m :count (inc (:count m))))))
+              a))
+           )
+         )
    :main1 (drum-p [:Kit10-Vinyl] [[:k1 :c1] :k4 :p4 :1 :s2 :1 :p3 :5 :s2 :3])
    :main2 (drum-p [:Kit10-Vinyl] [[:k1 :k4] :1 :p1 :k1 :k2 :p1 :k1 :1])
    :main3 (drum-p [:Kit10-Vinyl] [:k1 :1 :c1 :1 :s2 :1 :c1 :1])
@@ -522,19 +570,9 @@
               true (let [n (note (cond (< k 9.25) :E3
                                        (< k 13.75) :D3
                                        true :F3))
-                         action (vector plk-bass [:note (note n) :amp 0.3] wire-bass [:amp 0.4])]
+                         action (vector plk-bass [:note (note n) :amp 0.6]
+                                        wire-bass [:amp 0.4 :dur 2 :coef 0.01 :decay 0.8])]
                   action))))
-   ;; (let [action #(vector plk-bass [:note (note %) :amp 0.3] wire-bass [:amp 0.4])]
-   ;;           (reduce
-   ;;            (fn [m k]
-   ;;              (assoc m (if (= (mod k (int k)) 0.0)
-   ;;                         (int k) k)
-   ;;               (cond (< k 9.25) (action :E3)
-   ;;                     (< k 13.75) (action :D3)
-   ;;                     true (action :F3)))
-   ;;              )
-   ;;            {}
-   ;;            (range 1 18 0.25)))
    :clap (s/build-map-p
           [:4 [(drum-s [:Kit15-Electro] :cl1) []] :3]
           0.25)
@@ -562,6 +600,19 @@
        [:Kit5-Electro]
        [[cl1] :2]
        0.25)
+   :test (let [a (doall (map kill (node-tree-matching-synth-ids "test" 1)))
+               b  (doall (map kill (node-tree-matching-synth-ids "test" 0)))
+               b (node "test" {:freq (midi->hz (note :B4))})]
+           (on-event [:midi :note-on]
+                     (fn [m]
+                       (let [root "Eb"
+                             cur-scale (map find-pitch-class-name
+                                            (scale (keyword (str root "4")) :major))
+                             info (note-info (find-note-name (:data1 m)))]
+                         (ctl b :freq (midi->hz (:midi-note info)))
+                         ))
+                     :test-midi)
+           {1 []})
    })
 
 (def ambient2
@@ -646,11 +697,26 @@
                  :rel 5
                  :amp 5]]))
               )
-   :claves (gen-beat (:four-beat @beats)
-          (map #(vector % [:amp 1.3]) (concat (vals (drum-kits :claves))
-                                            ))
-          12
-          true true 1 0.3 0)
+   :claves (let [p (fn [_]
+                 {:phrase (gen-beat (:four-beat @beats)
+                                    (map #(vector % [:amp 1.3]) (concat (vals (drum-kits :claves))
+                                                                        ))
+                                    12
+                                    true true 1 0.3 0)
+                  :count 0})
+             mem (atom (p nil))]
+         (fn
+           ([] [(s/p-size (get @mem :phrase)) 0.25])
+           ([b]
+            (let [size (s/p-size (get @mem :phrase))
+                  a (get-in @mem [:phrase b])]
+              (cond (>= (:count @mem) 2)
+                    (swap! mem p)
+                    (= size b)
+                    (swap! mem (fn [m] (assoc m :count (inc (:count m))))))
+              a))
+           )
+         )
    })
 
 
@@ -669,4 +735,58 @@
               :1 [ bpfsaw[:decay 2 :dur 1 :atk 0.01 :note (note :D4)]]
               :3 [ bpfsaw[:decay 2 :dur 1 :atk 0.01 :note (note :A4)]] :1] 0.125)
 
+   })
+
+(def house3
+  {:kick (s/build-map-p
+          [[(drum-s [:Kit18-Acoustic] :k1) [:amp 0.4]] :3]
+          )
+   :hat (drum-p [:Kit1-Acousticclose :Kit5-Electro]
+                [:2 :c5 :3 [:c5 :cl1] :3 :c5 :3
+                 [:c5 :cl1] :3 :c5 :c5 :2 [:c5 :cl1] :1]
+                0.25 [:amp 0.5])
+   :bass (s/phrase-p
+          acid-bass
+          [:G1 :Bb1 :G1 :Bb1 :G1 :3 :G1 :Bb1 :G1 :Bb1 :G1 :3]
+          ;[:G1 :Bb1 :G1 :Bb1 :A1 :3 :G1 :Bb1 :G1 :Bb1 :A1 :3]
+          0.25 2 [:amp 0.05])
+   :perc (drum-p [:KurzweilKit08]
+                   [:p3 :2 :p3 :2 :p3 :2 :p3 :3 :p2 :1 :p3 ]
+                   )
+   :harmony (let [amp 0.09
+                  a [:D5 :F5]
+                  b [:A5 :C6]
+                  c [:C5 :E5]
+                  d [:G5 :B5]
+                  b2 [:A5 [:amp amp :atk 0.01 :dur 4] :C6 [:amp amp :atk 0.01 :dur 4]]
+                  d2 [:G5 [:amp amp :atk 0.01 :dur 4] :B5 [:amp amp :atk 0.01 :dur 4]]]
+              (s/phrase-p
+               klang-test
+               [a b :4 a b2 :4  a :1 b :1 a :1 b :1 a :1 b :5
+                c d :4 c d2 :4  c :1 d :1 c :1 d :1 c :1 d :5]
+               ;; [a b :8 a b2 :9  a :3 b :3 a :3 b :3 a :3 b :6
+               ;;  c d :8 c d2 :9  c :3 d :3 c :3 d :3 c :3 d :6]
+               0.25 2 [:amp amp :atk 0.01]))
+   :flute (s/phrase-p
+           flute
+           [:A5 :14 :B5 :16 :D6 :16]
+           0.25 0 [:dur 2.4 :amp 0.15])
+   :clap (drum-p [:Kit15-Electro]
+                 [:4 :cl1 [:amp 0.5] :3])
+   :click (drum-p
+           [:KurzweilKit07]
+           [:c1 :c1]
+           0.25 0 [:amp 0.3])
+   :sdst (drum-p
+          [:KurzweilKit05]
+          [:sd :2]
+          0.25)
+   :bass2 (s/phrase-p
+           bass2
+           [:A4 :B4 :C4 :D4 :D4 :1 :D4 :1]
+           0.25 2 [:decay 2])
+   :bass3 (s/phrase-p
+           bass2
+           [:E5 :D5 :C5 :B4 :6]
+           0.25 2 [:decay 2 :cutoff2 4000])
    })

@@ -21,6 +21,7 @@
     (out:ar 1 sig)
     )
   )
+
 (defsynth harmonic
   [amp 0.5 freq 100]
   (let [partials 20
@@ -38,6 +39,50 @@
                       newz (mul-add src f z)]
                   (recur newz (inc i)))))]
     (out 0 (pan2 (* amp snd)))))
+
+(defsynth tb303-2 [freq 300 ac 1 cutoff 6000 et 1]
+  (let [wv 0.1
+        lag-fr (lag-ud:kr freq 0.39 0.09)
+        lag-fr (* lag-fr (+ 1 (* 0.0156 (lfd-noise3 0.3))))
+        w (softclip (* (saw lag-fr) (+ 0.5 (* (pow wv 4) 550))))
+        amp-comp (+ (pow (- 1.05 wv) 6) 1)
+        w (* w 0.9 amp-comp (+ 1 (* (lfd-noise3:ar 0.5) 0.04)))
+        ac-int (lpf:ar (* ac 12) 1)
+        fenv (*
+              (decay2
+               (+ (* et 0.16) (* ac-int 0.02))
+               0.01 0.12)
+              (+ 1 (* 0.003 (lfd-noise3:ar 0.2))))
+        w (* (rlpfd w (+ cutoff (* (- 15000 cutoff) fenv))
+                    (+ 0.6 (* ac-int 1.2))
+                    0.5) 2)
+        w (leak-dc w 0.995)
+        w (+ w (* (softclip (* (hpf:ar w 400) 10)) 0.04))
+        ]
+    (out:ar [0 1] w)
+    )
+  )
+
+(defsynth acid-bass [note 50 amp 1 atk 1 dur 1 attack 0.001]
+  (let [[a s r] (map #(* dur %) [attack 1 0.04])
+        note (lag:kr note (* 0.12 (- 1 (line:kr atk atk 0.001))))
+        env1 (env-gen
+              (perc a s)
+              ;(envelope [0 1 0 0] [a s 5] [0 -4 -4])
+              :action FREE)
+        env2 (env-gen (adsr a s 0 r 70 -4))
+        sig (- (* (lf-pulse:ar (midicps note) 0 0.51) 2) 1)
+        sig (rlpf:ar sig (midicps (+ note env2)) 0.3)
+        sig1 (* sig env1 amp)
+        ;; sig (bpf:ar sig1 3500)
+        ;; sig (free-verb sig 1 0.95 0.15)
+        ;; sig (+ sig (* sig (env-gen (envelope [0.02 0.3 0.02] [0.4 0.01] [3 -4] 1))))
+        ;; sig (hpf:ar (* sig 1.2) 40)
+        ;; sig (limiter:ar sig 1 0.02)
+        ]
+    (out:ar [0 1] sig1)
+    )
+  )
 
 (defsynth sc303 [out-bus 0 freq 440 wave 0 ctf 100 res 0.2 sus 0 dec 1.0 env 1000 gate 0 vol 0.2]
   (let [v (Math/pow 10 -9)
@@ -411,8 +456,8 @@
 
 ;; (defsynth sistres [note 60 dur 6 amp 1]
 ;;   (let [freq (midicps note)
-;;         freqs (repeatedly 4
-;;                 #(exp-rand (- freq (/ freq 128)) (+ freq (/ freq 128))))
+;;         freqs (vec
+;;                (repeatedly 4 #(exp-rand (- freq (/ freq 128)) (+ freq (/ freq 128)))))
 ;;         sig (splay:ar (klang:ar
 ;;                        [freqs (repeat (count freqs) (double (/ 1 (count freqs))))]))
 ;;         sig (* sig (lf-gauss dur 0.25 0 0 2) amp)
@@ -420,7 +465,6 @@
 ;;     (out:ar 0 sig)
 ;;     )
 ;;   )
-
 
 (defsynth rise-pad [freq 440 t 3 attack 0.5 amp 1 detune 0.1]
   (let [dur (- 1 attack)

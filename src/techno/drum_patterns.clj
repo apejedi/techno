@@ -366,13 +366,13 @@
 
   (s/get-action-str [sweet])
 
-  (let [patterns [[1 48 :drum1 [:Kit4-Electro]]
+  (let [patterns [;[1 48 :drum1 [:Kit4-Electro]]
                   [1 8 :drum2 [:Kit7-Electro]]
-                  [1 8 :drum3 [:Kit15-Electro]]
-                  [1 16 :melody1 [:Kit7-Electro]]
-                  [1 16 :melody2 [:Kit15-Electro]]
-                  [1 48 :harmony1 [:Kit4-Electro]]
-                  [1 88 :harmony2 [:Kit4-Electro]]
+                  ;; [1 8 :drum3 [:Kit15-Electro]]
+                  ;; [1 16 :melody1 [:Kit7-Electro]]
+                  ;; [1 16 :melody2 [:Kit15-Electro]]
+                  ;; [1 48 :harmony1 [:Kit4-Electro]]
+                  ;; [1 88 :harmony2 [:Kit4-Electro]]
                   ]]
 ;    (s/rm-p core/player :all)
     (doseq [[fill slots action kits] patterns]
@@ -385,7 +385,15 @@
         action)
       )
     )
+(s/add-p
+   core/player
+   (drum-p
+    [:KurzweilKit07]
+    [:c1 :c1]
+    0.25 0 [:amp 0.3])
+   :click)
 
+(s/rm-p core/player :click)
   (s/add-p core/player
            {2.75 []} :clap)
 

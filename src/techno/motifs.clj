@@ -199,10 +199,19 @@
   (def chi (chicago-pad :freq (midi->hz (note :C3)) :amp 0.1))
   (kill chi)
   (rec/start-record-pattern)
+  (ctl 1003 :amp 0.4)
   (let []
+    (on-event [:midi :control-change]
+              (fn [m]
+                (let [types {1 :modulation 2 :breath}
+                      type (:data1 m)
+                      value (:data2 m)]
+                  )
+                )
+              ::control-change)
       (on-event [:midi :note-on]
                 (fn [m]
-                  (let [root "G"
+                  (let [root "Eb"
                         cur-scale (map find-pitch-class-name
                                        (scale (keyword (str root "4")) :major))
                         info (note-info (find-note-name (:data1 m)))
@@ -217,11 +226,18 @@
                               (s/build-map-p
                                (map #(let [f (midi->hz %)]
                                        (vector
-                                        bpfsaw [:note % :dur 0.6 :atk 0.01 :rq 0.5]
+                                        piano [:note % :dur 0.6 :atk 0.01 :rq 0.5]
                                         )
                                        ) notes)
                                0.25))]
-                    (bass2 :freq (midi->hz (:midi-note info)) :cutoff 3000 :amp 3 :decay 3)
+                    (doseq [n notes]
+                      (piano :note n :dur 0.6 )
+                      )
+                    ;; (when (= 2 (:channel m))
+                    ;;   (ctl 1673 :freq (midi->hz (:7midi-note info))))
+                    ;; (when (= 3 (:channel m))
+                    ;;   (ctl 1672 :freq (midi->hz (:midi-note info))))
+                    ;; (plk-bass :note (:midi-note info) :dur 0.8)
                     ;; (rec/record-action
                     ;;  [klang-test [:freq (midi->hz (:midi-note info)) :atk 0.001 :dur 1]]
                     ;;  core/player)
@@ -233,7 +249,7 @@
                     ;;                    )))
                     (when (not (nil? pat))
                       ;(s/play-p pat)
-                      ;(s/add-p core/player pat (keyword (:match info)))
+                      ;; (s/add-p core/player pat (keyword (:match info)))
                       )
                     ))
                 ::prophet-midi)
@@ -246,8 +262,17 @@
                 ;;     (s/rm-p core/player n)))
                 )
               ::prophet-midi-off))
+(remove-event-handler :test-midi)
+  (s/add-p
+   core/player
+   (s/phrase-p
+    bass2
+    [:E5 :D5 :C5 :B4 :6]
+    0.25 2 [:decay 2 :cutoff2 4000])
+   :bass3)
   (rec/start-record-pattern)
   (s/pp-pattern (rec/get-time-pattern))
+  (kill 1006)
 
   (let [b [;bass2 [:decay 1 :cutoff2 3000]
            plk-bass [:amp 0.4]
@@ -259,15 +284,14 @@
                 0.25)
                :bass))
 
-  (s/play-p
-   (fn
-     ([] [4.75 0.25])
-     ([b]
-      [wire-bass [:decay (scale-range (rand) 0 1 0.2 0.6)]
-       bass2 []]
-      )
-     )
-   1.3 3)
+  (s/add-p
+   core/player
+   (s/phrase-p
+    acid-bass
+    [:C4 :D4 :E4 :C4 :D4 :3 :E4 :F4 :E4 :D4 :6]
+    0.25 2 [:dur 0.6 :amp 0.3])
+   :bass2)
+  (s/rm-p core/player :bass2)
 (remove-event-handler ::prophet-midi)
 
 (s/play-p

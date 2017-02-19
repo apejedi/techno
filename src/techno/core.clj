@@ -6,7 +6,8 @@
             [clojure.tools.reader.edn :as edn]
             [clojure.tools.reader.reader-types :as readers]
             [clojure.string :as string]
-            [overtone.midi :as midi]))
+            [overtone.midi :as midi]
+            [techno.core :as core]))
 (defonce s-player (atom nil))
 (declare player)
 
@@ -46,7 +47,7 @@
   (r/draw-line 5)
   (r/gen-coords 500 500 5 4 player)
   (s/dec-amp player :shkr)
-  (let [v 1]
+  (let [v 2]
     (ctl 14 :volume v)
     (ctl 15 :volume v))
   (remove-event-handler ::server-audio-clipping-warner-vol)
