@@ -32,7 +32,7 @@
 
 (defonce sample1 (atom {}))
 
-(defonce client (atom (osc-client "192.168.0.19" 9000)))
+(defonce client (atom (osc-client "192.168.1.13" 9000)))
                                         ;(swap! client (fn [_] (osc-client "172.20.10.5" 9000)))
 ;(swap! client (fn [_] (osc-client "192.168.1.114" 9000)))
 

@@ -11,9 +11,9 @@
         [techno.drums]))
 
 (comment
-  (let [parts [:a]
+  (let [parts [:e]
         rm []
-        comp mystery]
+        comp arpeggi]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -63,7 +63,7 @@
      :c (s/phrase-p
          bpfsaw
          [:F#5 :G5 :A5 :4]
-         0.25 1 [:dur 0.7 :atk 0.01 :amp 0.2])
+         0.25 1 [:dur 0.7 :atk 0.01 :amp 1])
      :d (let [d :D4 e :E4 a :A4 g :G4 f :F#4]
           (s/phrase-p
            bpfsaw
@@ -600,19 +600,19 @@
        [:Kit5-Electro]
        [[cl1] :2]
        0.25)
-   :test (let [a (doall (map kill (node-tree-matching-synth-ids "test" 1)))
-               b  (doall (map kill (node-tree-matching-synth-ids "test" 0)))
-               b (node "test" {:freq (midi->hz (note :B4))})]
-           (on-event [:midi :note-on]
-                     (fn [m]
-                       (let [root "Eb"
-                             cur-scale (map find-pitch-class-name
-                                            (scale (keyword (str root "4")) :major))
-                             info (note-info (find-note-name (:data1 m)))]
-                         (ctl b :freq (midi->hz (:midi-note info)))
-                         ))
-                     :test-midi)
-           {1 []})
+   ;; :test (let [a (doall (map kill (node-tree-matching-synth-ids "test" 1)))
+   ;;             b  (doall (map kill (node-tree-matching-synth-ids "test" 0)))
+   ;;             b (node "test" {:freq (midi->hz (note :B4))})]
+   ;;         (on-event [:midi :note-on]
+   ;;                   (fn [m]
+   ;;                     (let [root "Eb"
+   ;;                           cur-scale (map find-pitch-class-name
+   ;;                                          (scale (keyword (str root "4")) :major))
+   ;;                           info (note-info (find-note-name (:data1 m)))]
+   ;;                       (ctl b :freq (midi->hz (:midi-note info)))
+   ;;                       ))
+   ;;                   :test-midi)
+   ;;         {1 []})
    })
 
 (def ambient2

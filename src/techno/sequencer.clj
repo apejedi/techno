@@ -1,7 +1,6 @@
 (ns techno.sequencer
   (:use [overtone.core]
         [overtone.sc.machinery.server.comms]
-        [overtone.inst.drum]
         )
   (:import (java.util.concurrent.atomic AtomicInteger))
   )

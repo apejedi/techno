@@ -211,7 +211,7 @@
               ::control-change)
       (on-event [:midi :note-on]
                 (fn [m]
-                  (let [root "Eb"
+                  (let [root "C"
                         cur-scale (map find-pitch-class-name
                                        (scale (keyword (str root "4")) :major))
                         info (note-info (find-note-name (:data1 m)))
@@ -226,11 +226,32 @@
                               (s/build-map-p
                                (map #(let [f (midi->hz %)]
                                        (vector
-                                        piano [:note % :dur 0.6 :atk 0.01 :rq 0.5]
+                                        reverb-test [:freq f ]
                                         )
                                        ) notes)
-                               0.25))]
-                    (bpfsaw2 :freq (midi->hz (:midi-note info)) :rel 5)
+                               0.25))
+                        chan (inc (:channel m))
+                        ctr-map {1 [rise-pad [:freq (midi->hz (:midi-note info))
+                                              :attack 1 :amp 0.3 :release 1]
+                                    bing [:note (:midi-note info) :coef 0.01]]
+                                 2 [prophet [:freq (midi->hz (:midi-note info))
+                                                :attack 1 :amp 0.3 :release 3 :cutoff 2000]
+                                    plk-bass [:note (note
+                                                     (keyword (str (name (:pitch-class info)) "3"))) :cutoff2 4000]]
+                                 3 [;piano [:note (:midi-note info)   :dur 2 :amp 0.3]
+                                    bpfsaw2 [:freq (midi->hz (:midi-note info)) :atk 3 :rel 3 :amp 0.8 :detune 0
+                                             ]]
+                                 4 [sweet [:note (:midi-note info) :dur 4 :vib 0.1]
+                                    ]
+                                 }]
+                    (doseq [[inst args] (partition 2 (get ctr-map chan))]
+                      (apply inst args)
+                      )
+                    ;; (if (= (rand-int 4) 0)
+                    ;;     (osc-send @techno.controller/client
+                    ;;               (str "/fundamental")
+                    ;;               (str (midi->hz (note (keyword (str (name (:pitch-class info)) 4)))))))
+
                     ;; (when (= 2 (:channel m))
                     ;;   (ctl 1673 :freq (midi->hz (:7midi-note info))))
                     ;; (when (= 3 (:channel m))
@@ -245,20 +266,20 @@
                     ;;                    (vector action [:note (:midi-note info)])
                     ;;                    (vector action args)
                     ;;                    )))
-                    (when (not (nil? pat))
-                      ;(s/play-p pat)
-                      ;; (s/add-p core/player pat (keyword (:match info)))
-                      )
+                    ;; (when (not (nil? pat))
+;; ;                      (s/play-p pat)
+;;                       (s/add-p core/player pat (keyword (:match info)))
+;;                       )
                     ))
                 ::prophet-midi)
-      (remove-event-handler ::prophet-midi)
+;      (remove-event-handler ::test-midi)
     (on-event [:midi :note-off]
               (fn [m]
-                ;(kill bass-synth)
-                ;; (let [n (find-note-name (:data1 m))]
-                ;;   (when (and (sequential? (core/get-patterns))
-                ;;              (>= (.indexOf (core/get-patterns) n) 0))
-                ;;     (s/rm-p core/player n)))
+                ;; (kill bass-synth)
+                (let [n (find-note-name (:data1 m))]
+                  (when (and (sequential? (core/get-patterns))
+                             (>= (.indexOf (core/get-patterns) n) 0))
+                    (s/rm-p core/player n)))
                 )
               ::prophet-midi-off))
 (remove-event-handler :test-midi)
@@ -568,3 +589,27 @@
           (mapcat f freqs))
     )
   )
+
+;; (fn
+;;   ([] [12.75 0.25])
+;;   ([b]
+;;    (if (= b 1)
+;;      (let [notes (chord-degree (choose [:i :ii :iii :vi]) :C3 :major (choose [3 4]))]
+;;        (doall
+;;         (map (fn [c n] (let [resp (osc-send
+;;                                   @techno.controller/client
+;;                                   (str "/fundamental/" c)
+;;                                   (int n))])
+;;                )
+;;              (range 0 (count notes))
+;;              notes
+
+
+;;              )
+;;         )
+;;        (s/chord-p
+;;         bass-synth
+;;                                         ;(chord-degree (choose [:i :vi :iii :iv]) :C4 :major 4)
+;;         (map midi->hz notes)
+;;         [:coef 0.01 :t 10 :attack 8 :release 5 :amp 0.1]))
+;;      )))

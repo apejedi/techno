@@ -74,11 +74,11 @@
         sig (- (* (lf-pulse:ar (midicps note) 0 0.51) 2) 1)
         sig (rlpf:ar sig (midicps (+ note env2)) 0.3)
         sig1 (* sig env1 amp)
-        ;; sig (bpf:ar sig1 3500)
-        ;; sig (free-verb sig 1 0.95 0.15)
-        ;; sig (+ sig (* sig (env-gen (envelope [0.02 0.3 0.02] [0.4 0.01] [3 -4] 1))))
-        ;; sig (hpf:ar (* sig 1.2) 40)
-        ;; sig (limiter:ar sig 1 0.02)
+        sig (bpf:ar sig1 3500)
+        sig (free-verb sig 1 0.95 0.15)
+        sig (+ sig (* sig (env-gen (envelope [0.02 0.3 0.02] [0.4 0.01] [3 -4] 1))))
+        sig (hpf:ar (* sig 1.2) 40)
+        sig (limiter:ar sig 1 0.02)
         ]
     (out:ar [0 1] sig1)
     )
@@ -660,3 +660,56 @@
     (out:ar [0 1] (pan2 src pan))
     )
   )
+(defsynth o-kick [out-bus 0]
+  (let [env0 (env-gen (envelope [0.5 1 0.5 0] [0.005 0.06 0.26] [-4 -2 -4]) :action FREE)
+        env1 (env-gen (envelope [110 59 29] [0.005 0.29] [-4 -5]))
+        env1m (midicps env1)
+        o (+ -0.5 (lf-pulse:ar env1m 0 0.5))
+        o (+ o (white-noise:ar))
+        o (* env0 (lpf:ar o (* 1.5 env1m)))
+        o (+ o (* env0 (sin-osc env1m 0.5)))
+        o (* o 1.2)
+        o (clip2 o 1)]
+    (out:ar out-bus [o o])
+    )
+  )
+
+(defsynth o-snr [out-bus 0 amp 0.8]
+  (let [env0 (env-gen (envelope [0.5 1 0.5 0] [0.005 0.03 0.1] [-4 -2 -4]))
+        env1 (env-gen (envelope [110 60 49] [0.005 0.1] [-4 -5]))
+        env1m (midicps env1)
+        env2 (env-gen (envelope [1 0.4 0] [0.05 0.13] [-2 -2]) :action FREE)
+        oscs (+ (+ -0.5 (lf-pulse:ar env1m 0 0.5))
+                (+ 0.25 (* 0.5 (lf-pulse:ar (* 1.6 env1m) 0 0.5))))
+        oscs (* env0 (lpf oscs (* 1.2 env1m)))
+        oscs (+ oscs (* env0 (sin-osc:ar env1m 0.8)))
+        noise (* 0.2 (white-noise:ar))
+        noise (* 2 (hpf:ar noise 200))
+        noise (+ noise (* 3 (bpf:ar noise 6900 0.6)))
+        noise (* noise env2)
+        o (+ oscs noise)
+        o (* amp (clip2 o 1))]
+    (out:ar out-bus [o o])
+    )
+  )
+
+(defsynth o-clap [out-bus 0 amp 0.5]
+  (let [env1 (env-gen (envelope [0 1 0 1 0 1 0 1 0] [0.001 0.013 0 0.01 0 0.01 0 0.03] [0 -3 0 -3 0 -3 0 -4]))
+        env2 (env-gen (envelope [0 1 0] [0.02 0.3] [0 -4]) :action FREE)
+        noise1 (* env1 (white-noise:ar))
+        noise1 (hpf:ar noise1 600)
+        noise1 (bpf:ar noise1 2000 3)
+        noise2 (* env2 (white-noise:ar))
+        noise2 (hpf:ar noise2 1000)
+        noise2 (* 0.7 (bpf:ar noise2 1200 0.7))
+        o (+ noise1 noise2)
+        o (* 2 o)
+        o (* amp (softclip o))]
+    (out:ar out-bus [o o])
+    )
+  )
+
+;; (defsynth o-hat [out-bus 0 amp 0.3]
+;;   (let [n 5]
+;;     )
+;;   )

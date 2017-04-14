@@ -1,4 +1,5 @@
 (ns techno.core
+  (:import (java.io InputStream FileInputStream))
   (:use [overtone.core]
         [techno.ring :as r]
         )
@@ -47,7 +48,7 @@
   (r/draw-line 5)
   (r/gen-coords 500 500 5 4 player)
   (s/dec-amp player :shkr)
-  (let [v 1.5]
+  (let [v 1]
     (ctl 14 :volume v)
     (ctl 15 :volume v))
   (remove-event-handler ::server-audio-clipping-warner-vol)
