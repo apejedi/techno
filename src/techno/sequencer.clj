@@ -57,7 +57,7 @@
   (+ (rand-int (- max min)) min)
   )
 
-(defn- to-str [inst]
+(defn to-str [inst]
   (if (and (map? inst) (contains? inst :name))
     (:name inst)
     inst
@@ -139,31 +139,40 @@
   )
 
 (defn merge-p [& patterns]
-  (reduce
-   (fn [res cur]
-     (let [cur (cond (map? cur) cur
-                     (fn? cur) (let [has-size (some #{0}
-                                                    (map (fn [f]
-                                                           (alength (.getParameterTypes f)))
-                                                      (-> cur class .getDeclaredMethods)))
-                                     size (if has-size (first (cur)) (apply max (keys res)))
-                                     step (if has-size (second (cur)) 0.25)
-                                     offsets (range 1 (+ size step) step)]
-                                 (reduce (fn [m o] (if (cur o) (assoc m o (cur o)) m)) {(last offsets) []} offsets)
-                                 ))]
-         (reduce
-          (fn [p b]
-            (let [val (get p b)
-                  to-add (get cur b)
-                  new-val (if (sequential? val)
-                            (concat val to-add)
-                            to-add)]
-              (assoc p b new-val)))
-          res
-          (keys cur)))
-     )
-   {}
-   patterns)
+  (let [pat (reduce
+          (fn [res cur]
+            (let [cur (cond (map? cur) cur
+                            (fn? cur) (let [has-size (some #{0}
+                                                           (map (fn [f]
+                                                                  (alength (.getParameterTypes f)))
+                                                                (-> cur class .getDeclaredMethods)))
+                                            size (if has-size (first (cur)) (apply max (keys res)))
+                                            step (if has-size (second (cur)) 0.25)
+                                            offsets (range 1 (+ size step) step)]
+                                        (reduce (fn [m o] (if (cur o) (assoc m o (cur o)) m)) {(last offsets) []} offsets)
+                                        ))]
+              (reduce
+               (fn [p b]
+                 (let [val (get p b)
+                       to-add (get cur b)
+                       new-val (if (sequential? val)
+                                 (concat val to-add)
+                                 to-add)]
+                   (assoc p b new-val)))
+               res
+               (keys cur)))
+            )
+          {}
+          patterns)
+        size (apply max (keys pat))]
+    (into {}
+          (filter (fn [[k v]]
+                    (if (or (and (sequential? v) (> (count v) 0))
+                            (= size k)
+                            ) [k v]))
+                  pat)
+          )
+    )
   )
 
 (defn get-sequencer-data [sequencer]

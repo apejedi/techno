@@ -4,10 +4,13 @@
         [techno.core :as core]
         [techno.sequencer :as s]
         [techno.synths]
-        [techno.melody])
+        [techno.melody]
+        [techno.samples]
+        [techno.drum-patterns])
   (:require
    [techno.recorder :as rec])
   )
+
 
 (defonce motif (atom (fn [_])))
 (swap! motif (fn [_]
@@ -238,10 +241,11 @@
                                                 :attack 1 :amp 0.3 :release 3 :cutoff 2000]
                                     plk-bass [:note (note
                                                      (keyword (str (name (:pitch-class info)) "3"))) :cutoff2 4000]]
-                                 3 [;piano [:note (:midi-note info)   :dur 2 :amp 0.3]
+                                 9 [;piano [:note (:midi-note info)   :dur 2 :amp 0.3]
                                     bpfsaw2 [:freq (midi->hz (:midi-note info)) :atk 3 :rel 3 :amp 0.8 :detune 0
                                              ]]
-                                 4 [sweet [:note (:midi-note info) :dur 4 :vib 0.1]
+                                 7 [bpfsaw [:note (:midi-note info) :dur 0.8
+                                            :atk 0.01 :rq 0.8 :vib 0.1]
                                     ]
                                  }]
                     (doseq [[inst args] (partition 2 (get ctr-map chan))]
@@ -282,6 +286,30 @@
                     (s/rm-p core/player n)))
                 )
               ::prophet-midi-off))
+  (s/play-p
+   (s/build-map-p
+    [[o-kick []] :3]
+    0.25 0)
+   (s/build-map-p
+    [:4 [o-clap []] :3]
+    0.25 0)
+   ;; (s/build-map-p
+   ;;  [:8 [o-snr []] [o-snr []] [o-snr []] [o-snr []] :2]
+   ;;  0.25 0)
+   (drum-p
+    [:Kit4-Electro :Kit2-Acousticroom]
+    [:c1 :c2 :h]
+    0.25 0 [])
+   (s/phrase-p
+    acid-bass
+    [:C2 :Eb1 :D2 :C2 :2]
+    0.25 0 [:amp 0.3 :dur 0.3])
+   ;; (s/phrase-p
+   ;;  prophet
+   ;;  [[:C4 :Eb4] [:C4 :D3]]
+   ;;  0.25 0 [:amp 0.3 :decay 0.9 :attack 0.01])
+   2 4)
+
 (remove-event-handler :test-midi)
   (s/add-p
    core/player

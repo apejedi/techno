@@ -173,3 +173,22 @@
       )
     )
   )
+
+(defn get-pattern-tbl [& patterns]
+  (mapcat
+   (fn [p]
+     (mapcat
+      (fn [[k v]]
+        (map
+         #(hash-map k (vector (s/to-str (first %)) (second %)))
+         (vec (partition 2 v))))
+      p))
+   patterns)
+  )
+
+(defn get-merged-str [& patterns]
+  (let [pat (apply s/merge-p patterns)]
+    (s/pp-pattern
+     pat)
+    )
+  )

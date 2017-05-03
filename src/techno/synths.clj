@@ -660,7 +660,7 @@
     (out:ar [0 1] (pan2 src pan))
     )
   )
-(defsynth o-kick [out-bus 0]
+(defsynth o-kick [out-bus 0 amp 1]
   (let [env0 (env-gen (envelope [0.5 1 0.5 0] [0.005 0.06 0.26] [-4 -2 -4]) :action FREE)
         env1 (env-gen (envelope [110 59 29] [0.005 0.29] [-4 -5]))
         env1m (midicps env1)
@@ -669,7 +669,8 @@
         o (* env0 (lpf:ar o (* 1.5 env1m)))
         o (+ o (* env0 (sin-osc env1m 0.5)))
         o (* o 1.2)
-        o (clip2 o 1)]
+        o (clip2 o 1)
+        o (* o amp)]
     (out:ar out-bus [o o])
     )
   )
@@ -693,9 +694,9 @@
     )
   )
 
-(defsynth o-clap [out-bus 0 amp 0.5]
+(defsynth o-clap [out-bus 0 amp 0.5 dur 0.32]
   (let [env1 (env-gen (envelope [0 1 0 1 0 1 0 1 0] [0.001 0.013 0 0.01 0 0.01 0 0.03] [0 -3 0 -3 0 -3 0 -4]))
-        env2 (env-gen (envelope [0 1 0] [0.02 0.3] [0 -4]) :action FREE)
+        env2 (env-gen (envelope [0 1 0] [(* 0.0625 dur) (* 0.9375 dur)] [0 -4]) :action FREE)
         noise1 (* env1 (white-noise:ar))
         noise1 (hpf:ar noise1 600)
         noise1 (bpf:ar noise1 2000 3)
@@ -709,7 +710,30 @@
     )
   )
 
-;; (defsynth o-hat [out-bus 0 amp 0.3]
-;;   (let [n 5]
-;;     )
-;;   )
+(defsynth o-hat [out-bus 0 amp 0.3]
+  (let [n 5
+        env1 (env-gen (envelope [0 1 0] [0.001 0.2] [0 -12]))
+        env2 (env-gen (envelope [0 1 0.05 0] [0.002 0.05 0.03] [0 -4 -4]) :action FREE)
+        oscs1 (mix:ar (map #(* (sin-osc:ar
+                                (midicps (+ (lin-lin:kr % 0 4 42 74) (rand 4)))
+                                (* 12 (midicps
+                                       (sin-osc:ar (+ (rand 4) (lin-lin:kr % 0 4 78 80)))
+                                       ))) (/ 1 %))
+                           (range 1 6)))
+        oscs1 (* env1 (b-hi-pass:ar oscs1 1000 2))
+        n2 8
+        noise (white-noise:ar)
+        noise (mix:ar (map #(let [freq (reciprocal
+                                        (midicps (+ (rand 4) (lin-lin:kr % 0 4 40 50))))]
+                              (comb-n noise 0.04 freq 0.1))
+                           (range 1 9)))
+        noise (+ noise (* noise (/ 1 4)))
+        noise (+ (* (bpf:ar noise 6000 0.9) 0.5) noise)
+        noise (b-low-shelf:ar noise 3000 0.5 -6)
+        noise (* (b-hi-pass noise 1000 1.5) env2)
+        sig (+ noise oscs1)
+        sig (softclip sig)
+        sig (* sig amp)]
+    (out:ar out-bus [sig sig])
+    )
+  )

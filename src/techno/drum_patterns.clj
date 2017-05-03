@@ -369,6 +369,9 @@
   (let [patterns [[1 48 :drum1 [:Kit4-Electro]]
                   [1 8 :drum2 [:Kit7-Electro]]
                   [1 8 :drum3 [:Kit15-Electro]]
+                  [1 8 :drum4 [:Kit4-Electro]]
+                  [1 8 :drum5 [:Kit7-Electro]]
+                  [1 8 :drum6 [:Kit15-Electro]]
                   [1 16 :melody1 [:Kit7-Electro]]
                   [1 16 :melody2 [:Kit15-Electro]]
                   [1 48 :harmony1 [:Kit4-Electro]]
@@ -407,7 +410,6 @@
 
 
   (s/set-amp core/player :2 0.6)
-
   (s/add-p
    core/player
    (fn ([] [7 0.125])
