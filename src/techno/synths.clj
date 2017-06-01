@@ -409,6 +409,7 @@
     )
   )
 
+
 ;; (defsynth chicago-pad2 [freq 440 cutoff 500 amp 1]
 ;;   (let [freq2 (/ (* (/ 3 2) freq) 2)
 ;;         freq3 (/ (* (/ 5 6) freq) 2)
@@ -670,10 +671,12 @@
         o (+ o (* env0 (sin-osc env1m 0.5)))
         o (* o 1.2)
         o (clip2 o 1)
-        o (* o amp)]
+        o (* o amp)
+        ]
     (out:ar out-bus [o o])
     )
   )
+
 
 (defsynth o-snr [out-bus 0 amp 0.8]
   (let [env0 (env-gen (envelope [0.5 1 0.5 0] [0.005 0.03 0.1] [-4 -2 -4]))
@@ -688,6 +691,7 @@
         noise (* 2 (hpf:ar noise 200))
         noise (+ noise (* 3 (bpf:ar noise 6900 0.6)))
         noise (* noise env2)
+        ;o oscs
         o (+ oscs noise)
         o (* amp (clip2 o 1))]
     (out:ar out-bus [o o])
@@ -735,5 +739,37 @@
         sig (softclip sig)
         sig (* sig amp)]
     (out:ar out-bus [sig sig])
+    )
+  )
+(defsynth b-kick [note 113 dur 0.3 amp 1 depth 2 reson 1]
+    (let [f (+ (mod note 12) 108)
+          fenv (midicps (env-gen
+                         (envelope [f (/ f 2) (/ f 3) (/ f 4)]
+                                   [(* dur 0.001) (* dur 0.04) (* dur 0.9)] [-8 2 -3])))
+          aenv (env-gen (perc (* dur 0.001) (* dur 0.9)) :action FREE)
+          click (* (pm-osc:ar (* fenv 2) fenv) reson)
+          osc (saw:ar fenv)
+          osc (lpf:ar osc (* depth fenv))
+          osc (mix:ar [osc click])
+          osc (* osc aenv amp)
+          ]
+      (out:ar 0 [osc osc])
+      )
+  )
+
+(defsynth b-snr [note 113 dur 0.3 amp 1 depth 2 noise 1]
+  (let [f (+ (mod note 12) 108)
+        fenv (midicps (env-gen
+                       (envelope [f (/ f 2) (/ f 3) (/ f 4)]
+                                 [(* dur 0.001) (* dur 0.04) (* dur 0.9)] [-8 2 -3])))
+        nenv (env-gen (perc (* dur 0.01) (* dur 0.3)))
+        aenv (env-gen (perc (* dur 0.001) (* dur 0.5)) :action FREE)
+        click (* (hpf:ar (pink-noise:ar) (/ fenv 2)) noise nenv)
+        osc (sin-osc:ar fenv)
+        ;osc (pm-osc fenv (* fenv 2) 2)
+        ;osc (hpf:ar osc fenv)
+        ;osc (mix:ar [osc click])
+        osc (* osc aenv amp)]
+    (out:ar 0 [osc osc])
     )
   )

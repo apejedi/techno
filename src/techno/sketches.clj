@@ -11,9 +11,9 @@
         [techno.drums]))
 
 (comment
-  (let [parts [:e]
+  (let [parts [:bells]
         rm []
-        comp arpeggi]
+        comp track2]
     (doseq [p rm]
       (s/rm-p core/player p)
       )
@@ -22,9 +22,9 @@
       )
     )
 
-  (let [comp track2
+  (let [comp melissa
         parts (keys comp)]
-    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 2))
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 0.6))
     )
   )
 
@@ -43,6 +43,54 @@
      }
     )
 
+(def template
+  {:drum1 (drum-p [:Kit15-Electro] [])
+   :drum2 (drum-p [:Kit16-Electro] [])
+   :drum3 (drum-p [:Kit9-Vinyl] [])
+   :drum4 (drum-p [:KurzweilKit08] [])
+   :motif1 (s/phrase-p
+            bpfsaw
+            []
+            0.25 0 [])
+   :motif2 (s/phrase-p
+            overpad
+            []
+            0.25 0 [])
+   :motif3 (s/phrase-p
+            bass2
+            []
+            0.25 0 [])
+   :motif4 (s/phrase-p
+            plk-bass
+            []
+            0.25 0 [])
+   :motif5 (s/phrase-p
+            bpfsaw
+            []
+            0.25 0 [])
+   :harmony1 (s/phrase-p
+            bpfsaw
+            []
+            0.25 0 [])
+   :harmony2 (s/phrase-p
+            overpad
+            []
+            0.25 0 [])
+   :harmony3 (s/phrase-p
+            bass2
+            []
+            0.25 0 [])
+   :harmony4 (s/phrase-p
+            plk-bass
+            []
+            0.25 0 [])
+   :harmony5 (s/phrase-p
+            bpfsaw
+            []
+            0.25 0 [])
+
+   }
+  )
   (def arpeggi
     {:a (s/phrase-p
          ks1
@@ -574,7 +622,7 @@
                                         wire-bass [:amp 0.4 :dur 2 :coef 0.01 :decay 0.8])]
                   action))))
    :clap (s/build-map-p
-          [:4 [(drum-s [:Kit15-Electro] :cl1) []] :3]
+          [:4 [(drum-s [:Kit15-Electro] :cl1) [] o-clap []] :3]
           0.25)
    :motif2 (s/phrase-p
            bass-synth

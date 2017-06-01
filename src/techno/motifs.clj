@@ -209,6 +209,7 @@
                 (let [types {1 :modulation 2 :breath}
                       type (:data1 m)
                       value (:data2 m)]
+                  (println type " " value)
                   )
                 )
               ::control-change)
@@ -234,21 +235,24 @@
                                        ) notes)
                                0.25))
                         chan (inc (:channel m))
-                        ctr-map {1 [rise-pad [:freq (midi->hz (:midi-note info))
-                                              :attack 1 :amp 0.3 :release 1]
-                                    bing [:note (:midi-note info) :coef 0.01]]
-                                 2 [prophet [:freq (midi->hz (:midi-note info))
-                                                :attack 1 :amp 0.3 :release 3 :cutoff 2000]
-                                    plk-bass [:note (note
-                                                     (keyword (str (name (:pitch-class info)) "3"))) :cutoff2 4000]]
-                                 9 [;piano [:note (:midi-note info)   :dur 2 :amp 0.3]
-                                    bpfsaw2 [:freq (midi->hz (:midi-note info)) :atk 3 :rel 3 :amp 0.8 :detune 0
-                                             ]]
-                                 7 [bpfsaw [:note (:midi-note info) :dur 0.8
+                        ctr-map {
+                                 3 [;piano [:note (:midi-note info)   :dur 2 :amp 0.3]
+                                    acid-bass [:note (:midi-note info) :dur 1]]
+                                 4 [bpfsaw [:note (:midi-note info) :dur 0.8
                                             :atk 0.01 :rq 0.8 :vib 0.1]
                                     ]
+                                 5 [b-snr [:note (:midi-note info) :dur 0.6 :reson 1]]
                                  }]
+                    (when (= chan 1)
+                      (reset! rec/time-pattern {})
+                      (s/rm-p core/player :recorded))
+                    (if (= chan 2)
+                      (s/add-p core/player
+                               @rec/time-pattern :recorded))
                     (doseq [[inst args] (partition 2 (get ctr-map chan))]
+                      (rec/record-action
+                       [inst args]
+                       core/player)
                       (apply inst args)
                       )
                     ;; (if (= (rand-int 4) 0)
@@ -261,9 +265,6 @@
                     ;; (when (= 3 (:channel m))
                     ;;   (ctl 1672 :freq (midi->hz (:midi-note info))))
                     ;; (plk-bass :note (:midi-note info) :dur 0.8)
-                    ;; (rec/record-action
-                    ;;  [klang-test [:freq (midi->hz (:midi-note info)) :atk 0.001 :dur 1]]
-                    ;;  core/player)
                     ;; (s/mod-actions core/player :bass
                     ;;                (fn [[action args]]
                     ;;                  (if (= (:name action) "plk-bass")
@@ -286,29 +287,36 @@
                     (s/rm-p core/player n)))
                 )
               ::prophet-midi-off))
+
+  (s/play-p
+   (s/phrase-p
+    bass-synth
+    [(chord :C4 :M7) (chord :E4 :m7) (chord :A3 :m9)]
+    0.25 6 [:attack 2 :release 2]))
   (s/play-p
    (s/build-map-p
     [[o-kick []] :3]
     0.25 0)
    (s/build-map-p
-    [:4 [o-clap []] :3]
+    [:4 [o-clap []
+         (drum-s [:Kit15-Electro] :cl1) []] :3]
     0.25 0)
    ;; (s/build-map-p
    ;;  [:8 [o-snr []] [o-snr []] [o-snr []] [o-snr []] :2]
    ;;  0.25 0)
    (drum-p
     [:Kit4-Electro :Kit2-Acousticroom]
-    [:c1 :c2 :h]
+    [:c1 :c2]
     0.25 0 [])
    (s/phrase-p
     acid-bass
     [:C2 :Eb1 :D2 :C2 :2]
     0.25 0 [:amp 0.3 :dur 0.3])
-   ;; (s/phrase-p
-   ;;  prophet
-   ;;  [[:C4 :Eb4] [:C4 :D3]]
-   ;;  0.25 0 [:amp 0.3 :decay 0.9 :attack 0.01])
-   2 4)
+   (s/phrase-p
+    bass-synth
+    [[:C4 :F3] :Eb3]
+    0.25 1 [:amp 0.6 :decay 0.9 :attack 0.01])
+   2 6)
 
 (remove-event-handler :test-midi)
   (s/add-p
@@ -348,6 +356,24 @@
   [(chord :B3 :m9) :6 (chord :A3 :M7)]
   0.25 0 [:attack 1 :release 3]))
 
+
+(s/play-p
+ (s/phrase-p
+  b-kick
+  [:D4 :3 :D4 :2 :F4 :C4 :3 :B4 :3]
+  0.25 0)
+ (s/build-map-p
+  [:3 [o-hat []] :1 [o-hat []] :2])
+ (s/build-map-p
+  [:4 [(drum-s [:Kit15-Electro] :cl1) []] :3])
+ (s/build-map-p
+  [:2 [b-snr [:note (note :D4) :dur 0.5] o-snr []] :1])
+ (let [w [acid-bass [(note :D1) :dur 0.5 :amp 0.5]]
+       b [bass2 [:amp 2]]]
+     (s/build-map-p
+      [:7 w :1 w w :1 b :1 w b]))
+ 2 4)
+
   (let [mk-prog (fn [p]
                 (conj
                  (vec
@@ -365,6 +391,13 @@
                          :freq2 (midi->hz %2) :amp 0.8) (chord :C4 :m7) (chord :G4 :m7))]
      [[whistle (nth a 0) whistle (nth a 1) whistle (nth a 2)]]
      ))
+
+  (demo
+   )
+
+
+
+
 
 
 (s/add-p core/player {1 [tick []] 6.25 []} :total)
@@ -412,7 +445,7 @@
       piano
       [a a a a :1 (shift a [2] 1) :1 a b b b b
        c c c c d d d d]
-      0.25 3 [:attack 0.1 :release 0.3 :dur 2])
+      0.25 3 [:attack 0.1 :release 0.3 :dur 2 :hard 0.01 :velhard 0.1])
      1.6
      )
     )
@@ -440,7 +473,6 @@
     [:Bb4 :G4 :F4]
     0.25 1 [:dur 1]))
 
-  (kill 957)
 
   (s/add-p
    core/player

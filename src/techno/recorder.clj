@@ -11,7 +11,8 @@
 (defonce position (atom 0))
 (defonce insts (atom (cycle [dance-kick noise-snare tone-snare])))
 (defonce time-patterns (atom {}))
-(defonce time-pattern (atom []))
+(defonce time-pattern (atom {}))
+(def last-recorded (atom {}))
 (defonce recording (atom false))
 
 
@@ -181,9 +182,18 @@
 
 (defn record-action [action player]
   (let [beat (get (s/get-sequencer-data player) :beat 1)
-        cur (get @time-pattern beat [])]
-      (swap! time-pattern
-             (fn [p] (assoc p beat (apply conj (concat [cur] action))))))
+        now (System/currentTimeMillis)
+        cur (get @time-pattern beat [])
+        last (get @last-recorded beat)]
+    (swap! time-pattern
+           assoc beat
+           (if (or (nil? last) (> (- now last) 3000))
+             action
+             (vec (concat cur action)))
+                                        ;(fn [p] (assoc p beat (apply conj (concat [cur] action))))
+           )
+    (swap! last-recorded assoc beat now)
+    )
   )
 
 (defn- crawl [graph f]
