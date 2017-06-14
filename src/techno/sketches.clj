@@ -22,9 +22,9 @@
       )
     )
 
-  (let [comp melissa
+  (let [comp chill
         parts (keys comp)]
-    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 0.6))
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1.9 3))
     )
   )
 
@@ -745,7 +745,7 @@
                  :rel 5
                  :amp 5]]))
               )
-   :claves (let [p (fn [_]
+   :claves(let [p (fn [_]
                  {:phrase (gen-beat (:four-beat @beats)
                                     (map #(vector % [:amp 1.3]) (concat (vals (drum-kits :claves))
                                                                         ))
@@ -837,4 +837,25 @@
            bass2
            [:E5 :D5 :C5 :B4 :6]
            0.25 2 [:decay 2 :cutoff2 4000])
+   })
+(def chill
+  {:drum1 (s/build-map-p
+           [[o-kick []] :1 [o-hat []] :2 [o-hat []] :2]
+           0.25 0)
+   :drum2 (s/build-map-p
+           [[(drum-s [:KurzweilKit03] :c1) []] :3]
+           0.25 0)
+   :drum3 (s/build-map-p
+           [:5 [o-clap []
+                (drum-s [:Kit15-Electro] :cl1) [:amp 2]
+                ]]
+           0.25 0)
+   :harmony1 (s/phrase-p
+              bpfsaw
+              [(chord :B3 :m7) :6 (chord :A3 :m7) :8]
+              0.25 0 [:rq 0.6 :dur 1.6 :amp 0.2 :atk 0.7])
+   :motif1 (s/phrase-p
+            acid-bass
+            [:F1 :1 :B1 :2 :G1 :2 :A1 :3]
+            0.25 0 [:dur 0.3])
    })

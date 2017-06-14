@@ -1,6 +1,8 @@
 (ns techno.recorder
   (:use [overtone.core]
-        [overtone.inst.drum])
+        [overtone.inst.drum]
+        ;[overtone.at-at :only [every]]
+        )
   (:import (javax.swing JTextArea JFrame JTextField JScrollPane)
            (java.awt Dimension BorderLayout Font Color)
            (java.awt.event KeyListener KeyEvent))
@@ -12,6 +14,7 @@
 (defonce insts (atom (cycle [dance-kick noise-snare tone-snare])))
 (defonce time-patterns (atom {}))
 (defonce time-pattern (atom {}))
+(defonce quantized-pattern (atom {}))
 (def last-recorded (atom {}))
 (defonce recording (atom false))
 
@@ -177,22 +180,12 @@
   )
 
 (defn start-record-pattern []
-  (reset! time-pattern {})
+  (reset! time-pattern (java.util.LinkedList.))
   )
 
 (defn record-action [action player]
-  (let [beat (get (s/get-sequencer-data player) :beat 1)
-        now (System/currentTimeMillis)
-        cur (get @time-pattern beat [])
-        last (get @last-recorded beat)]
-    (swap! time-pattern
-           assoc beat
-           (if (or (nil? last) (> (- now last) 3000))
-             action
-             (vec (concat cur action)))
-                                        ;(fn [p] (assoc p beat (apply conj (concat [cur] action))))
-           )
-    (swap! last-recorded assoc beat now)
+  (let [t (System/nanoTime)]
+    (.add @time-pattern [t action])
     )
   )
 
@@ -202,5 +195,33 @@
       (crawl v f)
       (f v)
       )
+    )
+  )
+
+(defn play-time-pattern []
+  (let [start (first (first @time-pattern))
+        offsets (map #(float (/ (- (first %) start) 1000000)) @time-pattern)
+        n (+ (now) 1000)]
+    (doseq [i (range 0 (count @time-pattern))]
+      (at (+ n (nth offsets i))
+          (apply (first (second (.get @time-pattern i))) (second (second (.get @time-pattern i))))
+         )
+      )
+    )
+  )
+
+(defn quantize-time-pattern [tempo step]
+  (let [quant (float (* step (/ tempo 60))) ;;duration of step
+        begin (first (first @time-pattern))
+        p (reduce (fn [p [o a]]
+                          (let [o (Math/floor (/ (- o begin) quant 1000000000))
+                                o (inc (* o step))
+                                o (if (= (mod o (int o)) 0.0) (int o) o)]
+                            (if (contains? p o) (assoc p o (vec (concat (get p o) a)))
+                                (assoc p o a))
+                            ))
+                        {}
+                     @time-pattern)]
+    p
     )
   )
