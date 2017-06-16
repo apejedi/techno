@@ -135,8 +135,8 @@
       ))
   )
 
-(defn get-action-str [action ]
-  (s/get-action-str action drum-kits "drum-kits"))
+;; (defn get-action-str [action ]
+;;   (s/get-action-str action drum-kits "drum-kits"))
 
 
 (defn eval-action [action]
@@ -193,7 +193,7 @@
                                   ;(name s)
                                   )))
         show-action (fn []
-                      (.setText text-box (get-action-str (get-cur-action))))
+                      (.setText text-box (s/get-action-str (get-cur-action))))
         add-action (fn []
                      (ap/with-applet wheel
                        (let [[circle beat] (q/state :cursor)
@@ -204,7 +204,7 @@
                              snd (.getSelectedItem sounds)
                              ;snd (keyword (.getSelectedItem sounds))
                              action (get-cur-action)
-                             action-text (get-action-str (vec (conj action (get-in drum-kits (.getValue snd)) [])))
+                             action-text (s/get-action-str (vec (conj action (get-in drum-kits (.getValue snd)) [])))
                              ;action-text (get-action-str (vec (conj action (get-in drum-kits (vector k snd)) [])))
                              ]
                          (.setText text-box action-text))))]
@@ -444,7 +444,7 @@
             (when (and (not (nil? text-box)) (not (nil? pos-box)) (.isVisible text-box) (not (= 10 (q/key-code))))
               (.setText text-box (if (contains? (get (s/get-p @sequencer pattern) :body {}) beat)
                                    (get-in (s/get-p @sequencer pattern) [:body beat])
-                                   (get-action-str (get-cur-action))))
+                                   (s/get-action-str (get-cur-action))))
               (.setText pos-box (str new-pattern " " beat))
               )
             (draw-cursor))

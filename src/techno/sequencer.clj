@@ -216,8 +216,8 @@
            (map? v) (if-let [r (find-in v x)]
                       (into [k] r))))
    coll))
-(defn get-action-str [action samples sample-var]
-  (let [sample-var (symbol sample-var)
+(defn get-action-str [action & [samples sample-var]]
+  (let [sample-var (if (not (nil? sample-var)) (symbol sample-var))
         action (vec
                 (mapcat
                  (fn [[a arg]]
@@ -240,8 +240,7 @@
                                    final))
                                arg)
                          ]
-                     (vector a arg "
-"))
+                     (vector a arg " "))
                    )
                  (partition 2 action)))
         action (vec (map
@@ -256,8 +255,11 @@
                             (sequential? %) (vec %)
                             true %)
                      action))
-        action (if (= [] (first action)) [] action)]
-    (str "[ " (apply str action) " ]")))
+        action (if (= [] (first action)) [] action)
+        action-str (map str action)]
+                                        ;(str "[ " (apply str action) " ]")
+    (str "[ " (clojure.string/join " " action-str) " ]")
+    ))
 
 (defn pp-pattern [pattern]
   (let [pattern (if (fn? pattern) (merge-p pattern) pattern)]
@@ -706,6 +708,10 @@
   (ctl (get-source sequencer) :clock-speed speed)
   )
 
+(defn get-sp [sequencer]
+  (node-get-control (@trigger-sources (to-sc-id sequencer)) :clock-speed)
+  )
+
 (defn mod-p [sequencer pattern attr val]
   (swap! patterns (fn [p]
                      (let [id (to-sc-id sequencer)
@@ -874,6 +880,10 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                  next
                  (second (rest beats)))))
       ))
+  )
+
+(defn build-phrase-p [pattern]
+
   )
 
 (defn p-shift [pattern shift-by]

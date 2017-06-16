@@ -1,13 +1,14 @@
 (ns techno.recorder
   (:use [overtone.core]
         [overtone.inst.drum]
-        ;[overtone.at-at :only [every]]
+                                        ;[overtone.at-at :only [every]]
         )
   (:import (javax.swing JTextArea JFrame JTextField JScrollPane)
            (java.awt Dimension BorderLayout Font Color)
            (java.awt.event KeyListener KeyEvent))
 
-  (:require [techno.sequencer :as s]))
+  (:require [techno.sequencer :as s]
+            [techno.core :as core]))
 
 
 (defonce position (atom 0))
@@ -179,13 +180,20 @@
     )
   )
 
+;(start-record-pattern)
 (defn start-record-pattern []
   (reset! time-pattern (java.util.LinkedList.))
+  (reset! recording true)
   )
 
-(defn record-action [action player]
+(defn stop-record-pattern []
+  (reset! recording false)
+  )
+
+(defn record-action [action]
   (let [t (System/nanoTime)]
-    (.add @time-pattern [t action])
+    (when @recording
+        (.add @time-pattern [t action]))
     )
   )
 
@@ -210,18 +218,38 @@
     )
   )
 
-(defn quantize-time-pattern [tempo step]
-  (let [quant (float (* step (/ tempo 60))) ;;duration of step
-        begin (first (first @time-pattern))
-        p (reduce (fn [p [o a]]
-                          (let [o (Math/floor (/ (- o begin) quant 1000000000))
-                                o (inc (* o step))
-                                o (if (= (mod o (int o)) 0.0) (int o) o)]
-                            (if (contains? p o) (assoc p o (vec (concat (get p o) a)))
-                                (assoc p o a))
-                            ))
-                        {}
-                     @time-pattern)]
-    p
+(defn quantize-time-pattern
+  ([] (quantize-time-pattern (* (s/get-sp core/player) 60) (s/get-st core/player)))
+  ([tempo step]
+   (let [quant (float (* step (/ tempo 60))) ;;duration of step
+         begin (first (first @time-pattern))
+         p (reduce (fn [p [o a]]
+                     (let [o (Math/floor (/ (- o begin) quant 1000000000))
+                           o (inc (* o step))
+                           o (if (= (mod o (int o)) 0.0) (int o) o)]
+                       (if (contains? p o) (assoc p o (vec (concat (get p o) a)))
+                           (assoc p o a))
+                       ))
+                   {}
+                   @time-pattern)]
+     p
+     ))
+  )
+
+(defn get-tempo [step]
+  (let [start (first (first @time-pattern))
+        limit 99903328
+        shortest (reduce
+                  (fn [m n]
+                    (let [prev (first (.get @time-pattern (dec n)))
+                          cur (first (.get @time-pattern n))]
+                      (if (>= (- cur prev) limit)
+                        (min m (- cur prev))
+                        m)
+                      )
+                    )
+                  1000000000 (range 1 (count @time-pattern)))]
+    shortest
+    (int (* (/ 1 (/ shortest 1000000000 step)) 60))
     )
   )

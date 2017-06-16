@@ -81,17 +81,34 @@
         (map
          (fn [[k v]]
            (str k " "
-                (s/get-action-str v techno.samples/drum-kits "drum-kits")
+                (techno.sequencer/get-action-str v techno.samples/drum-kits "drum-kits")
                 "
 ")) (get (s/get-p player pattern) :data))
         ["}"]))
-      (str
-              "(s/build-map-p
-" (vec (map #(if (sequential? %)
-               (s/get-action-str % techno.samples/drum-kits "drum-kits")
-               %)
-            (s/build-rest-p (get (s/get-p player pattern) :data)))) "
-)"))
+      (let [p (if (and (not (nil? sequencer)) (keyword? pattern))
+                (s/build-rest-p (get (s/get-p player pattern) :data))
+                (s/build-rest-p pattern))
+            strs (map #(if (sequential? %)
+                         (techno.sequencer/get-action-str % techno.samples/drum-kits "drum-kits")
+                         (str % "\n"))
+                      p)
+            p-str (clojure.string/join " " strs)]
+        (str "(s/build-map-p
+[" p-str "
+])")
+        )
+
+      ;; (str
+;;               "(s/build-map-p
+;; " (vec (map #(if (sequential? %)
+;;                (s/get-action-str % techno.samples/drum-kits "drum-kits")
+;;                %)
+;;             (if (and (not (nil? sequencer)) (keyword? pattern))
+;;               (s/build-rest-p (get (s/get-p player pattern) :data))
+;;               (s/build-rest-p pattern))
+;;             )) "
+;; )")
+      )
     )
   )
 

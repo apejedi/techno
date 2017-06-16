@@ -237,19 +237,16 @@
                         chan (inc (:channel m))
                         ctr-map {
                                  3 [;piano [:note (:midi-note info)   :dur 2 :amp 0.3]
-                                    acid-bass [:note (:midi-note info) :dur 0.5]]
+                                    zap [:freq1 (midi->hz (:midi-note info))
+                                         :freq2 (/ (midi->hz (:midi-note info)) 2)
+                                         :dur 0.2]]
                                  4 [bpfsaw2 [:freq (midi->hz (:midi-note info)) :lsf 1000]
                                     ]
-                                 5 [bing [:note (:midi-note info)]]
-                                 6 [flute [:note (:midi-note info) :dur 1]]
+                                 5 [bpfsaw [:note (:midi-note info) :dur 2.4 :amp 0.4 :rq 0.5]]
+                                 6 [bass2 [:freq (midi->hz (:midi-note info)) :decay 1]]
                                  }]
-                    (when (= chan 1)
-                      (rec/start-record-pattern)
-                      (s/rm-p core/player :recorded))
                     (doseq [[inst args] (partition 2 (get ctr-map chan))]
-                      (rec/record-action
-                       [inst args]
-                       core/player)
+                      (rec/record-action [inst args])
                       (apply inst args)
                       )
                     ;; (if (= (rand-int 4) 0)
@@ -274,7 +271,7 @@
 ;;                       )
                     ))
                 ::prophet-midi)
-                                        ;      (remove-event-handler ::test-midi)
+                                        ;      (remove-event-handler ::prophet-midi)
     (on-event [:midi :note-off]
               (fn [m]
                 ;; (kill bass-synth)

@@ -858,4 +858,31 @@
             acid-bass
             [:F1 :1 :B1 :2 :G1 :2 :A1 :3]
             0.25 0 [:dur 0.3])
+   :motif2 (s/phrase-p
+            bass2
+            [:D4 :1 :G4 :2 :C4 :2 :A4 :3]
+            0.25 0 [:dur 0.3 :decay 3 :amp 1.5])
+   })
+
+(def exp1
+  {:harmony (s/build-map-p
+             [[ bpfsaw [:note (note :B3) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   bpfsaw [:note (note :F#4) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   ] :7
+              [ bpfsaw [:note (note :E4) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   bpfsaw [:note (note :A3) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   ] :7
+              [ bpfsaw [:note (note :D4) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   bpfsaw [:note (note :F#3) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   ] :7
+              [ bpfsaw [:note (note :F#3) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   bpfsaw [:note (note :C#4) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   ] :7
+              ])
+   :motif (s/build-map-p
+           [[ bass2 [:freq (midi->hz (note :C#5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :Ab5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :D6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] [ bass2 [:freq (midi->hz (note :E6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] [ bass2 [:freq (midi->hz (note :D6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :Ab5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :C#5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :C#6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] :2
+            [ bass2 [:freq (midi->hz (note :Ab5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :D6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :C#5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] [ bass2 [:freq (midi->hz (note :E6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] [ bass2 [:freq (midi->hz (note :D6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] :2
+
+            ])
+   :drum (s/build-map-p
+          [[ o-kick []   ] :2
+           [ o-kick []] [o-snr []] :3
+           [ o-kick []   ] :2
+           [ o-kick []   ] [o-snr []] :3
+           [ o-kick []   ] :2
+           [ o-kick []   ] [o-snr []] :3
+           ])
+
    })
