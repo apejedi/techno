@@ -882,9 +882,12 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
       ))
   )
 
-(defn build-phrase-p [pattern]
+;; (defn build-phrase-p [pattern]
+;;   (let [insts (reduce (fn [c v] (reduce (fn ))) {} (vals pattern))
+;;         inst ]
+;;     )
 
-  )
+;;   )
 
 (defn p-shift [pattern shift-by]
   (let [to-int #(if (= (mod % (int %)) 0.0)
