@@ -86,7 +86,8 @@
                   (let [chan (inc (:channel m))
                         params (into {}  (mapcat #(vector [(:name %) %]) (:params @cur-synth)))
                         args (cond (contains? params "note") [:note (:data1 m)]
-                                    (contains? params "freq") [:freq (midi->hz (:data1 m))]
+                                   (contains? params "freq") [:freq (midi->hz (:data1 m))]
+                                   ;(contains? params "freq1") [:freq1 (midi->hz (:data1 m))]
                                     true [])
                         args (vec (concat args (flatten (mapcat (fn [[k v]] [(keyword k) v]) (get @synth-params (:name @cur-synth) [])))))]
                                         ;(println (partition 2 (get ctr-map chan)))

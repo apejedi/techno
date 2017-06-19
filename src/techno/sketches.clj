@@ -24,7 +24,7 @@
 
   (let [comp chill
         parts (keys comp)]
-    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1.9 3))
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1.3))
     )
   )
 
@@ -865,17 +865,14 @@
    })
 
 (def exp1
-  {:harmony (s/build-map-p
-             [[ bpfsaw [:note (note :B3) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   bpfsaw [:note (note :F#4) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   ] :7
-              [ bpfsaw [:note (note :E4) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   bpfsaw [:note (note :A3) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   ] :7
-              [ bpfsaw [:note (note :D4) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   bpfsaw [:note (note :F#3) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   ] :7
-              [ bpfsaw [:note (note :F#3) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   bpfsaw [:note (note :C#4) :dur 2.204724409448819 :detune 0.0 :rq 0.897637808651436 ]   ] :7
-              ])
-   :motif (s/build-map-p
-           [[ bass2 [:freq (midi->hz (note :C#5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :Ab5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :D6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] [ bass2 [:freq (midi->hz (note :E6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] [ bass2 [:freq (midi->hz (note :D6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :Ab5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :C#5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :C#6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] :2
-            [ bass2 [:freq (midi->hz (note :Ab5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :D6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   bass2 [:freq (midi->hz (note :C#5)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] [ bass2 [:freq (midi->hz (note :E6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] [ bass2 [:freq (midi->hz (note :D6)) :cutoff 5354.330708661418 :decay 3.401574938316045 :amp 2.5196850393700787]   ] :2
-
-            ])
+  {:harmony (s/phrase-p
+             bpfsaw
+             [[:B3 :F#4] :7 [:E4 :A3] :7 [:D4 :F#3] :7 [:F#3 :C#4] :7]
+             0.25 0 [:dur 2.204 :detune 0.0 :rq 0.897])
+   :motif (s/phrase-p
+           bass2
+           [[:C#5 :Ab5 :D6] :E6 [:D6 :Ab5 :C#5 :C#6] :2 [:Ab5 :D6 :C#5] :E6 :D6 :2]
+           0.25 0 [:cutoff 5354.33 :decay 3.40 :amp 2.51])
    :drum (s/build-map-p
           [[ o-kick []   ] :2
            [ o-kick []] [o-snr []] :3
@@ -885,4 +882,52 @@
            [ o-kick []   ] [o-snr []] :3
            ])
 
+   })
+(def exp2
+  {:hat (drum-p
+         [:Kit16-Electro]
+         [:c1 :2 :c1 :2 :c1 :2 :c1 :2 :c1 :1 :c1 :c2]
+         0.25 [:amp 0.7])
+   :bass (s/phrase-p
+          bass2
+          [:E2 :E2 :E2 :E2 :1 :E2 :1 :G2 [:atk 0.001 :decay 2 :cutoff2 1500.92 :amp 0.7] :2]
+          0.25 2 [:atk 0.001 :decay 1.2 :cutoff2 1000.92 :amp 0.7])
+
+   :kick (drum-p
+          [:Kit16-Electro]
+          [[o-kick [:amp 0.4]] :3])
+   :clap (drum-p
+          [:Kit15-Electro]
+          [:4 :cl1 :3])
+   :clap2 (s/phrase-p
+           bass2
+           [:B4 :F5 :D5 :E5 :C5 :1 :B4 :1]
+           0.25 2 [:cutoff2 3352.2 :atk 0.0012 :decay 5.02 :amp 0.8])
+   :motif (s/phrase-p
+           bass2
+           [:B4 :F5 :D5 :E5 :C5 :1 :B4 :1]
+           0.25 2 [:cutoff 2362.20 :atk 0.0012 :decay 3.02 :amp 0.5])
+   :prophet (s/phrase-p
+             prophet
+             [:D3 :14 :C3 :14 :B2 :14 :A2 [:attack 1.81 :decay 4 :cutoff 2125.984 :amp 0.3] :18]
+             0.25 0 [:attack 1.81 :decay 2.2 :cutoff 2125.984 :amp 0.3])
+   :rise (s/phrase-p
+          rise-pad
+          [[:D5 :D5]
+           [:D5 :D5] :3
+           [:C5 :C5] :C5
+           [:C5 :C5]
+           [:C5 :C5]
+           [:C5 :C5] :C5
+           [:B4 :B4] :B4
+           [:B4 :B4]
+           [:B4 :B4] :B4 :B4
+           [:A4 :A4]
+           [:A4 :A4]
+           [:A4 :A4] [:A4 :A4] :A4]
+          0.25 2 [])
+   :bass2 (s/phrase-p
+           acid-bass
+           [:C2 :C2 :1 :D2 :1 :C2 :D2 :1]
+           0.25 0 [:dur 0.47 :amp 0.2])
    })

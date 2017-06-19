@@ -85,17 +85,26 @@
                 "
 ")) (get (s/get-p player pattern) :data))
         ["}"]))
-      (let [p (if (and (not (nil? sequencer)) (keyword? pattern))
+      (let [is-phrase (and (not (keyword? pattern)) (s/is-phrase? pattern))
+            p (if (and (not (nil? sequencer)) (keyword? pattern))
                 (s/build-rest-p (get (s/get-p player pattern) :data))
-                (s/build-rest-p pattern))
-            strs (map #(if (sequential? %)
+                (s/build-rest-p pattern))]
+        (if (not is-phrase)
+          (let [strs (map #(if (sequential? %)
                          (techno.sequencer/get-action-str % techno.samples/drum-kits "drum-kits")
                          (str % "\n"))
                       p)
             p-str (clojure.string/join " " strs)]
-        (str "(s/build-map-p
+              (str "(s/build-map-p
 [" p-str "
-])")
+])"))
+          (let [[inst phrase-p step params] (s/build-phrase-p pattern)]
+            (str "(s/phrase-p
+ " (:name inst) "
+" phrase-p "
+0.25 0 " params ")")
+            )
+          )
         )
 
       ;; (str

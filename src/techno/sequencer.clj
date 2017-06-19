@@ -851,9 +851,10 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
   (let [step (if step step (get-step pattern))
         size (p-size pattern step)
         offsets (sort (filter #(let [a (get pattern %)]
-                                 (or (and (sequential? a) (not (nil? (first a))))
-                                     (= 1 %) (= (double size) %)))
-                              (range 1 (+ size step) step)))]
+                         (or (and (sequential? a) (not (nil? (first a))))
+                             (= 1 %) (= (double size) %)))
+                              (map (fn [o] (if (= (mod o (int o)) 0.0)
+                                            (int o) o)) (range 1 (+ size step) step))))]
     (loop [p [] beats offsets prev (first offsets) cur (first offsets) next (second offsets)]
       (let [cur-action (get pattern cur)
             is-head (= 1 cur)
@@ -882,12 +883,45 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
       ))
   )
 
-;; (defn build-phrase-p [pattern]
-;;   (let [insts (reduce (fn [c v] (reduce (fn ))) {} (vals pattern))
-;;         inst ]
-;;     )
+(defn build-phrase-p [pattern]
+  (let [action (first (filter #(not (nil? (first %))) (vals pattern)))
+        inst (first action)
+        params (vec (flatten (into [] (filter (fn [[k v]] (and (not (= k :note)) (not (= k :freq)))) (partition 2 (second action))))))
+        rest-p (build-rest-p pattern)
+        step (get-step pattern)
+        phrase-p (vec (map
+                       #(if (sequential? %)
+                          (let [a (map (fn [[a params]]
+                                       (let [m (into {} (vec (map vec (partition 2 params))))]
+                                         (cond (contains? m :freq) (find-note-name (hz->midi (:freq m)))
+                                               (contains? m :note) (find-note-name (:note m)))
+                                         )) (partition 2 %))]
+                            (if (> (count a) 1)
+                              (vec a)
+                              (first a))
+                            )
+                          %) rest-p))]
+   [inst phrase-p step params]
+    )
+  )
 
-;;   )
+(defn is-phrase? [pattern]
+  (let [insts (reduce
+               (fn [c a]
+                 (reduce
+                  (fn [c [i p]]
+                    (if (or (instance? overtone.studio.inst.Inst i)
+                            (instance? overtone.sc.synth.Synth i))
+                      (assoc c (:name i) i)
+                      c))
+                  c
+                  (partition 2 a))
+                 )
+               {}
+               (vals pattern))]
+    (= (count insts) 1)
+    )
+  )
 
 (defn p-shift [pattern shift-by]
   (let [to-int #(if (= (mod % (int %)) 0.0)
