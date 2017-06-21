@@ -130,7 +130,8 @@
         env (env-gen (perc (* atk dur) (* (- dur atk) dur)) :action 2)
         sig (sync-saw (+ freq (* detune freq)))
         sig (* env (bpf sig freq rq) amp)
-        sig (balance2 sig sig pan)]
+        ;sig (balance2 sig sig pan)
+        ]
     (out 0 sig)
     (out 1 sig)
     )
@@ -766,9 +767,9 @@
         aenv (env-gen (perc (* dur 0.001) (* dur 0.5)) :action FREE)
         click (* (hpf:ar (pink-noise:ar) (/ fenv 2)) noise nenv)
         osc (sin-osc:ar fenv)
-        ;osc (pm-osc fenv (* fenv 2) 2)
-        ;osc (hpf:ar osc fenv)
-        ;osc (mix:ar [osc click])
+        osc (pm-osc fenv (* fenv 2) 2)
+        osc (hpf:ar osc fenv)
+        osc (mix:ar [osc click])
         osc (* osc aenv amp)]
     (out:ar 0 [osc osc])
     )

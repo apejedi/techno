@@ -22,7 +22,7 @@
       )
     )
 
-  (let [comp chill
+  (let [comp song-of-storms
         parts (keys comp)]
     (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1.3))
     )
@@ -899,14 +899,13 @@
    :clap (drum-p
           [:Kit15-Electro]
           [:4 :cl1 :3])
-   :clap2 (s/phrase-p
-           bass2
-           [:B4 :F5 :D5 :E5 :C5 :1 :B4 :1]
-           0.25 2 [:cutoff2 3352.2 :atk 0.0012 :decay 5.02 :amp 0.8])
+   :clap2 (drum-p
+           [:Kit15-Electro]
+           [:4 :cl1 :7 :cl1 :7 :cl1 :7 :cl1 :cl1 :cl1 :1])
    :motif (s/phrase-p
            bass2
            [:B4 :F5 :D5 :E5 :C5 :1 :B4 :1]
-           0.25 2 [:cutoff 2362.20 :atk 0.0012 :decay 3.02 :amp 0.5])
+           0.25 2 [:cutoff2 3362.20 :atk 0.0012 :decay 3.02 :amp 0.5])
    :prophet (s/phrase-p
              prophet
              [:D3 :14 :C3 :14 :B2 :14 :A2 [:attack 1.81 :decay 4 :cutoff 2125.984 :amp 0.3] :18]
@@ -930,4 +929,60 @@
            acid-bass
            [:C2 :C2 :1 :D2 :1 :C2 :D2 :1]
            0.25 0 [:dur 0.47 :amp 0.2])
+   :beat1 (s/build-map-p
+           [[ b-kick []   ] :1
+            [ b-kick []   ] :4
+            [ o-snr [] (get-in drum-kits [:Kit16-Electro :CYCdh_ElecK06-Snr01.wav]) []   ] :2
+            [ o-snr [] (get-in drum-kits [:Kit16-Electro :CYCdh_ElecK06-Snr01.wav]) []   ] :4
+            [ b-kick []   ]
+            ])
+   :motif2 (s/phrase-p
+            bass-synth
+            [:E4 :3 :E4 :F4 :E4 :F4 :E4 :F4 :E4 :4 :F4 :G4
+             :E4 :D4 :E4 :2]
+            0.25 1 [:attack 0.03 :release 1 :detune 0 :bwr 2 :amp 0.7])
+   })
+
+(def exp3
+  {:beat1 (s/build-map-p
+           [[o-kick []] :1
+            [b-kick []]
+            [o-kick []] [o-kick []] :1
+            [o-clap [] o-snr []] :1
+            [o-kick []] :1
+            [b-kick []]
+            [o-kick []] [o-kick []]
+            [o-snr [:amp 0.5] (drum-s [:Kit15-Electro] :cl1) [:amp 2]] :2]
+           0.25)
+   :kick (s/build-map-p
+          [[o-kick []] :3  ]
+          0.25)
+   :beat2 (s/build-map-p
+           [:1
+            [ (drum-s [:Kit15-Electro] :cl2) []]
+            [ (drum-s [:Kit15-Electro] :cl2) []   ]
+            [ (drum-s [:Kit15-Electro] :cl1) []   ] :2
+            [ (drum-s [:Kit15-Electro] :cl1) []   ]
+            [ (drum-s [:Kit15-Electro] :cl2) []   ]
+            [ (drum-s [:Kit15-Electro] :cl1) []   ] :1
+            [ (drum-s [:Kit15-Electro] :cl1) []   ]
+            [ (drum-s [:Kit15-Electro] :cl2) []   ]
+            [ (drum-s [:Kit15-Electro] :cl1) []   ]
+            [ o-snr []   ] :2])
+   :harmony (s/phrase-p
+             prophet
+             [[:C#4 :F#3] [:C#4 :F#3]
+              [:C#4 :F#3] [:F#3 :C#4]
+              [:C#4 :F#3]
+                                        ;[:C#4 :F#3] [:F#3 :C#4] [:C#4 :F#3] [:F#3 :C#4]
+              :3
+              [:A3 :D3] [:A3 :D3] [:A3 :D3] [:A3 :D3] [:A3 :D3] :3
+              [:B3 :E3] [:B3 :E3]  [:B3 :E3] [:B3 :E3]
+              [:B3 :E3] :3]
+             0.25 2 [:attack 0.001 :decay 1.3 :amp 0.5 :cutoff 2000])
+   :harmony2 (s/phrase-p
+              bpfsaw2
+              [[:A5 :A5]
+               [:A5 :A5] :A5 :2 :Ab5 [:Ab5 :Ab5] [:Ab5 :Ab5] [:Ab5 :Ab5] :Ab5 :1 :F#5 [:F#5 :F#5] :F#5 :F#5 :5 [:D5 :D5] :D5 :D5 :C#5 [:C#5 :C#5] [:C#5 :C#5] :C#5 [:rel 3 :sus 1] :24]
+              0.25 3 [:rel 2])
    })

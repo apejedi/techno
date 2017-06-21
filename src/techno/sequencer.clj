@@ -911,7 +911,8 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                  (reduce
                   (fn [c [i p]]
                     (if (or (instance? overtone.studio.inst.Inst i)
-                            (instance? overtone.sc.synth.Synth i))
+                            (instance? overtone.sc.synth.Synth i)
+                            (instance? overtone.sc.sample.PlayableSample i))
                       (assoc c (:name i) i)
                       c))
                   c
