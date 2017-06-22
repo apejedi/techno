@@ -941,6 +941,17 @@
             [:E4 :3 :E4 :F4 :E4 :F4 :E4 :F4 :E4 :4 :F4 :G4
              :E4 :D4 :E4 :2]
             0.25 1 [:attack 0.03 :release 1 :detune 0 :bwr 2 :amp 0.7])
+   :rise2 (s/phrase-p
+           rise-pad
+           [[:B4 :F5]
+            [:B4 :F5]
+            [:A4 :E5]
+            [:A4 :E5]
+            [:G4 :E5]
+            [:G4 :E5]
+            [:A4 :E5]
+            [:A4 :E5] :6]
+           0.25 6 [:t 2])
    })
 
 (def exp3
