@@ -667,27 +667,3 @@
 ;;         (map midi->hz notes)
 ;;         [:coef 0.01 :t 10 :attack 8 :release 5 :amp 0.1]))
 ;;      )))
-
-
-
-
-(s/play-p (s/phrase-p
-           b-kick
-           [:D3 :A3 :1 :G5 :1 :C4 :F3]
-           0.25 0 [:dur 0.7 :reson 3])
-          (s/phrase-p
-           b-snr
-           [:1 :D4 :1 :E4]
-           0.25 0 [:reson 3 :dur 0.5 :noise 2])
-           1.666 2)
-
-(demo (let [freq (midi->hz (note :D4))
-            sig1 (sync-saw [freq (freq * (/ 3 5))] [freq (/ freq 2)])
-            sig2 (* 0.7 (white-noise:ar))
-            specs [(map #(* freq %) [0.5 0.25 1 2 3 4 5]) (repeat 7 (float (/ 1 7)))]
-            sig2 (klank specs sig2 :freqoffset (rand))
-            sig (mix:ar [sig1 sig2])
-            env (env-gen (perc 0.001 1) :action FREE)
-            sig (* sig env)]
-        (out [0 1] sig)
-        ))

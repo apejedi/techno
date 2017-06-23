@@ -19,6 +19,10 @@
 
 (declare sync-s)
 
+(defn i-step [offset]
+  (if (= (mod offset (int offset)) 0.0) (int offset) offset)
+  )
+
 (defn x-seq [coll & [orig]]
   (let [cur (shuffle coll)]
     (lazy-seq
