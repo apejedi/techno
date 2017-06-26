@@ -38,6 +38,7 @@
                            ))
   (s/set-st player 0.25)
   (r/ring player 100 10 50)
+  (techno.grid/mk-grid 2 3 core/player)
 
   (sweet :dur 0.2)
   (eval-action
