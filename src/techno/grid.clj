@@ -44,35 +44,49 @@
   )
 
 (defn draw []
-  (let [cur (get @state :cur 1)]
+  (let [cur (get @state :cur 1)
+        actions (get @state :actions)]
     (doseq [[o [[x1 y1] [x2 y2]]] (get @state :coord-map)]
       (apply
        q/fill
        (get-color o))
       (q/rect x1 y1 x2 y2)
       (q/fill 0)
-      (q/text (str o) (+ x1 10) (+ y1 15))
-      ))
+      (q/text (str o) (+ x1 10) (+ y1 15)))
+    )
   )
 
 (defn draw-beat [beat]
-  (swap! state assoc :beat (s/i-step (* (int beat) (get @state :step))))
-  ;(q/redraw)
-  ;; (ap/with-applet grid
-  ;;   (let [g (.getGraphics grid)
-  ;;         step (get @state :step)
-  ;;         offset (s/i-step (* (int beat) step))
-  ;;         cur (get-in @state [:coord-map offset])
-  ;;         prev (get-in @state [:coord-map (- offset step)])]
-  ;;     (.beginDraw g)
-  ;;     (when (not (nil? cur))
-  ;;       (q/fill 255 69 0)
-  ;;       (apply q/rect (flatten cur)))
-  ;;     (when (not (nil? prev))
-  ;;       (apply q/fill (get-color offset))
-  ;;       (apply q/rect (flatten cur)))
-  ;;     (.endDraw g)
-  ;;     ))
+  ;; (swap! state assoc :beat (s/i-step (* (int beat) (get @state :step))))
+                                        ;(q/redraw)
+  (ap/with-applet grid
+    (let [g (.getGraphics grid)
+          step (get @state :step 0.25)
+          size (get @state :size)
+          beat (if (> beat size)
+                 (nth (cycle (range 1 (inc size))) (dec beat))
+                 beat)
+          offset (s/i-step (inc (* (int beat) step)))
+          cur (get-in @state [:coord-map offset])
+          prev (get-in @state [:coord-map (s/i-step (- offset step))])]
+      (.beginDraw g)
+      ;; (q/fill 0 0 0 )
+      ;; (q/rect 500 500 600 600)
+      ;; (q/fill 255 255 255)
+      ;; (q/text (str offset) 550 550)
+      (when (not (nil? cur))
+        (q/fill 255 120 0)
+        (q/ellipse (- (first (second cur)) 30) (+ (second (second cur)) 10) 6 6)
+        ;(apply q/rect (flatten cur))
+        )
+      (when (not (nil? prev))
+        (q/fill 0 0 0)
+        (q/ellipse (- (first (second prev)) 30) (+ (second (second prev)) 10) 6 6)
+        ;(apply q/fill (get-color offset))
+        ;(apply q/rect (flatten cur))
+        )
+      (.endDraw g)
+      ))
   )
 
 (defn handle-key []
@@ -81,16 +95,23 @@
         coords (get @state :coord-map {})
         step (get @state :step 0.25)
         bars (get @state :bars 1)
+        refresh (not (= -1 (.indexOf [:left :right :up :down :0] key)))
         new (cond (= :left key) (- cur step)
                   (= :right key) (+ cur step)
                   (= :up key) (- cur bars)
                   (= :down key) (+ cur bars)
                   true cur)
         new (s/i-step new)
-        new (if (contains? coords new) new cur)]
-    (swap! state assoc :cur new)
-    (ap/with-applet grid
-      (q/redraw))
+        new (if (contains? coords new) new cur)
+        key-event @(:key-event (meta grid))]
+    (println key)
+    (when (contains? (get @state :actions) key)
+
+      )
+    (when refresh
+      (swap! state assoc :cur new)
+      (ap/with-applet grid
+        (q/redraw)))
     )
   )
 
@@ -98,9 +119,9 @@
   (swap! state assoc-in keys val)
   )
 
-(defn mk-grid [bars rows sequencer & [step space width height]]
+(defn mk-grid [bars rows sequencer actions & [step space width height]]
   (let [step (if (nil? step) 0.25 step)
-        space (if (nil? space) 10 space)
+        space (if (nil? space) 20 space)
         width (if (nil? width) 50 width)
         height (if (nil? height) 30 height)
         g-coords (fn [r c]
@@ -118,15 +139,15 @@
                          (range 0 (* (/ 1 step) bars))))
                       (range 0 rows)))
         uid (get (s/get-sequencer-data sequencer) :uid)]
-    (swap! state merge {:coord-map coords :rows rows :bars bars :step step :sequencer sequencer})
+    (swap! state merge {:coord-map coords :rows rows :bars bars :step step :sequencer sequencer :size (* bars rows (/ 1 step)) :actions actions})
     (q/defsketch grid
       :setup setup
       :draw draw
       :size :fullscreen
       :key-pressed handle-key)
-    ;; (on-latest-trigger
-    ;;  sequencer uid
-    ;;  draw-beat :draw-beat)
+    (on-latest-trigger
+     sequencer uid
+     draw-beat :draw-beat)
     )
   )
 
