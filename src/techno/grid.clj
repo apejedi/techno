@@ -95,7 +95,7 @@
         coords (get @state :coord-map {})
         step (get @state :step 0.25)
         bars (get @state :bars 1)
-        refresh (not (= -1 (.indexOf [:left :right :up :down :0] key)))
+        refresh (not (= -1 (.indexOf (concat [:left :right :up :down :x :a] (keys (get @state :actions {}))) key)))
         new (cond (= :left key) (- cur step)
                   (= :right key) (+ cur step)
                   (= :up key) (- cur bars)
@@ -104,10 +104,10 @@
         new (s/i-step new)
         new (if (contains? coords new) new cur)
         key-event @(:key-event (meta grid))]
-    (println key)
     (when (contains? (get @state :actions) key)
+      (let [c (get-in @state [:pattern cur] [])]
+        (swap! state assoc-in [:pattern cur] (vec (concat c (get-in @state [:actions key]))))))
 
-      )
     (when refresh
       (swap! state assoc :cur new)
       (ap/with-applet grid
