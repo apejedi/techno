@@ -35,7 +35,7 @@
                (apply max (keys (get @state :pattern)))
                1)
         step (get @state :step)
-        o (if (> o size)
+        o (if (and (not (= o cur)) (> o size))
             (nth (cycle
                   (range 1 (+ size step) step))
                  (dec (int (/ o step))))
