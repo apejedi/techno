@@ -31,9 +31,16 @@
 (defn get-color [o]
   (let [p (get @state :pattern {})
         cur (get @state :cur 1)
-        beat (get @state :beat)]
+        size (if (> (count (keys (get @state :pattern))) 0)
+               (apply max (keys (get @state :pattern)))
+               1)
+        step (get @state :step)
+        o (if (> o size)
+            (nth (cycle
+                  (range 1 (+ size step) step))
+                 (dec (int (/ o step))))
+            o)]
     (cond
-      (= o beat) [255 69 0]
       (= o cur) [255 255 0]
       (and (contains? p o) (= o (apply max (keys p))))
       (if (and (contains? p o) (not (nil? (first (get p o)))))
@@ -45,7 +52,9 @@
 
 (defn draw []
   (let [cur (get @state :cur 1)
-        actions (get @state :actions)]
+        actions (get @state :actions {})
+        [[p1 q1] [r1 s1]]
+        (get-in @state [:coord-map (apply max (keys (get @state :coord-map)))] [[1 1] [1 1]])]
     (doseq [[o [[x1 y1] [x2 y2]]] (get @state :coord-map)]
       (apply
        q/fill
@@ -53,6 +62,10 @@
       (q/rect x1 y1 x2 y2)
       (q/fill 0)
       (q/text (str o) (+ x1 10) (+ y1 15)))
+    (q/fill 255 255 255)
+    (doseq [[k v] actions y (range (+ s1 10) (+ s1 (* (count actions) 10)) 10)]
+      (q/text (str (name k) (s/get-action-str v)) 10 y)
+      )
     )
   )
 
@@ -106,8 +119,14 @@
         key-event @(:key-event (meta grid))]
     (when (contains? (get @state :actions) key)
       (let [c (get-in @state [:pattern cur] [])]
-        (swap! state assoc-in [:pattern cur] (vec (concat c (get-in @state [:actions key]))))))
-
+        (swap! state assoc-in [:pattern cur]
+               (vec (concat c (get-in @state [:actions key]))))))
+    (when (= : key)
+      (swap! state assoc-in [:pattern cur] []))
+    (when (= : key)  (not (nil? (get @state :sequencer)))
+          (s/add-p (get @state :sequencer) (get @state :pattern) :grid))
+    (when (= : key)
+      (swap! state assoc :pattern (s/stretch-p (get @state :pattern) new)))
     (when refresh
       (swap! state assoc :cur new)
       (ap/with-applet grid
