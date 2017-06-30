@@ -103,35 +103,36 @@
   )
 
 (defn handle-key []
-  (let [key (q/key-as-keyword)
-        cur (get @state :cur 1)
-        coords (get @state :coord-map {})
-        step (get @state :step 0.25)
-        bars (get @state :bars 1)
-        refresh (not (= -1 (.indexOf (concat [:left :right :up :down :x :a] (keys (get @state :actions {}))) key)))
-        new (cond (= :left key) (- cur step)
-                  (= :right key) (+ cur step)
-                  (= :up key) (- cur bars)
-                  (= :down key) (+ cur bars)
-                  true cur)
-        new (s/i-step new)
-        new (if (contains? coords new) new cur)
-        key-event @(:key-event (meta grid))]
-    (when (contains? (get @state :actions) key)
-      (let [c (get-in @state [:pattern cur] [])]
-        (swap! state assoc-in [:pattern cur]
-               (vec (concat c (get-in @state [:actions key]))))))
-    (when (= : key)
-      (swap! state assoc-in [:pattern cur] []))
-    (when (= : key)  (not (nil? (get @state :sequencer)))
-          (s/add-p (get @state :sequencer) (get @state :pattern) :grid))
-    (when (= : key)
-      (swap! state assoc :pattern (s/stretch-p (get @state :pattern) new)))
-    (when refresh
-      (swap! state assoc :cur new)
-      (ap/with-applet grid
-        (q/redraw)))
-    )
+  (when (.hasFocus (.getNative (.getSurface grid)))
+      (let [key (q/key-as-keyword)
+            cur (get @state :cur 1)
+            coords (get @state :coord-map {})
+            step (get @state :step 0.25)
+            bars (get @state :bars 1)
+            refresh (not (= -1 (.indexOf (concat [:left :right :up :down :x :a] (keys (get @state :actions {}))) key)))
+            new (cond (= :left key) (- cur step)
+                      (= :right key) (+ cur step)
+                      (= :up key) (- cur bars)
+                      (= :down key) (+ cur bars)
+                      true cur)
+            new (s/i-step new)
+            new (if (contains? coords new) new cur)
+            key-event @(:key-event (meta grid))]
+        (when (contains? (get @state :actions) key)
+          (let [c (get-in @state [:pattern cur] [])]
+            (swap! state assoc-in [:pattern cur]
+                   (vec (concat c (get-in @state [:actions key]))))))
+        (when (= : key)
+          (swap! state assoc-in [:pattern cur] []))
+        (when (= : key)  (not (nil? (get @state :sequencer)))
+              (s/add-p (get @state :sequencer) (get @state :pattern) :grid))
+        (when (= : key)
+          (swap! state assoc :pattern (s/stretch-p (get @state :pattern) new)))
+        (when refresh
+          (swap! state assoc :cur new)
+          (ap/with-applet grid
+            (q/redraw)))
+        ))
   )
 
 (defn set-state [keys val]
