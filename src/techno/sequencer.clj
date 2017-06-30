@@ -980,7 +980,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
   ([pattern new-size]
    (let [size-arg new-size
          step (get-step pattern)
-         tail (apply max (keys pattern))
+         tail (apply max (if (> (count (keys pattern)) 0) (keys pattern) [1]))
          quantize #(+ 1 (/ (- % 1) step))
          new-map (zipmap (map quantize (keys pattern)) (vals pattern))
          size (quantize tail)

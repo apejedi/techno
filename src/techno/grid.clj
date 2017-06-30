@@ -29,17 +29,27 @@
 
 
 (defn get-color [o]
-  (let [p (get @state :pattern {})
+  (let [orig o
+        p (get @state :pattern {})
         cur (get @state :cur 1)
         size (if (> (count (keys (get @state :pattern))) 0)
                (apply max (keys (get @state :pattern)))
                1)
         step (get @state :step)
         o (if (and (not (= o cur)) (> o size))
-            (nth (cycle
-                  (range 1 (+ size step) step))
-                 (dec (int (/ o step))))
-            o)]
+            (s/i-step
+             (nth (cycle
+                   (range 1 (+ size step) step))
+                  (int (/ (dec o) step))))
+            o)
+        ;g (.getGraphics grid)
+        ]
+    ;; (.beginDraw g)
+    ;; (q/fill 0 0 0 )
+    ;; (q/rect 500 500 600 600)
+    ;; (q/fill 255 255 255)
+    ;; (q/text (str orig " " o) 550 550)
+    ;; (.endDraw g)
     (cond
       (= o cur) [255 255 0]
       (and (contains? p o) (= o (apply max (keys p))))
@@ -63,7 +73,7 @@
       (q/fill 0)
       (q/text (str o) (+ x1 10) (+ y1 15)))
     (q/fill 255 255 255)
-    (doseq [[k v] actions y (range (+ s1 10) (+ s1 (* (count actions) 10)) 10)]
+    (doseq [[k v] actions y (range (+ s1 30) (+ s1 (* (count actions) 30)) 30)]
       (q/text (str (name k) (s/get-action-str v)) 10 y)
       )
     )
@@ -115,7 +125,7 @@
                       (= :up key) (- cur bars)
                       (= :down key) (+ cur bars)
                       true cur)
-            new (s/i-step new)
+            new (s/i-step (if (> new 0) new cur))
             new (if (contains? coords new) new cur)
             key-event @(:key-event (meta grid))]
         (when (contains? (get @state :actions) key)
