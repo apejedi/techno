@@ -538,7 +538,7 @@
         (detect-silence:ar (select:ar start-release [(dc:ar 1) source]) :action 14)
         (replace-out out-bus (silent:ar 2))
         (replace-out audio-bus source)
-        ;(replace-out out-bus [source source])
+        ;; (replace-out out-bus source)
         ))
 
 (defn add-p
@@ -563,7 +563,7 @@
                        )))
        (when (not (contains? @pattern-groups key))
          (let [p-group (group)
-               mixer (p-mixer [:tail p-group])]
+               mixer (p-mixer [:tail p-group] (audio-bus 2))]
            (swap! pattern-groups assoc key p-group)
            (swap! pattern-fx assoc-in [key :mixer] mixer)
            )

@@ -679,6 +679,7 @@
   )
 
 
+
 (defsynth o-snr [out-bus 0 amp 0.8]
   (let [env0 (env-gen (envelope [0.5 1 0.5 0] [0.005 0.03 0.1] [-4 -2 -4]))
         env1 (env-gen (envelope [110 60 49] [0.005 0.1] [-4 -5]))

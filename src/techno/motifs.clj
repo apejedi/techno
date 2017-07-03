@@ -237,13 +237,12 @@
                         chan (inc (:channel m))
                         ctr-map {
                                  3 [;piano [:note (:midi-note info)   :dur 2 :amp 0.3]
-                                    zap [:freq1 (midi->hz (:midi-note info))
-                                         :freq2 (/ (midi->hz (:midi-note info)) 2)
-                                         :dur 0.2]]
+                                    risset [:freq (midi->hz (:midi-note info)) :dur 4]]
                                  4 [bpfsaw2 [:freq (midi->hz (:midi-note info)) :lsf 1000]
                                     ]
                                  5 [bpfsaw [:note (:midi-note info) :dur 1.2 :amp 1 :atk 0.01 :rq 0.5]]
-                                 6 [bass2 [:freq (midi->hz (:midi-note info)) :decay 1]]
+                                 6 [bass2 [:freq (midi->hz (:midi-note info)) :decay 2]]
+                                 7 [node ["test" {:freq (midi->hz (:midi-note info)) :dur 0.7}]]
                                  }]
                     (doseq [[inst args] (partition 2 (get ctr-map chan))]
                       (rec/record-action [inst args])
