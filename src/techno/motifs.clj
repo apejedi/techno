@@ -242,7 +242,7 @@
                                          :dur 0.2]]
                                  4 [bpfsaw2 [:freq (midi->hz (:midi-note info)) :lsf 1000]
                                     ]
-                                 5 [bpfsaw [:note (:midi-note info) :dur 2.4 :amp 0.4 :rq 0.5]]
+                                 5 [bpfsaw [:note (:midi-note info) :dur 1.2 :amp 1 :atk 0.01 :rq 0.5]]
                                  6 [bass2 [:freq (midi->hz (:midi-note info)) :decay 1]]
                                  }]
                     (doseq [[inst args] (partition 2 (get ctr-map chan))]
@@ -409,11 +409,22 @@
    core/player
    (s/phrase-p
     bass-synth
-    [:C#2 :F#5 [:Bb2 :B3] :A3]
+    [:C#2 :F#2 [:Bb2 :B3] :A3]
     0.25 3 [:sustain 2 :decay 0.1 :attack 1 :amp 0.3 :cutoff-freq 4000]
     )
    :phrase2
    )
+  (s/add-p
+   core/player
+   (s/phrase-p
+    piano
+    [:D3 :3 :A3 :3 :G4 :3] 0.25 0 [:amp 0.5]) :piano)
+  (sweet [:head 5] :dur 2)
+  (ctl 802 :volume 1)
+(s/rm-p core/player :phrase2 true)
+
+
+(conj [3 4] [:rv 2])
 
 
   (s/add-p

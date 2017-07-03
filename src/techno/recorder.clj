@@ -221,7 +221,7 @@
 (defn quantize-time-pattern
   ([] (quantize-time-pattern (* (s/get-sp core/player) 60) (s/get-st core/player)))
   ([tempo step]
-   (let [quant (float (* step (/ tempo 60))) ;;duration of step
+   (let [quant (float (* step (/ 60 tempo))) ;;duration of step
          begin (first (first @time-pattern))
          p (reduce (fn [p [o a]]
                      (let [o (Math/floor (/ (- o begin) quant 1000000000))
@@ -249,7 +249,6 @@
                       )
                     )
                   1000000000 (range 1 (count @time-pattern)))]
-    shortest
     (int (* (/ 1 (/ shortest 1000000000 step)) 60))
     )
   )

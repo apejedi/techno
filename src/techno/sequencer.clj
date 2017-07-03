@@ -13,6 +13,8 @@
 (defonce ^:private sequence-buffers (atom {}))
 (defonce ^:private pattern-counters (atom {}))
 (defonce ^:private sequencer-data (atom {}))
+(defonce ^:private pattern-groups (atom {}))
+(defonce ^:private pattern-fx (atom {}))
 (defonce ^:private midi-clip (atom {}))
 (defonce t-source-g (group "trigger sources"))
 (defonce t-synth-g (group "trigger generators" :after t-source-g))
@@ -294,8 +296,9 @@
 
 (defn play
   "Function to play instruments on the given beat"
-  ([cur-beat pattern] (play cur-beat pattern cur-beat))
-  ([cur-beat pattern orig-beat]
+  ([cur-beat pattern] (play cur-beat pattern cur-beat nil))
+  ([cur-beat pattern orig-beat] (play cur-beat pattern orig-beat nil))
+  ([cur-beat pattern orig-beat p-group]
    (let [data (get-val-if-ref (pattern :data))
          beat-actions
          (cond
@@ -310,6 +313,7 @@
      ;;            " for beat " cur-beat " raw-beat" orig-beat))
      (loop [actions (partition 2 beat-actions) ret false]
        (let [[instrument args] (first actions)
+             args (if (not (nil? p-group)) (concat [[:head p-group]] args))
              p (if (not (nil? instrument))
                  (if (and (or (= (type instrument) overtone.studio.inst.Inst)
                               (= (type instrument) overtone.sc.synth.Synth))
@@ -346,11 +350,11 @@
         stepped-beat (step-beat beat step)
         id (to-sc-id synth)
         seq-size (get-in @sequencer-data [id :size])]
-    ;; (println "orig " beat " stepped beat " stepped-beat " seq-size " seq-size
-    ;;          ;" time " (java.util.Date.)
-    ;;          )
     (if (number? seq-size)
       (doseq [[k p] (get @patterns id)]
+        ;; (println "orig " beat " stepped beat " stepped-beat " seq-size " seq-size
+        ;;          (:size p) " step " step " time " (java.util.Date.)
+        ;;          )
         (let [val (get-val-if-ref (p :data))
                                         ;size (p-size val step)
               size (:size p)
@@ -383,7 +387,7 @@
                           (if (and wrap (> beat size))
                             (wrap-beat beat size 1)
                             beat))
-              new-p (play final-beat p orig-beat)]
+              new-p (play final-beat p orig-beat (get @pattern-groups k))]
           (swap! sequencer-data
                  (fn [s] (assoc-in s [id :beat] final-beat)))
           (if (map? new-p)
@@ -411,6 +415,10 @@
                    ))
   )
 
+(defsynth midi-clock-source [receive-from 0 send-to 1 step 0.25 div 12]
+  (out:kr send-to (pulse-divider:kr (in-trig:kr receive-from) div 1))
+  )
+
 (defsynth trigger-synth [listen-bus 3 uid 0 pattern-size 4 step 1 reset 0]
   (let [trigger (in:kr listen-bus)
         count   (stepper:kr trigger :min 1
@@ -420,7 +428,14 @@
     )
   )
 
-
+(defsynth midi-trigger-synth [listen-bus 3 uid 0 pattern-size 4 step 0.25 reset 0]
+  (let [trigger (in-trig:kr listen-bus)
+        count   (stepper:kr trigger :min 1
+                            :max (+ 1 (/ (- pattern-size 1) step))
+                            :reset reset :resetval 0)]
+    (send-trig:kr trigger uid count)
+    )
+  )
 
 (defn- update-pattern-size [sequencer]
   (if (node-active? sequencer)
@@ -463,44 +478,67 @@
     )
   )
 
-(defn rm-p [sequencer & to-rm]
+(defn rm-p
   "(rm-p sequencer pattern) stops the given pattern from being played"
-  (doseq [pattern to-rm]
-    (let [id (to-sc-id sequencer)
-          cur-val (get @patterns id {})
-          val (if (or (keyword? pattern) (symbol? pattern))
-                (get cur-val pattern)
-                (first (filter #(= (get-val-if-ref pattern) (get-val-if-ref (% :data)))
-                               (vals cur-val))))]
-      (if  (and (not (nil? val)) (contains? val :watcher))
-        (remove-watch (get val :data) (get val :watcher)))
-      (doseq [[k v] val]
-        (if (and (= (type v) overtone.sc.node.SynthNode) (node-active? v))
-          (kill v)
-          )
-        )
-      (swap! patterns (fn [p]
-                        (if (= pattern :all)
-                          (assoc p id {})
-                          (assoc p id
-                                 (if (keyword? pattern)
-                                   (dissoc cur-val pattern)
-                                   (into {}
-                                         (remove
-                                          (fn [[k v]]
-                                            (= (get-val-if-ref pattern) (get-val-if-ref (v :data)))
-                                            )
-                                          cur-val
-                                          )))
-                                 ))
-                        ))
-      (swap! pattern-counters
-             (fn [c]
-               (dissoc c pattern)
-               ))
-      (update-pattern-size sequencer)
-      ))
+  ([sequencer to-rm] (rm-p sequencer to-rm true))
+  ([sequencer to-rm kill-group]
+   (doseq [pattern [to-rm]]
+     (let [id (to-sc-id sequencer)
+           cur-val (get @patterns id {})
+           val (if (or (keyword? pattern) (symbol? pattern))
+                 (get cur-val pattern)
+                 (first (filter #(= (get-val-if-ref pattern) (get-val-if-ref (% :data)))
+                                (vals cur-val))))]
+       (if  (and (not (nil? val)) (contains? val :watcher))
+         (remove-watch (get val :data) (get val :watcher)))
+       (doseq [[k v] val]
+         (if (and (= (type v) overtone.sc.node.SynthNode) (node-active? v))
+           (kill v)
+           )
+         )
+       (swap! patterns (fn [p]
+                         (if (= pattern :all)
+                           (assoc p id {})
+                           (assoc p id
+                                  (if (keyword? pattern)
+                                    (dissoc cur-val pattern)
+                                    (into {}
+                                          (remove
+                                           (fn [[k v]]
+                                             (= (get-val-if-ref pattern) (get-val-if-ref (v :data)))
+                                             )
+                                           cur-val
+                                           )))
+                                  ))
+                         ))
+       (swap! pattern-counters
+              (fn [c]
+                (dissoc c pattern)
+                ))
+       (when (and (contains? @pattern-groups pattern) kill-group)
+         ;; (kill (get-in @pattern-groups [pattern :id]))
+         (when (not (nil? (get-in @pattern-fx [pattern :mixer])))
+           (ctl (get-in @pattern-fx [pattern :mixer]) :start-release 1)
+           )
+         (swap! pattern-groups
+              dissoc pattern)
+         )
+       (update-pattern-size sequencer)
+       )
+     )
+   )
   )
+
+(defsynth p-mixer [audio-bus 10 out-bus 0 volume 1 start-release 0]
+      (let [source    (in out-bus)
+            source    (* volume source)
+            ;not-safe? (trig1 (a2k (> source 1)) safe-recovery-time)
+            ;safe-snd  (limiter source 0.99 0.001)
+            ]
+        (detect-silence:ar (select:ar start-release [(dc:ar 1) source]) :action 14)
+        (replace-out out-bus (silent:ar 2))
+        ;(replace-out out-bus [source source])
+        ))
 
 (defn add-p
   "(add-p sequencer pattern) adds the given pattern to the patterns being played by the sequencer"
@@ -514,7 +552,7 @@
            watcher-key (if is-atom (keyword (gensym "pattern")))
            attrs (if is-atom (merge attrs {:watcher watcher-key}) attrs)]
        (if (contains? cur-val key)
-         (rm-p sequencer key))
+         (rm-p sequencer key false))
        (swap! patterns
               (fn [p]
                 (assoc p id
@@ -522,6 +560,13 @@
                               (merge {:data pattern
                                       :size (p-size pattern (get-st sequencer))} attrs))
                        )))
+       (when (not (contains? @pattern-groups key))
+         (let [p-group (group)
+               mixer (p-mixer [:tail p-group])]
+           (swap! pattern-groups assoc key p-group)
+           (swap! pattern-fx assoc-in [key :mixer] mixer)
+           )
+         )
        (swap! pattern-counters
               (fn [c]
                 (assoc c key (AtomicInteger. 0))
@@ -586,7 +631,7 @@
      ))
   )
 
-(defn- build-sequencer
+(defn build-sequencer
   ([source-synth bus] (build-sequencer source-synth bus 1 false))
   ([source-synth bus step one-shot]
    (let [uid (trig-id)
@@ -625,6 +670,14 @@
       step
       one-shot)))
   )
+
+(defn midi-s [midi-bus]
+  (let [trigger-bus (control-bus)]
+    (build-sequencer
+     (midi-clock-source [:tail t-source-g] midi-bus trigger-bus :div 6)
+     trigger-bus
+     0.25
+     false)))
 
 (defn g-cs [t-ugen]
   "Get custom sequencer with given ugen used as trigger source"
@@ -770,13 +823,15 @@
   )
 
 (defn mod-amp [sequencer pattern delta]
-  (mod-actions
-   sequencer pattern
-   (fn [[inst args]]
-     (let [arg-map (into {} (map vec (partition 2 args)))
-           amp (if (contains? arg-map :amp) (:amp arg-map) 0.8)
-           args (vec (mapcat #(if (not (= :amp (first %))) % []) (partition 2 args)))]
-       [inst (conj args :amp (+ amp delta))])))
+  (if (not (nil? (get-in @pattern-fx [pattern :mixer])))
+    (ctl (get-in @pattern-fx [pattern :mixer]) :volume (+ delta (node-get-control (get-in @pattern-fx [pattern :mixer]) :volume)))
+      (mod-actions
+       sequencer pattern
+       (fn [[inst args]]
+         (let [arg-map (into {} (map vec (partition 2 args)))
+               amp (if (contains? arg-map :amp) (:amp arg-map) 0.8)
+               args (vec (mapcat #(if (not (= :amp (first %))) % []) (partition 2 args)))]
+           [inst (conj args :amp (+ amp delta))]))))
   )
 
 (defn set-arg [sequencer pattern arg val]
@@ -1201,7 +1256,9 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
     )
   )
 
-
+(defn p-fx
+  ([pattern] (get @pattern-fx pattern))
+  )
 
 
 
