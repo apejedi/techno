@@ -530,13 +530,14 @@
   )
 
 (defsynth p-mixer [audio-bus 10 out-bus 0 volume 1 start-release 0]
-      (let [source    (in out-bus)
+      (let [source    (in out-bus 2)
             source    (* volume source)
             ;not-safe? (trig1 (a2k (> source 1)) safe-recovery-time)
             ;safe-snd  (limiter source 0.99 0.001)
             ]
         (detect-silence:ar (select:ar start-release [(dc:ar 1) source]) :action 14)
         (replace-out out-bus (silent:ar 2))
+        (replace-out audio-bus source)
         ;(replace-out out-bus [source source])
         ))
 
