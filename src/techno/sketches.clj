@@ -22,9 +22,9 @@
       )
     )
 
-  (let [comp song-of-storms
+  (let [comp bells
         parts (keys comp)]
-    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1.3))
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1.6))
     )
   )
 
@@ -996,4 +996,16 @@
               [[:A5 :A5]
                [:A5 :A5] :A5 :2 :Ab5 [:Ab5 :Ab5] [:Ab5 :Ab5] [:Ab5 :Ab5] :Ab5 :1 :F#5 [:F#5 :F#5] :F#5 :F#5 :5 [:D5 :D5] :D5 :D5 :C#5 [:C#5 :C#5] [:C#5 :C#5] :C#5 [:rel 3 :sus 1] :24]
               0.25 3 [:rel 2])
+   })
+
+(def bells
+  {:klang (s/phrase-p
+            klang-test
+            [:G3  :F#4  :F#4  :G3  :F#4  :F#4  :G3  :F#4  :A3  :G4  :G4  :A3  :G4  :G4  :A3  :G4  :B3  :B4  :B4  :B3  :B4  :B4  :B3  :B4  :C#4  :A4  :A4  :C#4  :A4  :A4
+             :C#4  :A4 :1]
+            0.25 1 [:atk 0.01])
+   :sin (s/phrase-p
+            sin-inst
+            [:G4  :D5  :G4 :D5  :G4  :D5  :G4  :D5  :A4  :E5  :A4  :E5  :A4  :E5  :A4  :E5  :F#4  :E5  :F#4  :E5  :F#4  :E5  :F#4  :E5  :F#4  :D5  :F#4 :D5  :F#4 :D5  :F#4  :D5]
+            0.25 1 [:dur 0.7 :amp 0.5])
    })

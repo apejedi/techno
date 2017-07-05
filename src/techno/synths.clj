@@ -322,7 +322,7 @@
     )
   )
 
-(defsynth plk-bass [note 42 out-bus 0 dur 0.5 amp 1 plk 2]
+(defsynth plk-bass [note 42 dur 0.5 amp 1 plk 2]
   (let [freq (midicps note)
         subfreq (/ freq 2)
         subenv (env-gen (perc 0 (* dur plk)) :action FREE)

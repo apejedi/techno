@@ -40,7 +40,7 @@
   (s/set-st player 0.25)
   (r/ring player 100 10 50)
   (techno.grid/mk-grid
-   2 3 core/player
+   6 6 core/player
    {:0 [o-kick []] :1 [o-snr []] :2 [o-clap []] :3 [b-kick []] :4 [b-snr []]})
 
   (sweet :dur 0.2)

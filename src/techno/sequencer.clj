@@ -536,9 +536,9 @@
             ;safe-snd  (limiter source 0.99 0.001)
             ]
         (detect-silence:ar (select:ar start-release [(dc:ar 1) source]) :action 14)
-        (replace-out out-bus (silent:ar 2))
-        (replace-out audio-bus source)
-        ;; (replace-out out-bus source)
+        ;; (replace-out audio-bus source)
+        ;; (replace-out:ar out-bus (silent:ar 2))
+        (replace-out out-bus source)
         ))
 
 (defn add-p
@@ -979,8 +979,16 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
                   (partition 2 a))
                  )
                {}
-               (vals pattern))]
-    (= (count insts) 1)
+               (vals pattern))
+        inst (first (vals insts))
+        note-arg (if (or (instance? overtone.studio.inst.Inst inst)
+                         (instance? overtone.sc.synth.Synth inst))
+                   (cond (some #(= (:name %) "freq") (:params inst)) :freq
+                         (some #(= (:name %) "note") (:params inst)) :note
+                         true false))
+        actions (first (filter #(and (sequential? %) (not (nil? (first %)))) (vals pattern)))
+        has-note (not (= -1 (.indexOf (second actions) note-arg)))]
+    (and (= (count insts) 1) has-note)
     )
   )
 
@@ -1026,35 +1034,51 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
 
 
 (defn stretch-p
-  ([sequencer pattern new-size]
-   (swap! patterns
-          (fn [p]
-            (assoc-in p
-                      [(to-sc-id sequencer) pattern :data]
-                      (stretch-p (get-in @patterns [(to-sc-id sequencer) pattern :data]) new-size))))
-   nil)
-  ([pattern new-size]
-   (let [size-arg new-size
-         step (get-step pattern)
-         tail (apply max (if (> (count (keys pattern)) 0) (keys pattern) [1]))
-         quantize #(+ 1 (/ (- % 1) step))
-         new-map (zipmap (map quantize (keys pattern)) (vals pattern))
-         size (quantize tail)
-         new-size (quantize (if new-size new-size (* tail 2)))
-         beats (cycle (range 1 (inc size)))]
-     (if (>= new-size size)
-         (reduce
-          (fn [p b]
-            (let [cur-beat (+ 1 (* (- b 1) step))
-                  cur-beat (if (= (double (mod cur-beat (int cur-beat))) 0.0) (int cur-beat) cur-beat)
-                  wrapped (double (nth beats (dec b)))
-                  action (get new-map wrapped)]
-              (if (or action (= b new-size))
-                (assoc p cur-beat action)
-                p))
-            ) pattern (range (inc size) (inc new-size)))
-         (apply dissoc pattern (filter #(> % size-arg) (keys pattern))))
-     ))
+  ;; ([sequencer pattern new-size]
+  ;;  (swap! patterns
+  ;;         (fn [p]
+  ;;           (assoc-in p
+  ;;                     [(to-sc-id sequencer) pattern :data]
+  ;;                     (stretch-p (get-in @patterns [(to-sc-id sequencer) pattern :data]) new-size))))
+  ;;  nil)
+  ([pattern new-size & [step]]
+   (let [stretched {new-size []}
+         step (if step step (get-step pattern))
+         steps (map i-step (range 1 (+ new-size step) step))
+         orig-steps (cycle (map i-step (range 1 (+ (apply max (keys pattern)) step) step)))
+         stretched (reduce
+                    (fn [p o]
+                      (let [w (nth orig-steps (int (/ (dec o) step)))]
+                        (if (contains? pattern w)
+                          (assoc p o (get pattern w))
+                          p)))
+                    stretched
+                    steps)]
+     stretched
+     )
+   ;; (let [size-arg new-size
+   ;;       step (get-step pattern)
+   ;;       tail (apply max (if (> (count (keys pattern)) 0) (keys pattern) [1]))
+   ;;       quantize #(+ 1 (/ (- % 1) step))
+   ;;       new-map (zipmap (map quantize (keys pattern)) (vals pattern))
+   ;;       size (quantize tail)
+   ;;       new-size (quantize (if new-size new-size (* tail 2)))
+   ;;       beats (cycle (range 1 (inc size)))]
+   ;;   (if (>= new-size size)
+   ;;       (reduce
+   ;;        (fn [p b]
+   ;;          (let [cur-beat (+ 1 (* (- b 1) step))
+   ;;                cur-beat (if (= (double (mod cur-beat (int cur-beat))) 0.0) (int cur-beat) cur-beat)
+   ;;                wrapped (double (nth beats (dec b)))
+   ;;                action (get new-map wrapped)]
+   ;;            (if (or action (= b new-size))
+   ;;              (assoc p cur-beat action)
+   ;;              p))
+   ;;          ) pattern (range (inc size) (inc new-size)))
+   ;;       (let [pattern (apply dissoc pattern (filter #(> % size-arg) (keys pattern)))]
+   ;;         ))
+   ;;   )
+   )
   )
 
 (defn fit-p [base pattern & [fill pad step]]

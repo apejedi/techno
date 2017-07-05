@@ -240,7 +240,7 @@
                                     risset [:freq (midi->hz (:midi-note info)) :dur 4]]
                                  4 [bpfsaw2 [:freq (midi->hz (:midi-note info)) :lsf 1000]
                                     ]
-                                 5 [bpfsaw [:note (:midi-note info) :dur 1.2 :amp 1 :atk 0.01 :rq 0.5]]
+                                 5 [bpfsaw [:note (:midi-note info) :dur 1.7 :amp 1 :atk 0.5 :rq 0.5]]
                                  6 [bass2 [:freq (midi->hz (:midi-note info)) :decay 2]]
                                  7 [node ["test" {:freq (midi->hz (:midi-note info)) :dur 0.7}]]
                                  }]
