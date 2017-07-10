@@ -775,3 +775,26 @@
     (out:ar 0 [osc osc])
     )
   )
+
+(defsynth r-kick [amp 1 dur 0.3]
+  (let [fenv (midicps (env-gen (envelope [100 50 40 20] [(* dur 0.1) (* dur 0.1) (* dur 0.8)] [-4 -5 -4])))
+        sig (sync-saw:ar fenv (* fenv (x-line:kr 1 0.5 dur)))
+        env (env-gen (envelope [0 1 0.6 0] [(* dur 0.1) (* dur 0.2) (* dur 0.7)]) :action FREE)
+        sig (* sig env)
+        sig (lpf:ar sig (* fenv (x-line:kr 4 8 dur)))]
+    (out:ar 0 [sig sig])
+    )
+  )
+
+(defsynth dirty-kick [note 80 out-bus 0 amp 1 dur 0.3]
+  (let [env0 (env-gen (envelope [0.5 1 0.5 0] [0.005 (* dur 0.2) (* dur 0.8)] [-4 -2 -4]) :action FREE)
+        env1 (env-gen (envelope [110 59 29] [0.005 0.29] [-4 -5]))
+        env1m (midicps env1)
+        o (+ -0.5 (lf-pulse:ar env1m 0 0.5))
+        o (* env0 o)
+        o (* o 1.2)
+        o (clip2 o 1)
+        o (* o amp)]
+    (out:ar out-bus [o o])
+    )
+  )

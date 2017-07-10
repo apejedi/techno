@@ -256,7 +256,8 @@
                                   (find-in samples (keyword
                                                       (clojure.string/replace (:name %) " " ""))))
                             (or (= (type %) overtone.studio.inst.Inst)
-                                (= (type %) overtone.sc.synth.Synth))
+                                (= (type %) overtone.sc.synth.Synth)
+                                (= overtone.sc.sample.PlayableSample (type %)))
                             (:name %)
                             (sequential? %) (vec %)
                             true %)

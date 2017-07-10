@@ -28,20 +28,28 @@
   )
 
 
-(defn get-color [o]
-  (let [orig o
-        p (get @state :pattern {})
+(defn get-offset [o & [ignore-cur]]
+  (let [p (get @state :pattern {})
         cur (get @state :cur 1)
         size (if (> (count (keys (get @state :pattern))) 0)
                (apply max (keys (get @state :pattern)))
                1)
         step (get @state :step)
-        o (if (and (not (= o cur)) (> o size))
+        o (if (and (or ignore-cur (not (= o cur))) (> o size))
             (s/i-step
              (nth (cycle
                    (range 1 (+ size step) step))
                   (int (/ (dec o) step))))
-            o)
+            o)]
+    o
+    )
+  )
+
+(defn get-color [o]
+  (let [orig o
+        p (get @state :pattern {})
+        cur (get @state :cur 1)
+        o (get-offset o)
         ;g (.getGraphics grid)
         ]
     ;; (.beginDraw g)
@@ -72,10 +80,16 @@
       (q/rect x1 y1 x2 y2)
       (q/fill 0)
       (q/text (str o) (+ x1 10) (+ y1 15)))
-    (q/fill 255 255 255)
-    (doseq [[k v] actions y (range (+ s1 30) (+ s1 (* (count actions) 30)) 30)]
-      (q/text (str (name k) (s/get-action-str v)) 10 y)
-      )
+    (doall
+     (let [ys (range (+ s1 20) (+ s1 (* (count actions) 20)) 20)]
+       (q/fill 0 0 0)
+       (q/rect 10 s1 1400 (+ (last ys) 30))
+       (q/fill 255 255 255)
+       (q/text (s/get-action-str (get-in @state [:pattern (get-offset cur true)])) 700 (+ s1 30))
+       (map
+        (fn [[k v] y] (q/text (str (name k) ": " (s/get-action-str v)) 10 y))
+        actions ys
+        )))
     )
   )
 
