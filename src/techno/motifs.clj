@@ -271,6 +271,7 @@
 ;;                       )
                     ))
                 ::prophet-midi)
+
                                         ;      (remove-event-handler ::prophet-midi)
     (on-event [:midi :note-off]
               (fn [m]
@@ -281,7 +282,11 @@
                     (s/rm-p core/player n)))
                 )
               ::prophet-midi-off))
-
+  (s/add-p core/player
+           (s/phrase-p
+ klang-test
+[:G6 :2 :D6 :11 :C6 :5 :Eb6 :5 :D6 :4]
+0.25 0 [:atk 0.01 :amp 7.3]) :motif1)
   (s/play-p
    (s/phrase-p
     bass-synth
