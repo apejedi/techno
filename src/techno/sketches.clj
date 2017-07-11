@@ -1017,3 +1017,38 @@
            [:G4 :G4 :G4 :12 :E5 :E5 :4 :D5 :D5 :8 :A4 :1 :A4 :1 :A4 :10 :B4 :1 :B4 :B4 :8]
            0.25 0 [])
    })
+
+(def sketch
+  {
+   :harmony1 (s/phrase-p
+             bass-synth
+             [[:Ab3 :Eb3] :8 [:Eb3 :Bb3] :8 [:G3 :Eb3] :8]
+             0.25 0 [:attack 1.5 :release 1 :detune 0 :bwr 0.6])
+   :motif1 (s/phrase-p
+           bing
+           [:Eb4 :1 :Bb4 :1 :C#5 :2 :Eb4 :1 :Bb4 :1 :C#5 :2 :Ab4 :2 :G4 :2]
+           0.25 0 [:decay 1])
+   })
+(def saws
+  {
+   :drum1(s/build-map-p
+          [:2
+           [ (get-in drum-kits [:Kit16-Electro :CYCdh_ElecK06-ClHat01.wav]) []   ] :1
+
+           ])
+   :harmony1(s/phrase-p
+             bass-synth
+             [[:F3 :C3] :10 [:Bb3 :Eb3] :12 [:F3 :C#3] :12 [:C3 :Ab3] :10]
+             0.25 0 [:attack 2 :release 1 :detune 0])
+
+   :drum2(s/build-map-p
+          [[ o-kick []   ] [ r-kick []   ] [ o-snr []   ] :3
+           [ dirty-kick []   ] :2
+           [ (get-in drum-kits [:Kit16-Electro :CYCdh_ElecK06-Snr01.wav]) []   ] :2
+
+           ])
+   :motif1(s/phrase-p
+           bpfsaw
+           [:Eb5 :5 :Bb5 :4 :F5 :5 :Ab5 :30]
+           0.25 0 [:dur 1.7 :amp 1 :atk 0.5 :rq 0.5])
+   })
