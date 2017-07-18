@@ -49,8 +49,8 @@
                   (map name [:q :w :e :r :t :y :u :i :o :p :a :s :d :f :g :h :j :k :l :z :x :c :v :b :n :m]))
           (concat
            [o-kick o-snr b-kick b-snr r-kick dirty-kick o-hat]
-           ;(flatten (map vals (vals (group-samples (drum-kits :Kit15-Electro)))))
-           (flatten (map vals (vals (group-samples (drum-kits :Kit16-Electro)))))
+           (flatten (map vals (vals (group-samples (drum-kits :Kit15-Electro)))))
+           (flatten (map vals (vals (group-samples (drum-kits :KurzweilKit04)))))
            ))))
 
   (sweet :dur 0.2)
@@ -141,7 +141,7 @@
         cur (StringBuilder.)]
     (.mark raw-r 100000)
     (loop [r (.read raw-r) t (.read text-r) cur cur]
-      ;; (println (str "cur: "(.toString cur)) (str "r: " (if (> r -1) (char r) r)) (str "t: " (if (> t -1) (char t) t)))
+      ;(println (str "cur: "(.toString cur)) (str "r: " (if (> r -1) (char r) r)) (str "t: " (if (> t -1) (char t) t)))
       (if (or (= -1 t) (= -1 r))
         (if (> (.length cur) 0)
           (.toString cur)
@@ -196,6 +196,7 @@
                                   (or (not sketch) (nil? sketch) (= b sketch)))
                              (reduce
                               (fn [m [k v]]
+                                ;(println (str k) (get-val (str v) start end))
                                 (assoc m (str k) (get-val (str v) start end)))
                               patterns
                               g)

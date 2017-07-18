@@ -349,9 +349,8 @@
    )
   )
 
-(defsynth wire-bass [decay 0.5 coef 0.54 amp 1 dur 3]
-  (let [coef (lin-lin coef 0 1 -0.3 1)
-        decay (lin-lin decay 0 1 0.007 0.02)
+(defsynth wire-bass [coef 0.54 amp 1 dur 3 freq 100]
+  (let [decay (/ 1 freq)
         sig (pluck:ar (* (pink-noise) 0.1) 1 decay decay dur coef)
         sig (* sig (env-gen:kr (perc (* 0.001 dur) (* 0.999 dur)) :action FREE) amp)]
     (out:ar [0 1] sig)
@@ -796,5 +795,17 @@
         o (clip2 o 1)
         o (* o amp)]
     (out:ar out-bus [o o])
+    )
+  )
+
+(defsynth p-saw [freq 400 dur 1.5 atk 0.4 max-freq 6 ]
+  (let [release (- 1 atk)
+        sig (saw:ar freq)
+        sig2 (* 0.2 (pulse:ar (* freq (midiratio -4)) (lin-exp (lf-noise1:kr 10) -1 1 0.2 0.9)))
+        sig (mix:ar [sig sig2])
+        sig (moog-ff:ar sig (x-line:ar freq (* freq max-freq)))
+        env (env-gen:kr (envelope [0 1 0.7 0] [(* dur atk) (* dur 0.4 release) (* dur release 0.6)]) :action FREE)
+        sig (* sig env)]
+   (out:ar 0 [sig sig])
     )
   )

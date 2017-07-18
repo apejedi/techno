@@ -991,6 +991,13 @@
               [:B3 :E3] [:B3 :E3]  [:B3 :E3] [:B3 :E3]
               [:B3 :E3] :3]
              0.25 2 [:attack 0.001 :decay 1.3 :amp 0.5 :cutoff 2000])
+   :arp (let [a [:D4 :F#4  :A4]
+              b [:C#4 :E4  :Ab4]
+              c [:C#4  :F#3 :A3]]
+          (s/phrase-p
+           bpfsaw
+           (flatten (concat (repeat 10 a) (repeat 6 b) (repeat 16 c)))
+           0.25 0 [:dur 0.7 :atk 0.01 :rq 1]))
    :harmony2 (s/phrase-p
               bpfsaw2
               [[:A5 :A5]
@@ -1029,26 +1036,59 @@
            [:Eb4 :1 :Bb4 :1 :C#5 :2 :Eb4 :1 :Bb4 :1 :C#5 :2 :Ab4 :2 :G4 :2]
            0.25 0 [:decay 1])
    })
-(def saws
-  {
-   :drum1(s/build-map-p
-          [:2
-           [ (get-in drum-kits [:Kit16-Electro :CYCdh_ElecK06-ClHat01.wav]) []   ] :1
 
-           ])
-   :harmony1(s/phrase-p
+(def saws
+  {:plk (s/phrase-p
+         ks1
+         [:Bb5 :Ab5 :F#5 :F5]
+         0.25 1
+         [:coef 0.0001 :dur 1.7 :amp 1.5])
+   :drum2 (s/build-map-p
+           [[ o-kick []   ] [ r-kick []   ] [ o-snr []   ] :1
+            [ (get-in drum-kits [:Kit15-Electro :CYCdh_ElecK05-Clap01.wav]) []   ] :1
+            [ dirty-kick []   ] :2
+            [ (get-in drum-kits [:Kit16-Electro :CYCdh_ElecK06-Snr01.wav]) []   ] [ (get-in drum-kits [:Kit15-Electro :CYCdh_ElecK05-Clap01.wav]) []   ] :1
+
+            ])
+   :harmony1 (s/phrase-p
              bass-synth
              [[:F3 :C3] :10 [:Bb3 :Eb3] :12 [:F3 :C#3] :12 [:C3 :Ab3] :10]
-             0.25 0 [:attack 2 :release 1 :detune 0])
-
-   :drum2(s/build-map-p
-          [[ o-kick []   ] [ r-kick []   ] [ o-snr []   ] :3
-           [ dirty-kick []   ] :2
-           [ (get-in drum-kits [:Kit16-Electro :CYCdh_ElecK06-Snr01.wav]) []   ] :2
+             0.25 0 [:attack 2 :release 1 :detune 0 :amp 0.7 :bwr 0.5])
+   :motif1 (s/phrase-p
+            bpfsaw
+            [:Eb5 :5 :Bb5 :5 :F5 :5 :Ab5 :29]
+            0.25 0 [:dur 2.4 :amp 1 :atk 0.01 :rq 0.5])
+   :drum1 (s/build-map-p
+           [:2
+            [ (get-in drum-kits [:Kit16-Electro :CYCdh_ElecK06-ClHat01.wav]) []] :1])
+   })
+(def buzzes
+  {:drum1 (s/build-map-p
+          [[ o-hat []   ] :1
+           [ o-kick []   ] :1
+           [ b-snr []   ] :1
+           [ o-snr []   ] :1
+           [ o-hat []   ] [ r-kick []   ] [ r-kick []   ] :1
+           [ o-snr []   ] :1
+           [ o-hat []   ] :1
 
            ])
-   :motif1(s/phrase-p
+   :motif1 (s/phrase-p
            bpfsaw
-           [:Eb5 :5 :Bb5 :4 :F5 :5 :Ab5 :30]
-           0.25 0 [:dur 1.7 :amp 1 :atk 0.5 :rq 0.5])
+           [:B4  :C#4  :F#4 :1 :E4  :C#4  :F#4  :E4  :F#4  :C#4 :7 :B4 :1 :E4 :3 :Ab4  :F#4 :15]
+           0.25 3 [:atk 0.01 :dur 1.4 :amp 2.2 :rq 0.4])
+   :harmony1 (s/phrase-p
+             prophet
+             [:A1 :6 :A2 :5 :F#2 [:decay 3 :cutoff 1000] :18]
+             0.25 0 [:cutoff 1062 :amp 0.5])
+   :harmony2 (s/phrase-p
+              rise-pad
+             [[:Ab5 :C#6] [:C#6 :Ab5] :1 [:Ab5 :C#6] :1 [:Ab5 :C#6] :9 [:Ab5 :Eb6] :Eb6 :Ab5 [:Eb6 :Ab5] :Ab5 :Eb6 :9 [:F#5 :Bb5] :1 :Bb5 :F#5 [:Bb5 :F#5] :9 [:C#6 :Ab5] :1 [:C#6 :Ab5] :9]
+             0.25 0 [:amp 0.6])
+
+   :drum2 (s/build-map-p
+          [[ b-snr [] (drum-s [:Kit15-Electro] :c1) []  ] [(drum-s [:Kit15-Electro] :c1) [:amp 0.2]] [ b-snr [] (drum-s [:Kit15-Electro] :c1) []  ] [(drum-s [:Kit15-Electro] :c1) [:amp 0.2]]
+           [ b-snr []  (drum-s [:Kit15-Electro] :c1) [] ] [(drum-s [:Kit15-Electro] :c1) [:amp 0.2]] [(drum-s [:Kit15-Electro] :c1) [:amp 0.2]] [(drum-s [:Kit15-Electro] :c1) [:amp 0.2]]
+           ])
+
    })

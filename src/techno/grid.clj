@@ -139,7 +139,7 @@
                       (= :up key) (- cur bars)
                       (= :down key) (+ cur bars)
                       true cur)
-            new (s/i-step (if (> new 0) new cur))
+            new (s/i-step (if (> (int new) 0) new cur))
             new (if (contains? coords new) new cur)
             key-event @(:key-event (meta grid))]
         (when (contains? (get @state :actions) key)
@@ -147,11 +147,19 @@
             (swap! state assoc-in [:pattern cur]
                    (vec (concat c (get-in @state [:actions key]))))))
         (when (= : key)
+          (swap! state assoc :copy (get-in @state [:pattern cur]))
           (swap! state assoc-in [:pattern cur] []))
         (when (= : key)  (not (nil? (get @state :sequencer)))
               (s/add-p (get @state :sequencer) (get @state :pattern) :grid))
         (when (= : key)
           (swap! state assoc :pattern (s/stretch-p (get @state :pattern) new)))
+        (when (and (.isShiftDown key-event) (not (= cur new)))
+          (swap! state assoc-in [:pattern new] (get-in @state [:pattern cur]))
+          (swap! state assoc-in [:pattern cur] nil))
+        (when (= : key)
+          (swap! state assoc :copy (get-in @state [:pattern cur])))
+        (when (= : key)
+          (swap! state assoc-in [:pattern cur] (get @state :copy)))
         (when refresh
           (swap! state assoc :cur new)
           (ap/with-applet grid
