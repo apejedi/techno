@@ -467,13 +467,13 @@
 ;;     )
 ;;   )
 
-(defsynth rise-pad [freq 440 t 3 attack 0.5 amp 1 detune 0.1]
+(defsynth rise-pad [freq 440 t 3 attack 0.5 amp 1 detune 0.1 rq 0.5]
   (let [dur (- 1 attack)
         [a d s r] [(* attack t) 0 (* 0.3 dur t) (* 0.7 dur t)]
         env (env-gen (adsr-ng :attack a :sustain s :decay d :release r) :action 2)
         freq (* freq (midiratio (* (lf-noise0:kr 0.5) detune)))
         sig  (blip freq 3)
-        sig (* (bpf sig freq 0.5) 0.4)
+        sig (* (bpf sig freq rq) 0.4)
         sig (* sig env amp)]
     (out:ar [0 1] sig)
     )
