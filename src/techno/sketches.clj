@@ -1003,6 +1003,18 @@
               [[:A5 :A5]
                [:A5 :A5] :A5 :2 :Ab5 [:Ab5 :Ab5] [:Ab5 :Ab5] [:Ab5 :Ab5] :Ab5 :1 :F#5 [:F#5 :F#5] :F#5 :F#5 :5 [:D5 :D5] :D5 :D5 :C#5 [:C#5 :C#5] [:C#5 :C#5] :C#5 [:rel 3 :sus 1] :24]
               0.25 3 [:rel 2])
+   :clap (drum-p
+          [:Kit15-Electro]
+          [:4 :cl1 :3] 0.25)
+   :motif (let [a [:E4 :1 :C#5 :2 :C#5 :2 :C#5 :2 :C#5 :1 :C#5 :2]
+                b [:F#4 :1 :C#5 :2 :C#5 :2 :C#5 :2 :C#5 :1 :C#5 :2]
+                c [:Ab4 :1 :C#5 :2 :C#5 :2 :C#5 :2 :C#5 :1 :C#5 :2]
+                d [:B4 :1 :C#5 :2 :C#5 :2 :C#5 :2 :C#5 :1 :C#5 :2]]
+            (s/phrase-p
+             bass2
+             (flatten (concat (repeat 6 a) (repeat 6 b) (repeat 3 c) ;(repeat 3 d)
+                              ))
+             0.25 0 [:decay 2.4 :amp 2.4 :cutoff 6362 :cutoff2 3362]))
    })
 
 (def bells
