@@ -4,7 +4,7 @@
         [techno.sequencer :only [adsr-ng]])
 
   (:require [techno.sequencer :as s]))
-(defsynth sweet [note 60 dur 1 amp 1 vib 0.02]
+(defsynth sweet [note 60 dur 1 amp 1 vib 0.02 out-bus 0]
   (let [freq (midicps note)
         ratios [1 3/4 1/5 2/7 11/5 5/8]
         freqs (map #(* % freq) ratios)
@@ -17,13 +17,12 @@
         release (* 0.4 dur)
         env (env-gen (envelope [0 0.6 0.4 0] [attack sustain release]) :action 2)
         sig (* sig env amp)]
-    (out:ar 0 sig)
-    (out:ar 1 sig)
+    (out:ar out-bus [sig sig])
     )
   )
 
 (defsynth harmonic
-  [amp 0.5 freq 100]
+  [amp 0.5 freq 100 out-bus 0]
   (let [partials 20
         z-init   0
         offset   (line:kr 0 -0.02 60)
@@ -38,9 +37,9 @@
                       src  (f-sin-osc (* freq (inc i)))
                       newz (mul-add src f z)]
                   (recur newz (inc i)))))]
-    (out 0 (pan2 (* amp snd)))))
+    (out out-bus (pan2 (* amp snd)))))
 
-(defsynth tb303-2 [freq 300 ac 1 cutoff 6000 et 1]
+(defsynth tb303-2 [freq 300 ac 1 cutoff 6000 et 1 out-bus 0]
   (let [wv 0.1
         lag-fr (lag-ud:kr freq 0.39 0.09)
         lag-fr (* lag-fr (+ 1 (* 0.0156 (lfd-noise3 0.3))))
@@ -59,11 +58,11 @@
         w (leak-dc w 0.995)
         w (+ w (* (softclip (* (hpf:ar w 400) 10)) 0.04))
         ]
-    (out:ar [0 1] w)
+    (out:ar out-bus [w w])
     )
   )
 
-(defsynth acid-bass [note 50 amp 1 atk 1 dur 1 attack 0.001]
+(defsynth acid-bass [note 50 amp 1 atk 1 dur 1 attack 0.001 out-bus 0]
   (let [[a s r] (map #(* dur %) [attack 1 0.04])
         note (lag:kr note (* 0.12 (- 1 (line:kr atk atk 0.001))))
         env1 (env-gen
@@ -80,7 +79,7 @@
         sig (hpf:ar (* sig 1.2) 40)
         sig (limiter:ar sig 1 0.02)
         ]
-    (out:ar [0 1] sig1)
+    (out:ar out-bus [sig1 sig1])
     )
   )
 
@@ -103,7 +102,7 @@
   )
 
 (defsynth organ
-        [note 60 dur 2 amp 1]
+        [note 60 dur 2 amp 1 out-bus 0]
         (let [freq  (midicps note)
               [a d s r] (map * (repeat 4 dur) [0.01 0.2 0.5 0.2])
               waves (sin-osc [(* 0.5 freq)
@@ -120,24 +119,22 @@
                      ;(adsr a d s r)
                      :action FREE)
               snd   (* env (apply + waves) amp 0.1)]
-          (out 0 snd)
-          (out 1 snd)
+          (out out-bus [snd snd])
           )
         )
 
-(defsynth bpfsaw [note 60 dur 1 atk 0.3 detune 0 rq 0.2 amp 1 pan 0]
+(defsynth bpfsaw [note 60 dur 1 atk 0.3 detune 0 rq 0.2 amp 1 pan 0 out-bus 0]
   (let [freq (midicps note)
         env (env-gen (perc (* atk dur) (* (- dur atk) dur)) :action 2)
         sig (sync-saw (+ freq (* detune freq)))
         sig (* env (bpf sig freq rq) amp)
         ;sig (balance2 sig sig pan)
         ]
-    (out 0 sig)
-    (out 1 sig)
+    (out out-bus [sig sig])
     )
   )
 
-(defsynth flute [note 60  amp 0.5  attack 0.1  decay 0.3  sustain 0.4  release 0.2 dur 3  output 0 trill 0]
+(defsynth flute [note 60  amp 0.5  attack 0.1  decay 0.3  sustain 0.4  release 0.2 dur 3  trill 0 out-bus 0]
   (let [freq (midicps note)
         [a d s r] (map #(* dur %) [attack decay sustain release])
         env  (env-gen (adsr-ng a d s r) :action FREE)
@@ -145,51 +142,51 @@
         mod3 (lin-lin:kr (sin-osc:kr trill) -1 1 0.1 1)
         sig (distort (* env (sin-osc [freq mod1])))
         sig (* amp sig mod3)]
-    (out output sig)
+    (out out-bus sig)
     ))
 
-(defsynth piano [note 60 amp 1 dur 1 vel 100 decay 0.8 release 0.8 hard 0.8 velhard 0.8 muffle 0.8 velmuff 0.8 velcurve 0.8 stereo 0.2 tune 0.5 random 0.1 stretch 0.1 sustain 0.1]
+(defsynth piano [note 60 amp 1 dur 1 vel 100 decay 0.8 release 0.8 hard 0.8 velhard 0.8 muffle 0.8 velmuff 0.8 velcurve 0.8 stereo 0.2 tune 0.5 random 0.1 stretch 0.1 sustain 0.1 out-bus 0]
   (let [freq (midicps note)
         env (env-gen (perc (/ 1 vel) dur) :action 2)
         snd (* amp env (mda-piano freq 1 vel  decay  release  hard  velhard  muffle  velmuff  velcurve  stereo  tune  random  stretch  sustain))
         snd2 (comb-n snd 0.2 0.2 dur)]
-    (out:ar [0 1] snd)
+    (out:ar 0 [snd snd])
     )
   )
 
 (defsynth dub-kick
-  [freq 80 amp 1]
+  [freq 80 amp 1 out-bus 0]
   (let [cutoff-env (perc 0.001 1 freq -20)
         amp-env (perc 0.001 1 1 -8)
         osc-env (perc 0.001 1 freq -8)
         noiz (lpf (white-noise) (+ (env-gen:kr cutoff-env) 20))
         snd  (lpf (sin-osc (+ (env-gen:kr osc-env) 20)) 200)
         mixed (* (+ noiz snd) (env-gen amp-env :action FREE) 2 amp)]
-    (out:ar 0 mixed)
-    (out:ar 1 mixed))
-    )
-(definst dance-kick
+    (out:ar out-bus [mixed mixed])
+    ))
+(defsynth dance-kick
   [freq  50.24
    attack  0.0001
    decay   0.484
    fattack  0.0001
    fdecay  0.012
    mul 8
-   amp  0.8]
+   amp  0.8
+   out-bus 0]
   (let [freq-env (env-gen:kr (perc fattack fdecay))
         wave (sin-osc (+ freq (* mul freq freq-env)))
         env  (env-gen:kr (perc attack decay) :action FREE)
         src (* env wave)
         dist (clip2 (* 2 (tanh (* 3 (distort (* 1.5 src))))) 0.8)
-        eq (b-peak-eq dist 37.67 1 10.4)]
-    (* amp eq)))
+        eq (b-peak-eq dist 37.67 1 10.4)
+        sig (* amp eq)]
+    (out:ar out-bus [sig sig])))
 
-(defsynth zap [freq1 5000 freq2 100 dur 0.2 amp 1]
+(defsynth zap [freq1 5000 freq2 100 dur 0.2 amp 1 out-bus 0]
   (let [freq (x-line freq1 freq2 dur)
         env (env-gen:kr (perc (* 0.1 dur) (* 0.9 dur) amp) :action 2)
         sig (* (lf-tri freq) env)]
-    (out:ar 0 sig)
-    (out:ar 1 sig)
+    (out:ar out-bus [sig sig])
     )
   )
 
@@ -197,7 +194,7 @@
 (defsynth bpfsaw2 [freq 500 atk 2 sus 0 rel 3 c1 1 c2 -1
 		 detune 0.2 pan 0 cfhzmin 0.1 cfhzmax 0.3
 		cfmin 500 cfmax 2000 rqmin 0.1 rqmax 0.2
-                   lsf 200 ldb 0 amp 1 output 0]
+                   lsf 200 ldb 0 amp 1 out-bus 0]
   (let [env (env-gen:kr (envelope [0 1 1 0] [atk sus rel] [c1 0 c2]) :action 2)
         f (* freq (midiratio (* (lf-noise0:kr 0.5) detune)))
         sig (saw [f f])
@@ -209,10 +206,10 @@
         sig (b-low-shelf sig lsf 0.5 ldb)
         sig (balance2 (first sig) (second sig))
         sig (* sig env amp)]
-    (out output sig)
+    (out out-bus sig)
     ))
 
-(defsynth klang-test [freq 440 amp 1 atk 0.1 dur 3]
+(defsynth klang-test [freq 440 amp 1 atk 0.1 dur 3 out-bus 0]
   (let [partials (map double
                       ;[1]
                       [(/ 1 2) (/ 2 3) 1 (/ 4 3) 2 (/ 5 2)]
@@ -227,19 +224,20 @@
                     ])
         env (env-gen (perc (* atk dur) (* (- 1 atk) dur)) :action FREE)
         sig (* sig env amp)]
-    (out 0 [sig sig])
+    (out out-bus [sig sig])
     )
   )
 
-(defsynth sin-inst [note 60 dur 2 amp 1]
-  (let [env (env-gen (envelope [0.1 1 0] [(* 0.01 dur) (* 1 dur)] :welch) :action 2)]
-    (out:ar [0 1] (* env
+(defsynth sin-inst [note 60 dur 2 amp 1 out-bus 0]
+  (let [env (env-gen (envelope [0.1 1 0] [(* 0.01 dur) (* 1 dur)] :welch) :action 2)
+        sig (* env
                      (+
                       (* (sin-osc (midicps note)))
                       (*  (sin-osc (midicps (+ 19 note))) 0.08)
                       (* (sin-osc (midicps (- note 12))) 0.04)
                       )
-                      amp)))
+                      amp)]
+    (out:ar out-bus [sig sig]))
   )
 
 ;; (defsynth kick [amp 1]
@@ -265,7 +263,8 @@
                 mod-freq  5
                 mod-index 5
                 sustain   0.4
-                noise     0.025 :min 0.001 :max 1.0 :step 0.001]
+                noise     0.025 :min 0.001 :max 1.0 :step 0.001
+                out-bus 0]
   (let [pitch-contour (line:kr (* 2 freq) freq 0.02)
         drum (lpf (sin-osc pitch-contour (sin-osc mod-freq (/ mod-index 1.3))) 1000)
         drum-env (env-gen (perc 0.005 sustain) :action FREE)
@@ -273,15 +272,16 @@
         hit (lpf hit (line 6000 500 0.03))
         hit-env (env-gen (perc))
         snd (* amp (+ (* drum drum-env) (* hit hit-env)))]
-    (out:ar [0 1] snd))
+    (out:ar out-bus [snd snd]))
   )
 
-(definst snare [freq  405 amp  0.3
-   sustain 0.1
-   decay  0.1
-   drum-amp 0.25
-   crackle-amp 40
-   tightness 1000]
+(defsynth snare [freq  405 amp  0.3
+                sustain 0.1
+                decay  0.1
+                drum-amp 0.25
+                crackle-amp 40
+                tightness 1000
+                out-bus 0]
   (let [drum-env  (env-gen (perc 0.005 sustain) :action FREE)
         drum-osc  (mix (* drum-env (sin-osc [freq (* freq 0.53)])))
         drum-s3   (* drum-env (pm-osc (saw (* freq 0.85)) 184 (/ 0.5 1.3)))
@@ -292,12 +292,13 @@
         filtered  (* 0.5 (brf filtered 5000 0.1))
         filtered  (* 0.5 (brf filtered 3600 0.1))
         filtered  (* (brf filtered 2000 0.0001) noise-env)
-        resonance (* (resonz filtered tightness) crackle-amp)]
-    (* amp (+ drum resonance))))
+        resonance (* (resonz filtered tightness) crackle-amp)
+        sig (* amp (+ drum resonance))]
+    (out:ar out-bus [sig sig])))
 
 
 
-(defsynth whistle [freq1 200 freq2 300 dur 5 freq1-sus 0.4 freq2-sus 0.4 mod 10 amp 1]
+(defsynth whistle [freq1 200 freq2 300 dur 5 freq1-sus 0.4 freq2-sus 0.4 mod 10 amp 1 out-bus 0]
   (let [[a b c] [(* freq1-sus dur) (* (- 1 freq1-sus freq2-sus 0.1) dur) (* freq2-sus dur)]
         env (env-gen:kr
              (envelope [freq1 freq1 freq2 freq2 0.01]
@@ -307,22 +308,23 @@
         ;osc-a (hpf (lpf osc-a freq2) freq1)
         ;ticks (impulse:ar 20)
         ]
-    (out:ar [0 1] osc-a)
+    (out:ar out-bus [osc-a osc-a])
     )
   )
 
-(defsynth reverb-test [freq 440 max-delay 0.2 delay-time 0.2 decay 1 amp 1]
+(defsynth reverb-test [freq 440 max-delay 0.2 delay-time 0.2 decay 1 amp 1 out-bus 0]
   (let [osc (klang [(map #(* freq %) [1 2 6]) [0.6 0.2 0.2]])
         env (env-gen (perc))
         env2 (env-gen (perc 0.1 decay) :action FREE)
         snd (* env osc 0.5)
         snd2 (comb-n snd max-delay delay-time decay)
-        snd2 (* snd2 0.4 env2)]
-    (out [0 1] (* (+ snd snd2) amp))
+        snd2 (* snd2 0.4 env2)
+        snd (* (+ snd snd2) amp)]
+    (out out-bus [snd snd])
     )
   )
 
-(defsynth plk-bass [note 42 dur 0.5 amp 1 plk 2]
+(defsynth plk-bass [note 42 dur 0.5 amp 1 plk 2 out-bus 0]
   (let [freq (midicps note)
         subfreq (/ freq 2)
         subenv (env-gen (perc 0 (* dur plk)) :action FREE)
@@ -345,22 +347,20 @@
         sig (tanh (/ sig 2.3))
         sig (* (moog-ff sig (x-line (* freq 150) (* freq 30) 0.1) 0.1) amp)
         ]
-    (out [0 1] sig)
+    (out out-bus [sig sig])
    )
   )
 
-(defsynth wire-bass [coef 0.54 amp 1 dur 3 freq 100]
+(defsynth wire-bass [coef 0.54 amp 1 dur 3 freq 100 out-bus 0]
   (let [decay (/ 1 freq)
         sig (pluck:ar (* (pink-noise) 0.1) 1 decay decay dur coef)
         sig (* sig (env-gen:kr (perc (* 0.001 dur) (* 0.999 dur)) :action FREE) amp)]
-    (out:ar [0 1] sig)
+    (out:ar out-bus [sig sig])
     )
   )
 
 
-
-
-(defsynth bass-synth [freq 200 attack 0.1 amp 1 release 1 detune 3 bwr 1]
+(defsynth bass-synth [freq 200 attack 0.1 amp 1 release 1 detune 3 bwr 1 out-bus 0]
   (let [freq-v (+
                 (lin-exp (lf-noise0:kr 2) -1 1 0.1 detune)
                   freq)
@@ -371,18 +371,18 @@
         sig (+ sig sig2)
         sig (* sig amp env)
         ]
-    (out:ar 0 sig)
+    (out:ar out-bus [sig sig])
     )
   )
 
-
-(defsynth bing [note 72 attack 0.02 decay  0.3 amp 1]
+(defsynth bing [note 72 attack 0.02 decay  0.3 amp 1 out-bus 0]
   (let [snd (sin-osc (midicps note))
-        env (env-gen (perc attack decay) :action FREE)]
-    (out [0 1] (* 0.8 env snd amp))))
+        env (env-gen (perc attack decay) :action FREE)
+        snd (* 0.8 env snd amp)]
+    (out out-bus [snd snd])))
 
 
-(defsynth chicago-pad [freq 440 cutoff 500 amp 1 dur 10]
+(defsynth chicago-pad [freq 440 cutoff 500 amp 1 dur 10 out-bus 0]
   (let [freq (+ freq (sin-osc:kr 0.1) 20)
         freqs (map #(* freq %) [(/ 3 2) (/ 6 5) 1])
         snd (mix (* 0.3 (saw freqs)))
@@ -393,19 +393,19 @@
         snd (* snd (env-gen:kr (adsr (* 0.1 dur) (* 0.1 dur) (* 0.6 dur) (* 0.2 dur)) :action 2))
         snd (* amp (allpass-c snd 0.5 0.05 0.3))
         ]
-    (out [0 1] snd)
+    (out out-bus [snd snd])
     )
   )
 
 
-(defsynth clang [freq 100 amp 1 attack 0.1 decay 1 reps 10]
+(defsynth clang [freq 100 amp 1 attack 0.1 decay 1 reps 10 out-bus 0]
   (let [sig (ringz (impulse:ar reps) [200 400 234 889] 0.7)
         sig (sin (sum sig))
         sig (g-verb sig 5 2 0.7)
         env (env-gen:kr (perc attack decay) :action FREE)
         sig (* sig env)
         ]
-    (out:ar [0 1] sig)
+    (out:ar out-bus [sig sig])
     )
   )
 
@@ -429,25 +429,25 @@
 ;;   )
 
 
-(defsynth drone-noise [freq 440 amp 1]
+(defsynth drone-noise [freq 440 amp 1 out-bus 0]
   (let [freqs (map #(* freq %) [2 4 1])
         sig (klank [freqs (repeat (count freqs) (/ 1 (count freqs)))] (pink-noise))
         sig (bpf (tanh sig) freq)
         sig (* sig 0.5 amp)
         ]
-    (out:ar [0 1] sig)
+    (out:ar out-bus [sig sig])
     )
   )
 
 
-(defsynth wobble-drone [freq 100 wobble 2 amp 1]
+(defsynth wobble-drone [freq 100 wobble 2 amp 1 out-bus 0]
   (let [mod-f (/ freq 2)
         idx (* 10 (sin-osc wobble))
         sig (pm-osc freq mod-f idx)
                                         ;sig2 (var-saw freq :width (lin-lin (lf-noise0 3) -1 1 0 1))
         sig2 (lf-tri freq)
         sig (+ (* amp sig ) (* 0.4 sig2))]
-    (out:ar [0 1] sig)
+    (out:ar out-bus [sig sig])
     )
   )
 ;; (def w (wobble-drone :amp 0.4 :wobble 10))
@@ -467,7 +467,7 @@
 ;;     )
 ;;   )
 
-(defsynth rise-pad [freq 440 t 3 attack 0.5 amp 1 detune 0.1 rq 0.5]
+(defsynth rise-pad [freq 440 t 3 attack 0.5 amp 1 detune 0.1 rq 0.5 out-bus 0]
   (let [dur (- 1 attack)
         [a d s r] [(* attack t) 0 (* 0.3 dur t) (* 0.7 dur t)]
         env (env-gen (adsr-ng :attack a :sustain s :decay d :release r) :action 2)
@@ -475,7 +475,7 @@
         sig  (blip freq 3)
         sig (* (bpf sig freq rq) 0.4)
         sig (* sig env amp)]
-    (out:ar [0 1] sig)
+    (out:ar out-bus [sig sig])
     )
   )
 
@@ -571,24 +571,24 @@
 ;;   )
 
 
-(defsynth horn [freq 440]
+(defsynth horn [freq 440 out-bus 0]
   (let [sin (klang [[freq (/ freq 2) (* freq (/ 3 5))] [0.6 0.3 0.1]] )
         s-aw (* (saw freq) 0.1)
         p (* (pulse freq (lin-lin (lf-noise0:kr 10) -1 1 0.5 1)) 0.1)
         sig (mix [sin s-aw])
         sig (free-verb sig 0.3 0.7 0.3)
         ]
-    (out:ar [0 1] sig)
+    (out:ar out-bus [sig sig])
     )
   )
 
 
-(defsynth bass2 [atk 0.001 decay 0.6 amp 1 freq 80 cutoff 2000 cutoff2 2000]
+(defsynth bass2 [atk 0.001 decay 0.6 amp 1 freq 80 cutoff 2000 cutoff2 2000 out-bus 0]
   (let [sig (* (decay2:ar (impulse:ar (/ atk 2)) atk decay)
                (mix (pulse:ar [freq (+ freq 1)] 0.3)) amp)
         sig (moog-ff sig (x-line:kr cutoff cutoff2 atk) 3)
         sig (* sig (env-gen (perc atk decay) :action 2))]
-    (out:ar [0 1] sig)
+    (out:ar out-bus [sig sig])
     )
   )
 
@@ -635,18 +635,18 @@
            ))))
 
 
-(definst dull-bell [freq 220 dur 1.0 amp 1.0]
+(defsynth dull-bell [freq 220 dur 1.0 amp 1.0 out-bus 0]
   (let [snd (* amp (bell-partials freq dur dull-partials))]
     (detect-silence snd :action FREE)
-    snd))
+    (out:ar out-bus [snd snd])))
 
-(definst pretty-bell [note 60 dur 1.0 mul 1.0]
+(defsynth pretty-bell [note 60 dur 1.0 mul 1.0 out-bus 0]
   (let [
         freq (midicps note)
         snd (* mul (bell-partials freq dur partials) (env-gen (perc 0.01 1) :action FREE))
         ]
     ;(detect-silence snd :action FREE)
-    snd))
+    (out:ar out-bus [snd snd])))
 
 (defsynth risset [pan 0 freq 400 amp 0.1 dur 2 atk 0.01]
   (let [amps [1 0.67 1 1.8 2.67 1.67 1.46 1.33 1.33 1 1.33]
@@ -657,8 +657,10 @@
                         (let [env (env-gen (perc 0.005 (* dur du) a -4.5))]
                           (* amp env (sin-osc:ar (* freq (+ de f))))))
                       amps durs frqs dets))
-        src (* src (env-gen (perc (* atk dur) (* (- 1 atk) dur)) :action FREE))]
-    (out:ar [0 1] (pan2 src pan))
+        src (* src (env-gen (perc (* atk dur) (* (- 1 atk) dur)) :action FREE))
+        out-bus 0
+        snd (pan2 src pan)]
+    (out:ar out-bus [snd snd])
     )
   )
 (defsynth o-kick [out-bus 0 amp 1]
@@ -758,7 +760,7 @@
       )
   )
 
-(defsynth b-snr [note 113 dur 0.3 amp 1 depth 2 noise 1]
+(defsynth b-snr [note 113 dur 0.3 amp 1 depth 2 noise 1 out-bus 0]
   (let [f (+ (mod note 12) 108)
         fenv (midicps (env-gen
                        (envelope [f (/ f 2) (/ f 3) (/ f 4)]
@@ -771,17 +773,17 @@
         osc (hpf:ar osc fenv)
         osc (mix:ar [osc click])
         osc (* osc aenv amp)]
-    (out:ar 0 [osc osc])
+    (out:ar out-bus [osc osc])
     )
   )
 
-(defsynth r-kick [amp 1 dur 0.3]
+(defsynth r-kick [amp 1 dur 0.3 out-bus 0]
   (let [fenv (midicps (env-gen (envelope [100 50 40 20] [(* dur 0.1) (* dur 0.1) (* dur 0.8)] [-4 -5 -4])))
         sig (sync-saw:ar fenv (* fenv (x-line:kr 1 0.5 dur)))
         env (env-gen (envelope [0 1 0.6 0] [(* dur 0.1) (* dur 0.2) (* dur 0.7)]) :action FREE)
         sig (* sig env)
         sig (lpf:ar sig (* fenv (x-line:kr 4 8 dur)))]
-    (out:ar 0 [sig sig])
+    (out:ar out-bus [sig sig])
     )
   )
 
@@ -798,7 +800,7 @@
     )
   )
 
-(defsynth p-saw [freq 400 dur 1.5 atk 0.4 max-freq 6 ]
+(defsynth p-saw [freq 400 dur 1.5 atk 0.4 max-freq 6 out-bus 0]
   (let [release (- 1 atk)
         sig (saw:ar freq)
         sig2 (* 0.2 (pulse:ar (* freq (midiratio -4)) (lin-exp (lf-noise1:kr 10) -1 1 0.2 0.9)))
@@ -806,11 +808,11 @@
         sig (moog-ff:ar sig (x-line:ar freq (* freq max-freq)))
         env (env-gen:kr (envelope [0 1 0.7 0] [(* dur atk) (* dur 0.4 release) (* dur release 0.6)]) :action FREE)
         sig (* sig env)]
-   (out:ar 0 [sig sig])
+   (out:ar out-bus [sig sig])
     )
   )
 
-(defsynth g-kick [amp 1]
+(defsynth g-kick [amp 1 out-bus 0]
   (let [snd (sin-osc:ar (* (env-gen:ar (envelope [1000 69 60] [0.015 0.1] :exponential)) (midiratio [-0.1 0 0.1])))
         snd (mix:ar snd)
         snd (tanh (* snd 10))
@@ -820,6 +822,14 @@
         snd (rlpf:ar snd 8000 0.7)
         snd (* snd (env-gen:ar (envelope [0 1 0.7 0.7 0] [0.001 0.01 0.3 0.02]) :action FREE))
         snd (clip:ar (* snd 0.6) -1 1)]
-    (out:ar 0 [snd snd])
+    (out:ar out-bus [snd snd])
+    )
+  )
+
+(defsynth pm [freq 400 dur 4 out-bus 0]
+  (let [o (pm-osc freq :pm-index (line:kr 0 4 dur) :mod-freq (line:kr freq (* freq 4) dur))
+        env (env-gen:kr (envelope [0 1 0.7 0] [(* dur 0.4) (* dur 0.2) (* dur 0.4)]) :action FREE)
+        o (* o env)]
+    (out:ar out-bus [o o])
     )
   )

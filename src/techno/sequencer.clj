@@ -14,12 +14,29 @@
 (defonce ^:private pattern-counters (atom {}))
 (defonce ^:private sequencer-data (atom {}))
 (defonce ^:private pattern-groups (atom {}))
+(defonce ^:private pattern-busses (atom {}))
 (defonce ^:private pattern-fx (atom {}))
 (defonce ^:private midi-clip (atom {}))
+(defonce ^:private  sc-lang (atom (osc-client "127.0.0.1" 57120)))
+(defonce ^:private  sc-server (atom (osc-server 4420)))
+(defonce ^:private  bus-pool (atom []))
+(defonce ^:private  bus-pool-using (atom []))
+(defonce  sc-resp (atom nil))
 (defonce t-source-g (group "trigger sources"))
 (defonce t-synth-g (group "trigger generators" :after t-source-g))
 
 (declare sync-s)
+
+(osc-handle
+ @sc-server "/response"
+ (fn [m]
+   (println m)
+   (reset! sc-resp m)
+   (let [o (read-string (first (:args m)))]
+     (when (and (map? o) (contains? o :busses))
+       (reset! bus-pool (:busses o)))
+     )
+   ))
 
 (defn i-step [offset]
   (if (= (mod offset (int offset)) 0.0) (int offset) offset)
@@ -299,8 +316,10 @@
   "Function to play instruments on the given beat"
   ([cur-beat pattern] (play cur-beat pattern cur-beat nil))
   ([cur-beat pattern orig-beat] (play cur-beat pattern orig-beat nil))
-  ([cur-beat pattern orig-beat p-group]
+  ([cur-beat pattern orig-beat p-group] (play cur-beat pattern orig-beat nil nil))
+  ([cur-beat pattern orig-beat p-group p-bus]
    (let [data (get-val-if-ref (pattern :data))
+         p-bus (if (map? p-bus) (:id p-bus) p-bus)
          beat-actions
          (cond
            (fn? data) (data cur-beat)
@@ -314,6 +333,7 @@
      ;;            " for beat " cur-beat " raw-beat" orig-beat))
      (loop [actions (partition 2 beat-actions) ret false]
        (let [[instrument args] (first actions)
+             args (if (not (nil? p-bus)) (concat args [:out-bus p-bus]))
              args (if (not (nil? p-group)) (concat [[:head p-group]] args))
              p (if (not (nil? instrument))
                  (if (and (or (= (type instrument) overtone.studio.inst.Inst)
@@ -330,6 +350,7 @@
                          ))
                      )
                    (do
+                     ;; (println (:name instrument) args)
                      (apply instrument args)
                        false))
                  )
@@ -388,7 +409,7 @@
                           (if (and wrap (> beat size))
                             (wrap-beat beat size 1)
                             beat))
-              new-p (play final-beat p orig-beat (get @pattern-groups k))]
+              new-p (play final-beat p orig-beat (get @pattern-groups k) (get-in @pattern-fx [k :bus]))]
           (swap! sequencer-data
                  (fn [s] (assoc-in s [id :beat] final-beat)))
           (if (map? new-p)
@@ -521,6 +542,9 @@
          (when (not (nil? (get-in @pattern-fx [pattern :mixer])))
            (ctl (get-in @pattern-fx [pattern :mixer]) :start-release 1)
            )
+         (when (not (nil? (get-in @pattern-fx [pattern :bus])))
+           (return-bus (get-in @pattern-fx [pattern :bus]))
+           )
          (swap! pattern-groups
               dissoc pattern)
          )
@@ -530,16 +554,56 @@
    )
   )
 
+(defn eval-sc [code]
+  (osc-send @sc-lang "/evalCode" code)
+  )
+
+(defn alloc-audio-bus []
+  (dosync
+   (reset! sc-resp {:args nil})
+   (eval-sc "b = Bus.audio(s, 2);b.index;")
+   @sc-resp
+   )
+  )
+
+(defn get-bus []
+  (let [b (first @bus-pool)]
+    (if (not (nil? b))
+      (do
+        (swap! bus-pool rest)
+        (swap! bus-pool-using conj b)
+        b)))
+  )
+
+(defn return-bus [bus]
+  (swap! bus-pool conj bus)
+  (swap! bus-pool-using #(filter (fn [i] (not (= i bus))) %))
+  )
+
+(defn free-audio-bus [bus]
+  (dosync
+   (eval-sc (str "b = Bus.new('audio', " bus ", 2);b.free;"))
+   )
+  )
+
+(defn bulk-alloc-busses []
+  (dosync
+   (eval-sc (str "~busses=11.collect{b = Bus.audio(s, 2); b.index;};\"{:busses \" + ~busses.asString + \"}\"; "))
+   )
+  )
+
+(defn reset-busses []
+  (eval-sc "(4..1000).do{|i| Bus.new('audio', i, 2, s).free};")
+  )
+
+(when (nil? (first @bus-pool))
+  (bulk-alloc-busses))
+
 (defsynth p-mixer [audio-bus 10 out-bus 0 volume 1 start-release 0]
-      (let [source    (in out-bus 2)
-            source    (* volume source)
-            ;not-safe? (trig1 (a2k (> source 1)) safe-recovery-time)
-            ;safe-snd  (limiter source 0.99 0.001)
-            ]
+      (let [source    (in:ar audio-bus 2)
+            source    (* volume source)]
         (detect-silence:ar (select:ar start-release [(dc:ar 1) source]) :action 14)
-        ;; (replace-out audio-bus source)
-        ;; (replace-out:ar out-bus (silent:ar 2))
-        (replace-out out-bus source)
+        (out:ar 0 source)
         ))
 
 (defn add-p
@@ -564,9 +628,12 @@
                        )))
        (when (not (contains? @pattern-groups key))
          (let [p-group (group)
-               mixer (p-mixer [:tail p-group] (audio-bus 2))]
+               p-bus (get-bus)
+               mixer (p-mixer [:tail p-group] p-bus)]
            (swap! pattern-groups assoc key p-group)
-           (swap! pattern-fx assoc-in [key :mixer] mixer)
+           (when (not (nil? p-bus))
+             (swap! pattern-fx assoc-in [key :mixer] mixer)
+             (swap! pattern-fx assoc-in [key :bus] p-bus))
            )
          )
        (swap! pattern-counters
@@ -1334,3 +1401,14 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
      (map #(+ % bias) [0 attack-level level level 0])
      [attack decay sustain release]
      curve)))
+;; (
+;; f = { |msg, time, replyAddr, recvPort|
+;; 	b = NetAddr.new("127.0.0.1", 4420);
+;;     if(msg[0] == '/evalCode') {
+;; 		b.sendMsg("/response", msg[1].asString.interpretPrint);
+;;     }
+;; };
+;; );
+
+;; thisProcess.addOSCRecvFunc(f);
+;; thisProcess.removeOSCRecvFunc(f);
