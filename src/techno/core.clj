@@ -17,9 +17,26 @@
 
 (comment
   (if (or (nil? player) (not (node-active? player)))
+    (let [bus (control-bus)
+          active (atom false)]
+      (on-event
+       [:midi nil]
+       (fn [m]
+           (when (.contains (name (:status m)) "start")
+             (reset! active true))
+           (when (and (= (:status m) :timing-clock))
+             (control-bus-set! bus 1)
+             )
+           )
+       :midi-clock)
+      (def player (s/midi-s bus)))
+    )
+
+  (if (or (nil? player) (not (node-active? player)))
       (def player (s/get-s
                    (/ 80 60)
                    )))
+  (s/reset-s core/player)
 
   (on-event [:midi :note-on]
             (fn [m]
@@ -39,18 +56,19 @@
   (s/set-st player (double (/ 1 8)
                            ))
   (s/set-st player 0.25)
-  (r/ring player 100 10 50)
+  (r/ring player 200 5 100)
+  (s/reset-s player)
   (techno.grid/mk-grid
    6 6 core/player
-   (into {}
+   (into []
          (mapcat
           #(vector [(-> %1 str keyword) [%2 []]])
           (concat (range 0 10)
                   (map name [:q :w :e :r :t :y :u :i :o :p :a :s :d :f :g :h :j :k :l :z :x :c :v :b :n :m]))
           (concat
            [o-kick o-snr b-kick b-snr r-kick dirty-kick o-hat]
-           (flatten (map vals (vals (group-samples (drum-kits :Kit15-Electro)))))
            (flatten (map vals (vals (group-samples (drum-kits :KurzweilKit04)))))
+           (flatten (map vals (vals (group-samples (drum-kits :Kit4-Electro)))))
            ))))
 
   (sweet :dur 0.2)
@@ -66,6 +84,7 @@
     (ctl 14 :volume v)
     (ctl 15 :volume v))
   (remove-event-handler ::server-audio-clipping-warner-vol)
+  (remove-event-handler :midi-clock)
   )
 
 (defn get-patterns []

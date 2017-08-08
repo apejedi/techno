@@ -154,7 +154,7 @@
     )
   )
 
-(defsynth dub-kick
+(defsynth db-kick
   [freq 80 amp 1 out-bus 0]
   (let [cutoff-env (perc 0.001 1 freq -20)
         amp-env (perc 0.001 1 1 -8)
@@ -164,7 +164,7 @@
         mixed (* (+ noiz snd) (env-gen amp-env :action FREE) 2 amp)]
     (out:ar out-bus [mixed mixed])
     ))
-(defsynth dance-kick
+(defsynth dnc-kick
   [freq  50.24
    attack  0.0001
    decay   0.484
@@ -258,43 +258,43 @@
 
 
 
-(defsynth kick [freq      80
-                amp       0.8
-                mod-freq  5
-                mod-index 5
-                sustain   0.4
-                noise     0.025 :min 0.001 :max 1.0 :step 0.001
-                out-bus 0]
-  (let [pitch-contour (line:kr (* 2 freq) freq 0.02)
-        drum (lpf (sin-osc pitch-contour (sin-osc mod-freq (/ mod-index 1.3))) 1000)
-        drum-env (env-gen (perc 0.005 sustain) :action FREE)
-        hit (hpf (* noise (white-noise)) 500)
-        hit (lpf hit (line 6000 500 0.03))
-        hit-env (env-gen (perc))
-        snd (* amp (+ (* drum drum-env) (* hit hit-env)))]
-    (out:ar out-bus [snd snd]))
-  )
+;; (defsynth kick [freq      80
+;;                 amp       0.8
+;;                 mod-freq  5
+;;                 mod-index 5
+;;                 sustain   0.4
+;;                 noise     0.025 :min 0.001 :max 1.0 :step 0.001
+;;                 out-bus 0]
+;;   (let [pitch-contour (line:kr (* 2 freq) freq 0.02)
+;;         drum (lpf (sin-osc pitch-contour (sin-osc mod-freq (/ mod-index 1.3))) 1000)
+;;         drum-env (env-gen (perc 0.005 sustain) :action FREE)
+;;         hit (hpf (* noise (white-noise)) 500)
+;;         hit (lpf hit (line 6000 500 0.03))
+;;         hit-env (env-gen (perc))
+;;         snd (* amp (+ (* drum drum-env) (* hit hit-env)))]
+;;     (out:ar out-bus [snd snd]))
+;;   )
 
-(defsynth snare [freq  405 amp  0.3
-                sustain 0.1
-                decay  0.1
-                drum-amp 0.25
-                crackle-amp 40
-                tightness 1000
-                out-bus 0]
-  (let [drum-env  (env-gen (perc 0.005 sustain) :action FREE)
-        drum-osc  (mix (* drum-env (sin-osc [freq (* freq 0.53)])))
-        drum-s3   (* drum-env (pm-osc (saw (* freq 0.85)) 184 (/ 0.5 1.3)))
-        drum      (* drum-amp (+ drum-s3 drum-osc))
-        noise     (* 0.1 (lf-noise0 20000))
-        noise-env (env-gen (perc 0.005 sustain) :action FREE)
-        filtered  (* 0.5 (brf noise 8000 0.1))
-        filtered  (* 0.5 (brf filtered 5000 0.1))
-        filtered  (* 0.5 (brf filtered 3600 0.1))
-        filtered  (* (brf filtered 2000 0.0001) noise-env)
-        resonance (* (resonz filtered tightness) crackle-amp)
-        sig (* amp (+ drum resonance))]
-    (out:ar out-bus [sig sig])))
+;; (defsynth snare [freq  405 amp  0.3
+;;                 sustain 0.1
+;;                 decay  0.1
+;;                 drum-amp 0.25
+;;                 crackle-amp 40
+;;                 tightness 1000
+;;                 out-bus 0]
+;;   (let [drum-env  (env-gen (perc 0.005 sustain) :action FREE)
+;;         drum-osc  (mix (* drum-env (sin-osc [freq (* freq 0.53)])))
+;;         drum-s3   (* drum-env (pm-osc (saw (* freq 0.85)) 184 (/ 0.5 1.3)))
+;;         drum      (* drum-amp (+ drum-s3 drum-osc))
+;;         noise     (* 0.1 (lf-noise0 20000))
+;;         noise-env (env-gen (perc 0.005 sustain) :action FREE)
+;;         filtered  (* 0.5 (brf noise 8000 0.1))
+;;         filtered  (* 0.5 (brf filtered 5000 0.1))
+;;         filtered  (* 0.5 (brf filtered 3600 0.1))
+;;         filtered  (* (brf filtered 2000 0.0001) noise-env)
+;;         resonance (* (resonz filtered tightness) crackle-amp)
+;;         sig (* amp (+ drum resonance))]
+;;     (out:ar out-bus [sig sig])))
 
 
 

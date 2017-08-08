@@ -181,7 +181,7 @@
    :kicks (let [k "Kick-01" s "Snr03"]
             (build-from-kits
              [:Kit16-Electro]
-             [[k [dub-kick [100 :amp 0.6]]] :3]
+             [[k [db-kick [100 :amp 0.6]]] :3]
              0.25))
    :sdst (let [a [:amp 0.5]]
            (drum-p
@@ -441,7 +441,7 @@
          0.25 0 [:amp 0.7 :t 1.5]))
    :b (drum-p
        [:Kit3-Acoustic]
-       [:k :3 [kick [:sustain 1 :noise 1 :amp 0.5] :sdst] :3]
+       [:k :3 [o-kick [:sustain 1 :noise 1 :amp 0.5] :sdst] :3]
        0.25)
    :c (s/phrase-p
        overpad
@@ -1104,3 +1104,23 @@
            ])
 
    })
+
+(def exp4
+{:motif1 (s/phrase-p
+          klang-test
+          [:C4 :5 :G4 :9 :C5 :5 :Bb4 :5 :F4 :3 :G4 :3]
+          0.25 0 [:atk 0.01 :out-bus 0.0])
+ :harmony1 (s/phrase-p
+            bpfsaw2
+            [:Bb5 :Bb5 :6 :Bb5 :1 :Bb5 :Bb5 :3 :Bb5 :1 :Bb5 :Bb5 :1 :Bb5 :1 :Bb5 :1 :Bb5 :1 :Bb5 :Bb5 :1 :Bb5 :1 :Bb5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :1 :A5 :A5 :1 :A5 :1 :A5 :3 :G5 :1 :G5 :1 :G5 :G5 :1 :G5 :1 :G5 :1 :G5 :1 :G5 :1 :G5 :1 :G5 :1 :G5 :1 :G5 :1 :G5 :1 :G5 :1 :G5 :1 :G5 :1 :G5 :1 :G5 :14]
+            0.25 0 [])
+ :grid (s/build-map-p
+        [:2
+         [ (get-in drum-kits [:tabla :56145__msarkar__dhin.aif]) []   ] :1
+         [ (get-in drum-kits [:tabla :56149__msarkar__re.aif]) []   ] [ (get-in drum-kits [:tabla :56153__msarkar__tu.aif]) []   ] [ (get-in drum-kits [:tabla :56144__msarkar__dha.aif]) []   ] :1
+         [ (get-in drum-kits [:tabla :56145__msarkar__dhin.aif]) []   ] :5
+         [ (get-in drum-kits [:tabla :56148__msarkar__na.aif]) []   ] :1
+
+         ])
+
+})

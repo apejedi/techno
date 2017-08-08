@@ -225,7 +225,7 @@
        (fn [_]
          (build-from-kits
           [:Kit3-Acoustic]
-          {1 [[dance-kick []]]
+          {1 [[dnc-kick []]]
            1.5 ["SdSt-03"]
            2 ["Snr-07"]
            2.25 ["SdSt-03" "Snr-03"]

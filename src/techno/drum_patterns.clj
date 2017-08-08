@@ -187,20 +187,6 @@
 
 
 
-(def boc-beat
-  (build-from-kits
-   [:Kit3-Acoustic :Kit10-Vinyl]
-   {1 ["Tom-01" [dub-kick [200]]]
-    1.75 ["Tom-04" [dub-kick [150]]]
-    2 ["Tom-05" [dub-kick [100]]]
-    2.25 ["Tom-04" [dub-kick [200]] "Rim-01"]
-    3 ["Tom-01" [dub-kick [200]]]
-    3.5 ["Tom-04" [dub-kick [150]]]
-    4 ["Tom-05" "Snr-04" [dub-kick []] "SdSt-07"]
-    4.75 []
-    }
-   )
-  )
 
 (def t (atom nil))
 (swap! t
@@ -219,15 +205,6 @@
              base 0.25))
          ))
 
-
-(def lazer (let [d [zap [3000 :amp 0.3 :dur 0.1] dub-kick [300 :amp 1.5]]
-                 base (s/build-map-p
-               [d :6 d :2 d :5])]
-             (s/m-phrase
-              {:refresh 0.7 :sputter 0.7 :sputter-amt 0.3}
-              base
-              0.25)
-             ))
 
 (defn test-drums [patterns play & [times kits speed]]
   (let [kits (if kits kits [:Kit3-Acoustic :Kit16-Electro :Kit10-Vinyl])

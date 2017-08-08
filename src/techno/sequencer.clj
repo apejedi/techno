@@ -27,6 +27,8 @@
 
 (declare sync-s)
 
+(declare return-bus)
+
 (osc-handle
  @sc-server "/response"
  (fn [m]
@@ -333,8 +335,8 @@
      ;;            " for beat " cur-beat " raw-beat" orig-beat))
      (loop [actions (partition 2 beat-actions) ret false]
        (let [[instrument args] (first actions)
-             args (if (not (nil? p-bus)) (concat args [:out-bus p-bus]))
-             args (if (not (nil? p-group)) (concat [[:head p-group]] args))
+             args (if (not (nil? p-bus)) (concat args [:out-bus p-bus]) args)
+             args (if (not (nil? p-group)) (concat [[:head p-group]] args) args)
              p (if (not (nil? instrument))
                  (if (and (or (= (type instrument) overtone.studio.inst.Inst)
                               (= (type instrument) overtone.sc.synth.Synth))
@@ -431,9 +433,16 @@
     )
   )
 
-(defsynth trigger-source [out-bus 3 clock-speed 2 step 0.25]
-  (out:kr out-bus (impulse:kr
-                   (/ clock-speed step)
+;; (defsynth trigger-source [out-bus 3 clock-speed 2 step 0.25]
+;;   (out:kr out-bus (impulse:kr
+;;                    (/ clock-speed step)
+;;                    ))
+;;   )
+
+(defsynth trigger-source [out-bus 3 clock-speed 2 step 0.25 reset-bus -1]
+  (out:kr out-bus (t-duty:kr
+                   (/ step clock-speed)
+                   (in-trig:kr reset-bus)
                    ))
   )
 
@@ -441,23 +450,16 @@
   (out:kr send-to (pulse-divider:kr (in-trig:kr receive-from) div 1))
   )
 
-(defsynth trigger-synth [listen-bus 3 uid 0 pattern-size 4 step 1 reset 0]
+(defsynth trigger-synth [listen-bus 3 uid 0 pattern-size 1.75 step 0.25 reset-bus -1]
   (let [trigger (in:kr listen-bus)
-        count   (stepper:kr trigger :min 1
+        count   (stepper:kr trigger (in-trig:kr reset-bus) :min 1
                             :max (+ 1 (/ (- pattern-size 1) step))
-                            :reset reset :resetval 0)]
+                            :resetval 1)]
     (send-trig:kr trigger uid count)
     )
   )
 
-(defsynth midi-trigger-synth [listen-bus 3 uid 0 pattern-size 4 step 0.25 reset 0]
-  (let [trigger (in-trig:kr listen-bus)
-        count   (stepper:kr trigger :min 1
-                            :max (+ 1 (/ (- pattern-size 1) step))
-                            :reset reset :resetval 0)]
-    (send-trig:kr trigger uid count)
-    )
-  )
+
 
 (defn- update-pattern-size [sequencer]
   (if (node-active? sequencer)
@@ -548,7 +550,8 @@
          (swap! pattern-groups
               dissoc pattern)
          )
-       (update-pattern-size sequencer)
+       (when (not (empty? (get patterns id {})))
+           (update-pattern-size sequencer))
        )
      )
    )
@@ -626,7 +629,7 @@
                               (merge {:data pattern
                                       :size (p-size pattern (get-st sequencer))} attrs))
                        )))
-       (when (not (contains? @pattern-groups key))
+       (when  (and (not (contains? @pattern-groups key)) (not (contains? attrs :no-group)))
          (let [p-group (group)
                p-bus (get-bus)
                mixer (p-mixer [:tail p-group] p-bus)]
@@ -678,6 +681,7 @@
      (doseq [k (keys (@patterns id))] (rm-p (in :node) k))
      (swap! patterns (fn [p] (dissoc p id)))
 
+     (free-bus (get-in @sequencer-data [id :reset-bus]))
      (do-if sequence-handler remove-event-handler)
      (swap! sequencer-handlers (fn [handlers]
                                  (dissoc handlers id)
@@ -702,10 +706,11 @@
 
 (defn build-sequencer
   ([source-synth bus] (build-sequencer source-synth bus 1 false))
-  ([source-synth bus step one-shot]
+  ([source-synth bus step one-shot] (build-sequencer source-synth bus 1 false -1))
+  ([source-synth bus step one-shot reset-bus]
    (let [uid (trig-id)
          listen-to (if one-shot 3 bus)
-         synth (trigger-synth [:tail t-synth-g] listen-to uid 4 step)
+         synth (trigger-synth [:tail t-synth-g] listen-to uid 1.75 step reset-bus)
          key (keyword (gensym "sequencer"))]
      (swap! trigger-buses (fn [buses]
                             (assoc buses (to-sc-id synth) bus)
@@ -715,6 +720,9 @@
                               ))
      (swap! sequencer-data (fn [data]
                               (assoc data (to-sc-id synth) {:uid uid})
+                             ))
+     (swap! sequencer-data (fn [data]
+                              (assoc data (to-sc-id synth) {:reset-bus reset-bus})
                               ))
      (on-trigger synth uid
                  (fn [beat]
@@ -732,12 +740,14 @@
   ([speed] (get-s speed 0.25 false))
   ([speed step] (get-s speed step false))
   ([clock-speed step one-shot]
-   (let [trigger-bus (control-bus)]
+   (let [trigger-bus (control-bus)
+         reset-bus (control-bus)]
      (build-sequencer
-      (trigger-source [:tail t-source-g] trigger-bus clock-speed step)
+      (trigger-source [:tail t-source-g] trigger-bus clock-speed step reset-bus)
       trigger-bus
       step
-      one-shot)))
+      one-shot
+      reset-bus)))
   )
 
 (defn midi-s [midi-bus]
@@ -791,6 +801,12 @@
       (ctl ids :pattern-size size))
     (ctl ids :reset 0)
     (ctl ids :reset 1)
+    )
+  )
+
+(defn reset-s [player]
+  (let [bus (get-in @sequencer-data [(to-sc-id player) :reset-bus])]
+    (control-bus-set! bus 1)
     )
   )
 
@@ -1405,7 +1421,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
 ;; f = { |msg, time, replyAddr, recvPort|
 ;; 	b = NetAddr.new("127.0.0.1", 4420);
 ;;     if(msg[0] == '/evalCode') {
-;; 		b.sendMsg("/response", msg[1].asString.interpretPrint);
+;; 		b.sendMsg("/response", msg[1].asString.interpretPrint);(c
 ;;     }
 ;; };
 ;; );

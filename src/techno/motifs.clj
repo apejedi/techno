@@ -683,3 +683,69 @@
 ;;         (map midi->hz notes)
 ;;         [:coef 0.01 :t 10 :attack 8 :release 5 :amp 0.1]))
 ;;      )))
+
+(let [state (atom {})
+      bpm 120
+      step 0.25
+      fps 24
+      n-len (int (/ (* fps 60 step) bpm))
+      fired (atom false)
+      ;; f-map (loop [m {} offsets (range 0 24)]
+      ;;         (if (> (count offsets) 0)
+      ;;           (recur (assoc m offset)
+      ;;                  (rest offsets)
+      ;;                  )))
+      ]
+    (on-event
+     [:midi nil]
+     (fn [m]
+       (when (contains? m :msg)
+         (let [type (bit-shift-right (bit-and (second (.getMessage (:msg m))) 2r11110000) 4)
+               val (bit-and (second (.getMessage (:msg m))) 2r00001111)]
+           (swap! state assoc type val)
+           (when (= type 3)
+             (let [frame (bit-or (bit-shift-left (get @state 1) 4) (get @state 0))
+                   second (bit-or (bit-shift-left (get @state 3) 4) (get @state 2))]
+               ;; (when (and (>= frame 0) (< frame 4) (not @fired))
+               ;;   (o-kick)
+               ;;   (reset! fired true)
+               ;;   )
+               ;; (when (and (>= frame 4) (< frame 10) @fired)
+               ;;   (reset! fired false)
+               ;;   )
+               ;; (when (and (>= frame 12) (< frame 15) (not @fired))
+               ;;   (o-kick)
+               ;;   (reset! fired true)
+               ;;   )
+               ;; (when (and (> frame 15) (< frame 24) @fired)
+               ;;   (reset! fired false)
+               ;;   )
+                                        ;(println second frame)
+               (println "frame " frame ;(bit-or (bit-shift-left (get @state 1) 4) (get @state 0))
+                        "second " second ;(bit-or (bit-shift-left (get @state 3) 4) (get @state 2))
+                        )
+               )
+             )
+           )
+         )
+       )
+     :midi-clock))
+
+                                        ;(remove-event-handler :midi-clock)
+
+(let [started (atom false)
+      counter (atom 0)
+      beat (atom 1)]
+    (on-event
+     [:midi nil]
+     (fn [m]
+       ;(println (:status m) " " (first (.getMessage (:msg m))) " " (second (.getMessage (:msg m))))
+       (when (and (not @started) (= (:status m) :start))
+         (reset-s core/player)
+         (reset! started true)
+         (println "syncing"))
+       (when (= (:status m) :stop)
+         (println "stopping")
+         (reset! started false))
+       )
+     :midi-clock))

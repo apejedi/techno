@@ -190,7 +190,8 @@
                              [[o a]]))
                          (range 0 (* (/ 1 step) bars))))
                       (range 0 rows)))
-        uid (get (s/get-sequencer-data sequencer) :uid)]
+        uid (get (s/get-sequencer-data sequencer) :uid)
+        actions (if (not (map? actions)) (into {} actions) actions)]
     (swap! state merge {:coord-map coords :rows rows :bars bars :step step :sequencer sequencer :size (* bars rows (/ 1 step)) :actions actions})
     (q/defsketch grid
       :setup setup
