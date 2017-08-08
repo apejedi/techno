@@ -718,12 +718,8 @@
      (swap! trigger-sources (fn [sources]
                               (assoc sources (to-sc-id synth) source-synth)
                               ))
-     (swap! sequencer-data (fn [data]
-                              (assoc data (to-sc-id synth) {:uid uid})
-                             ))
-     (swap! sequencer-data (fn [data]
-                              (assoc data (to-sc-id synth) {:reset-bus reset-bus})
-                              ))
+     (swap! sequencer-data assoc-in [(to-sc-id synth) :uid] uid)
+     (swap! sequencer-data assoc-in [(to-sc-id synth) :reset-bus] reset-bus)
      (on-trigger synth uid
                  (fn [beat]
                    (handle-beat-trigger synth beat (node-get-control source-synth :step) one-shot)

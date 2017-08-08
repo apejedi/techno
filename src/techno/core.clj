@@ -56,7 +56,7 @@
   (s/set-st player (double (/ 1 8)
                            ))
   (s/set-st player 0.25)
-  (r/ring player 200 5 100)
+  (r/ring player 100 10 50)
   (s/reset-s player)
   (techno.grid/mk-grid
    6 6 core/player

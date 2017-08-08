@@ -456,7 +456,11 @@
             )
           (when (and (= 83 (q/key-code)) (.isControlDown key-event))
             (s/mod-p @sequencer new-pattern :size beat)
-            (s/stretch-p @sequencer new-pattern beat)
+            (s/add-p
+             @sequencer
+             (s/stretch-p (:data (s/get-p @sequencer new-pattern)) beat)
+             new-pattern)
+
             )
           (when (= :e key)
             (draw-action)
@@ -567,7 +571,8 @@
       )
     (on-latest-trigger
      player uid
-     draw-line :draw-line)
+     draw-line
+     :draw-line)
     ;; (on-event ::pattern-added
     ;;  draw-state ::draw-state)
     )
