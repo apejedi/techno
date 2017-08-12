@@ -1124,3 +1124,19 @@
          ])
 
 })
+
+(def ambient3
+  {:motif1 (s/phrase-p
+            bass2
+            [:Ab5 :1 :E5 :Ab5 :F#5 :1 :Ab5 :1 :C#6 :1 :Ab5 :1 :F#5 :1 :Ab5 :3]
+            0.25 0 [:decay 4])
+   :motif2 (s/phrase-p
+            klang-test
+            [[:E5 :B4 :Ab5] :3 [:B4 :E5 :Ab5] :3 [:B4 :Ab5 :E5] :4 [:E5 :Ab5 :B4] :10 [:A4 :F#5 :C#5] :7 [:A4 :F#5 :C#5] :8 [:B4 :Ab5] :E5 :4 [:B4 :Ab5 :E5] :4]
+            0.25 0 [:atk 0.01])
+   :harmony1 (s/phrase-p
+              rise-pad
+              [[:A2 :C#3 :E3 :Ab3] :8]
+              0.25 0 [:attack 1.5 :release 2])
+
+   })

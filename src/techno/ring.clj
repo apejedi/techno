@@ -387,6 +387,7 @@
               raw-size (+ 1 (/ (- size 1) step))
               state (q/state-atom)
               key (q/key-as-keyword)
+              old-beat (s/i-step (+ 1 (* slot step)))
               new (vector (+ circle (cond (= key :up) 1
                                           (= key :down) -1
                                           true 0))
@@ -407,14 +408,14 @@
               key-event @(:key-event (meta wheel))
               cur-action (get-cur-action)
               cur-body (get (s/get-p @sequencer pattern) :body {})]
-          ;; (let [g (.getGraphics wheel)
-          ;;           [circle slot] (q/state :cursor)]
-          ;;       (.beginDraw g)
-          ;;       (q/fill 0 0 0)
-          ;;       (q/rect 100 50 300 100)
-          ;;       (q/fill 255 255 255)
-          ;;       (q/text (str key (q/key-code)) 100 100)
-          ;;       (.endDraw g))
+          (let [g (.getGraphics wheel)
+                    [circle slot] (q/state :cursor)]
+                (.beginDraw g)
+                (q/fill 0 0 0)
+                (q/rect 100 50 300 100)
+                (q/fill 255 255 255)
+                (q/text (str beat " " old-beat) 100 100)
+                (.endDraw g))
           (when (or (= :left key) (= :right key) (= :up key) (= :down key) (= 10 (q/key-code)))
             (when (.isControlDown key-event)
               (eval-action "[]"))
@@ -433,12 +434,15 @@
                (s/mod-p @sequencer new-pattern :body
                         (assoc cur-body beat (get cur-body cur-beat)))))
             (when (and (or (= :left key) (= :right key)) (.isShiftDown key-event))
-              (s/add-p @sequencer
-                       (s/p-shift
+              (let [p (assoc
+                       (assoc
                         (:data (s/get-p @sequencer pattern))
-                        (cond (= :left key) -1
-                              (= :right key) 1))
-                       pattern)
+                        beat
+                        (get (:data (s/get-p @sequencer pattern)) old-beat))
+                       old-beat [])]
+                  (s/add-p @sequencer
+                           p
+                           pattern))
               (draw-state)
               )
             (when (and (not (nil? text-box)) (not (nil? pos-box)) (.isVisible text-box) (not (= 10 (q/key-code))))
@@ -448,8 +452,20 @@
               (.setText pos-box (str new-pattern " " beat))
               )
             (draw-cursor))
-          (when (and (= 120 (q/key-code)) (.isControlDown key-event))
+          (when (and (= 88 (q/key-code)) (.isControlDown key-event))
             (eval-action "[]")
+            )
+          (when (and (= 67 (q/key-code)) (.isControlDown key-event))
+            (swap! state assoc :copy (get (:data (s/get-p @sequencer new-pattern)) beat))
+            )
+          (when (and (= 86 (q/key-code)) (.isControlDown key-event))
+            (s/add-p @sequencer
+                     (assoc
+                      (:data (s/get-p @sequencer pattern))
+                      beat
+                      (q/state :copy))
+                     pattern)
+            (techno.synths/bing)
             )
           (when (and (= 82 (q/key-code)) (.isControlDown key-event))
             (draw-state)
