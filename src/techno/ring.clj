@@ -465,7 +465,6 @@
                       beat
                       (q/state :copy))
                      pattern)
-            (techno.synths/bing)
             )
           (when (and (= 82 (q/key-code)) (.isControlDown key-event))
             (draw-state)

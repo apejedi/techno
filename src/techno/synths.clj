@@ -1,9 +1,10 @@
 (ns techno.synths
   (:use [overtone.core]
         [overtone.inst.synth]
-        [techno.sequencer :only [adsr-ng]])
-
+        [techno.sequencer :only [adsr-ng]]
+        [techno.ugens])
   (:require [techno.sequencer :as s]))
+
 (defsynth sweet [note 60 dur 1 amp 1 vib 0.02 out-bus 0]
   (let [freq (midicps note)
         ratios [1 3/4 1/5 2/7 11/5 5/8]

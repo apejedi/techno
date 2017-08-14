@@ -997,7 +997,7 @@
           (s/phrase-p
            bpfsaw
            (flatten (concat (repeat 10 a) (repeat 6 b) (repeat 16 c)))
-           0.25 0 [:dur 0.7 :atk 0.01 :rq 1]))
+           0.25 0 [:dur 0.7 :atk 0.1 :rq 0.6]))
    :harmony2 (s/phrase-p
               bpfsaw2
               [[:A5 :A5]
@@ -1007,13 +1007,10 @@
           [:Kit15-Electro]
           [:4 :cl1 :3] 0.25)
    :motif (let [a [:E4 :1 :C#5 :2 :C#5 :2 :C#5 :2 :C#5 :1 :C#5 :2]
-                b [:F#4 :1 :C#5 :2 :C#5 :2 :C#5 :2 :C#5 :1 :C#5 :2]
-                c [:Ab4 :1 :C#5 :2 :C#5 :2 :C#5 :2 :C#5 :1 :C#5 :2]
-                d [:B4 :1 :C#5 :2 :C#5 :2 :C#5 :2 :C#5 :1 :C#5 :2]]
+                b [:F#4 :1 :C#5 :2 :C#5 :2 :C#5 :2 :C#5 :1 :C#5 :2]]
             (s/phrase-p
              bass2
-             (flatten (concat (repeat 6 a) (repeat 6 b) (repeat 3 c) ;(repeat 3 d)
-                              ))
+             (flatten (concat (repeat 6 a) (repeat 6 b) ))
              0.25 0 [:decay 2.4 :amp 2.4 :cutoff 6362 :cutoff2 3362]))
    })
 
@@ -1059,7 +1056,7 @@
            [[ o-kick []   ] [ r-kick []   ] [ o-snr []   ] :1
             [ (get-in drum-kits [:Kit15-Electro :CYCdh_ElecK05-Clap01.wav]) []   ] :1
             [ dirty-kick []   ] :2
-            [ (get-in drum-kits [:Kit16-Electro :CYCdh_ElecK06-Snr01.wav]) []   ] [ (get-in drum-kits [:Kit15-Electro :CYCdh_ElecK05-Clap01.wav]) []   ] :1
+            [ (get-in drum-kits [:Kit16-Electro :CYCdh_ElecK06-Snr01.wav]) []   ] [ (get-in drum-kits [:Kit15-Electro :CYCdh_ElecK05-Clap01.wav]) []   ] :5
 
             ])
    :harmony1 (s/phrase-p
@@ -1095,13 +1092,14 @@
              0.25 0 [:cutoff 1062 :amp 0.5])
    :harmony2 (s/phrase-p
               rise-pad
-             [[:Ab5 :C#6] [:C#6 :Ab5] :1 [:Ab5 :C#6] :1 [:Ab5 :C#6] :9 [:Ab5 :Eb6] :Eb6 :Ab5 [:Eb6 :Ab5] :Ab5 :Eb6 :9 [:F#5 :Bb5] :1 :Bb5 :F#5 [:Bb5 :F#5] :9 [:C#6 :Ab5] :1 [:C#6 :Ab5] :9]
+             [[:Ab5 :C#6] [:C#6 :Ab5] :1 [:Ab5 :C#6] :1 [:Ab5 :C#6] :9 [:Ab5 :Eb6] :Eb6 :Ab5 [:Eb6 :Ab5] :Ab5 :Eb6 :9 [:F#5 :Bb5] :1 :Bb5 :F#5 [:Bb5 :F#5] :9 [:C#6 :Ab5] :1 [:C#6 :Ab5] :13]
              0.25 0 [:amp 0.6])
 
-   :drum2 (s/build-map-p
-          [[ b-snr [] (drum-s [:Kit15-Electro] :c1) []  ] [(drum-s [:Kit15-Electro] :c1) [:amp 0.2]] [ b-snr [] (drum-s [:Kit15-Electro] :c1) []  ] [(drum-s [:Kit15-Electro] :c1) [:amp 0.2]]
-           [ b-snr []  (drum-s [:Kit15-Electro] :c1) [] ] [(drum-s [:Kit15-Electro] :c1) [:amp 0.2]] [(drum-s [:Kit15-Electro] :c1) [:amp 0.2]] [(drum-s [:Kit15-Electro] :c1) [:amp 0.2]]
-           ])
+   :drum2 (let [c (drum-s [:Kit15-Electro] :c1)]
+              (s/build-map-p
+               [[ b-snr [] c []  ] [c [:amp 0.2]] [ b-snr [] c []  ] [c [:amp 0.2]]
+                [ b-snr []  c [] ] [c [:amp 0.2]] [c [:amp 0.2]] [c [:amp 0.2]]
+                ]))
 
    })
 
@@ -1126,17 +1124,16 @@
 })
 
 (def ambient3
-  {:motif1 (s/phrase-p
+  {:harmony1  (s/phrase-p
+               rise-pad
+               [[:A2 :C#3 :E3 :Ab3] :8]
+               0.25 0 [:attack 1.5 :release 2])
+   :motif1 (s/phrase-p
             bass2
-            [:Ab5 :1 :E5 :Ab5 :F#5 :1 :Ab5 :1 :C#6 :1 :Ab5 :1 :F#5 :1 :Ab5 :3]
+            [:Ab5 :1 :E5 :Ab5 :F#5 :1 :Ab5 :1 :C#6 :1 :Ab5 :1 :F#5 :1 :Ab5 :3 :Ab5 :1 :E5 :Ab5 :F#5 :1 :Ab5 :1 :C#6 :1 :Ab5 :1 :F#5 :1 :Ab5 :3 :Ab5 :3]
             0.25 0 [:decay 4])
    :motif2 (s/phrase-p
             klang-test
-            [[:E5 :B4 :Ab5] :3 [:B4 :E5 :Ab5] :3 [:B4 :Ab5 :E5] :4 [:E5 :Ab5 :B4] :10 [:A4 :F#5 :C#5] :7 [:A4 :F#5 :C#5] :8 [:B4 :Ab5] :E5 :4 [:B4 :Ab5 :E5] :4]
+            [[:E5 :B4 :Ab5] :7 [:B4 :E5 :Ab5] :3 [:E5 :Ab5 :B4] :7 [:A4 :F#5 :C#5] :7 [:A4 :F#5 :C#5] :3 [:A4 :F#5 :C#5] :7]
             0.25 0 [:atk 0.01])
-   :harmony1 (s/phrase-p
-              rise-pad
-              [[:A2 :C#3 :E3 :Ab3] :8]
-              0.25 0 [:attack 1.5 :release 2])
-
    })

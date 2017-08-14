@@ -53,6 +53,20 @@
     )
   )
 
+(defn mod-p [sequencer pattern attr val]
+  (swap! patterns (fn [p]
+                     (let [id (to-sc-id sequencer)
+                           key (if (keyword? pattern) pattern
+                                   (first (first
+                                           (filter (fn [[k v]]
+                                                     (= (v :data)  pattern)) (p id)))))]
+                       (if (not (nil? key))
+                         (assoc-in p [id key attr] val)
+                         p
+                         )
+                       )))
+  nil)
+
 (defn sputter
   "Returns a list where some elements may have been repeated.
 
@@ -411,7 +425,11 @@
                           (if (and wrap (> beat size))
                             (wrap-beat beat size 1)
                             beat))
-              new-p (play final-beat p orig-beat (get @pattern-groups k) (get-in @pattern-fx [k :bus]))]
+              play-at-1 (get p :add-at-1 false)
+              do-play (or (not play-at-1) (= final-beat 1))
+              new-p (if do-play (play final-beat p orig-beat (get @pattern-groups k) (get-in @pattern-fx [k :bus])))]
+          (when (and play-at-1 do-play)
+            (mod-p synth k :add-at-1 false))
           (swap! sequencer-data
                  (fn [s] (assoc-in s [id :beat] final-beat)))
           (if (map? new-p)
@@ -849,20 +867,6 @@
 (defn get-sp [sequencer]
   (node-get-control (@trigger-sources (to-sc-id sequencer)) :clock-speed)
   )
-
-(defn mod-p [sequencer pattern attr val]
-  (swap! patterns (fn [p]
-                     (let [id (to-sc-id sequencer)
-                           key (if (keyword? pattern) pattern
-                                   (first (first
-                                           (filter (fn [[k v]]
-                                                     (= (v :data)  pattern)) (p id)))))]
-                       (if (not (nil? key))
-                         (assoc-in p [id key attr] val)
-                         p
-                         )
-                       )))
-  nil)
 
 
 (defn mod-actions [sequencer pattern f]
@@ -1417,7 +1421,7 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
 ;; f = { |msg, time, replyAddr, recvPort|
 ;; 	b = NetAddr.new("127.0.0.1", 4420);
 ;;     if(msg[0] == '/evalCode') {
-;; 		b.sendMsg("/response", msg[1].asString.interpretPrint);(c
+;; 		b.sendMsg("/response", msg[1].asString.interpretPrint);
 ;;     }
 ;; };
 ;; );

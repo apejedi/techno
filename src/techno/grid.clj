@@ -81,15 +81,28 @@
       (q/fill 0)
       (q/text (str o) (+ x1 10) (+ y1 15)))
     (doall
-     (let [ys (range (+ s1 20) (+ s1 (* (count actions) 20)) 20)]
+     (let [rows 10
+           cols 5
+           space 20
+           width 50
+           height 30
+           g-coords (fn [r c]
+                      [[(+ (* space (+ c 1)) (* width c)) (+ (* space (inc r)) (* height r))]
+                       [(* (+ width space) (inc c)) (* (+ space height) (inc r))]])
+           ys (range (+ s1 20) (+ s1 (* (count actions) 20)) 20)]
        (q/fill 0 0 0)
        (q/rect 10 s1 1400 (+ (last ys) 30))
        (q/fill 255 255 255)
-       (q/text (s/get-action-str (get-in @state [:pattern (get-offset cur true)])) 700 (+ s1 30))
        (map
-        (fn [[k v] y] (q/text (str (name k) ": " (s/get-action-str v)) 10 y))
-        actions ys
-        )))
+        (fn [row]
+          )
+        (range 0 (int (Math/ceil (/ (count actions) cols)))))
+       ;; (q/text (s/get-action-str (get-in @state [:pattern (get-offset cur true)])) 700 (+ s1 30))
+       ;; (map
+       ;;  (fn [[k v] y] (q/text (str (name k) ": " (s/get-action-str v)) 10 y))
+       ;;  actions ys
+       ;;  )
+       ))
     )
   )
 

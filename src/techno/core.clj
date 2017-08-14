@@ -66,7 +66,7 @@
           (concat (range 0 10)
                   (map name [:q :w :e :r :t :y :u :i :o :p :a :s :d :f :g :h :j :k :l :z :x :c :v :b :n :m]))
           (concat
-           [o-kick o-snr b-kick b-snr r-kick dirty-kick o-hat]
+           [o-kick  b-kick r-kick b-snr dirty-kick g-kick o-snr o-hat]
            (flatten (map vals (vals (group-samples (drum-kits :KurzweilKit04)))))
            (flatten (map vals (vals (group-samples (drum-kits :Kit4-Electro)))))
            ))))
@@ -80,7 +80,7 @@
   (r/draw-line 5)
   (r/gen-coords 500 500 5 4 player)
   (s/dec-amp player :shkr)
-  (let [v 0.3]
+  (let [v 0.5]
     (ctl 14 :volume v)
     (ctl 15 :volume v))
   (remove-event-handler ::server-audio-clipping-warner-vol)
@@ -118,10 +118,9 @@
                 "
 ")) (get (s/get-p player pattern) :data))
         ["}"]))
-      (let [is-phrase (and (not (keyword? pattern)) (s/is-phrase? pattern))
-            p (if (and (keyword? pattern))
-                (s/build-rest-p (get (s/get-p player pattern) :data))
-                (s/build-rest-p pattern))]
+      (let [pattern (if (keyword? pattern) (get (s/get-p player pattern) :data) pattern)
+            is-phrase (s/is-phrase? pattern)
+            p (s/build-rest-p pattern)]
         (if (not is-phrase)
           (let [strs (map #(if (sequential? %)
                          (techno.sequencer/get-action-str % techno.samples/drum-kits "drum-kits")
@@ -139,17 +138,6 @@
             )
           )
         )
-
-      ;; (str
-;;               "(s/build-map-p
-;; " (vec (map #(if (sequential? %)
-;;                (s/get-action-str % techno.samples/drum-kits "drum-kits")
-;;                %)
-;;             (if (and (not (nil? sequencer)) (keyword? pattern))
-;;               (s/build-rest-p (get (s/get-p player pattern) :data))
-;;               (s/build-rest-p pattern))
-;;             )) "
-;; )")
       )
     )
   )
