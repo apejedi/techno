@@ -1137,3 +1137,62 @@
             [[:E5 :B4 :Ab5] :7 [:B4 :E5 :Ab5] :3 [:E5 :Ab5 :B4] :7 [:A4 :F#5 :C#5] :7 [:A4 :F#5 :C#5] :3 [:A4 :F#5 :C#5] :7]
             0.25 0 [:atk 0.01])
    })
+
+
+
+(def sketch
+  {:drum4 (s/build-map-p
+           [[ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Snr03.wav]) []   ] [ b-snr []   ] :1
+            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom02.wav]) []   ] :2
+            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom03.wav]) []   ] :1
+            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Snr03.wav]) []   ] [ b-snr []   ] :1
+            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom02.wav]) []   ] :2
+            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom03.wav]) []   ] :1
+
+            ])
+   :drum1 (s/build-map-p
+           [:4
+            [ dirty-kick [:amp 0.5]   ] [ o-hat []   ] [ o-hat []   ] :1
+            [ (get-in drum-kits [:Kit4-Electro :CYCdh_ElecK01-Kick02.wav]) []   ] :1
+            [ o-snr []   ] :5
+
+            ])
+   :harmony1 (s/phrase-p
+              prophet
+              [[:Bb3 :D4 :G4] :31 [:Bb4 :Eb4 :C4] :17 [:G3 :G4]  :17 [:F3 :Eb4 :C4] :27
+               ]
+              0.25 0 [:rq 0.9 :cutoff 4000 :attack 2 :decay 2.4])
+   :motif1 (s/phrase-p
+            bass-synth
+            [:Bb3 :1 :G3 :5 :D3 :6 :C3 :16 :Bb3 :1 :G3 :5 :D3 :6 :Eb3 :16]
+            0.25 0 [:release 2.204724409448819 :attack -0.007874015865363473 :bwr 1])
+
+   :motif2  (s/phrase-p
+             overpad
+             []
+             0.25 0 [])
+   :drum2 (drum-p [:Kit15-Electro]
+                  [:4 :cl1 :3] 0.25 )
+   :motif3 (fn [b]
+             (let [cfmin  (choose (map midi->hz (scale :C5 :minor)))
+                                        ; cfmin (* (midi->hz 64) (choose [0.5 1 2 4]))
+                   ]
+               (if (= (rand-int 4) 1)
+                 [bpfsaw
+                  [:dur (choose [0.7 1])
+                   :atk 0.01
+                   :note (choose (scale :C5 :minor))
+                   :rq (rand 1)]]
+                 ))
+             )
+   :harmony2 (s/phrase-p
+              bpfsaw2
+              [:C4 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :11 :D4 :1 :D4 :D4 :1 :D4 :D4 :10 :Eb4 :1 :Eb4 :1 :Eb4 :1 :Eb4 :Eb4 :1 :Eb4 :1 :Eb4 :11 :Bb4 :1 :Bb4 :1 :Bb4 :1 :Bb4 :Bb4 :1 :Bb4 :1 :Bb4 :1 :Bb4 :Bb4 :1 :Bb4 :1 :Bb4 :8 :G4 :1 :G4 :1 :G4 :1 :G4 :1 :G4 :G4 :1 :G4 :G4 :1 :G4 :1 :G4 :G4 :14]
+              0.25 0 [])
+   :drum3 (s/build-map-p
+           [:2
+            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Ride01.wav]) []   ] :1
+
+            ])
+
+   })

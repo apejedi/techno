@@ -648,9 +648,10 @@
                                       :size (p-size pattern (get-st sequencer))} attrs))
                        )))
        (when  (and (not (contains? @pattern-groups key)) (not (contains? attrs :no-group)))
-         (let [p-group (group)
+         (let [vol (get attrs :volume 1)
+               p-group (group)
                p-bus (get-bus)
-               mixer (p-mixer [:tail p-group] p-bus)]
+               mixer (p-mixer [:tail p-group] p-bus :volume vol)]
            (swap! pattern-groups assoc key p-group)
            (when (not (nil? p-bus))
              (swap! pattern-fx assoc-in [key :mixer] mixer)

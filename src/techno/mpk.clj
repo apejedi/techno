@@ -28,7 +28,7 @@
    (let [note (:note m)
          control-map {:pad {24 rise-pad 25 sweet 26 prophet 27 bpfsaw2 20 flute 21 overpad 22 bpfsaw 23 sin-inst}
                       :bass {24 acid-bass 25 bass2 26 plk-bass 27 wire-bass 20 bass-synth}
-                      :inst {24 klang-test 25 reverb-test 26 piano 27 ks1 20 bing}}
+                      :inst {24 klang-test 25 reverb-test 26 piano 27 ks1 20 bing 21 bowed}}
          drum-map {24 {48 o-kick 49 o-snr 50 o-hat 51 o-clap 44 b-kick 45 b-snr 46 (drum-s [:Kit16-Electro] :c1) 47 (drum-s [:Kit16-Electro] :c2)}}
          drum-map (into drum-map (mapcat (fn [note kit]
                                            (vector [note

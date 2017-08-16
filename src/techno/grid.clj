@@ -93,15 +93,15 @@
        (q/fill 0 0 0)
        (q/rect 10 s1 1400 (+ (last ys) 30))
        (q/fill 255 255 255)
-       (map
-        (fn [row]
-          )
-        (range 0 (int (Math/ceil (/ (count actions) cols)))))
-       ;; (q/text (s/get-action-str (get-in @state [:pattern (get-offset cur true)])) 700 (+ s1 30))
        ;; (map
-       ;;  (fn [[k v] y] (q/text (str (name k) ": " (s/get-action-str v)) 10 y))
-       ;;  actions ys
-       ;;  )
+       ;;  (fn [row]
+       ;;    )
+       ;;  (range 0 (int (Math/ceil (/ (count actions) cols)))))
+       (q/text (s/get-action-str (get-in @state [:pattern (get-offset cur true)])) 700 (+ s1 30))
+       (map
+        (fn [[k v] y] (q/text (str (name k) ": " (s/get-action-str v)) 10 y))
+        actions ys
+        )
        ))
     )
   )
