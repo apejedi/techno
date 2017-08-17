@@ -67,8 +67,7 @@
                   (map name [:q :w :e :r :t :y :u :i :o :p :a :s :d :f :g :h :j :k :l :z :x :c :v :b :n :m]))
           (concat
            [o-kick  b-kick r-kick b-snr dirty-kick g-kick o-snr o-hat]
-           (flatten (map vals (vals (group-samples (drum-kits :KurzweilKit04)))))
-           (flatten (map vals (vals (group-samples (drum-kits :Kit4-Electro)))))
+           (flatten (map vals (vals (group-samples (drum-kits :claves)))))
            ))))
 
   (sweet :dur 0.2)

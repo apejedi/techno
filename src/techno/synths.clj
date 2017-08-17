@@ -3,7 +3,7 @@
         [overtone.inst.synth]
         [techno.sequencer :only [adsr-ng]])
   (:require [techno.sequencer :as s]
-            [techno.ugens]))
+            [techno.ugens :refer [dwg-bowed-tor:ar dwg-sound-board:ar]]))
 
 (defsynth sweet [note 60 dur 1 amp 1 vib 0.02 out-bus 0]
   (let [freq (midicps note)
@@ -835,18 +835,18 @@
     )
   )
 
-(defsynth bowed [freq 440 out-bus 0 atk 0.2 amp 0.5 start 0.1 end 0.7 force 1 dur 2 c1 0.25 c3 31]
+(defsynth bowed [freq 440 out-bus 0 atk 0.2 amp-b 0.5 start 0.1 end 0.7 force 1 dur 2 c1 0.25 c3 31 amp 1]
   (let [vib (+ 1 (* 0.003 (gendy1:kr 1 1 1 1 0.1 4)))
         rest (- 1 atk)
         env (env-gen:kr (envelope [0 0.7 1 0.8 0] [(* dur atk) (* dur 0.2 rest) (* dur 0.4 rest) (* dur 0.4 rest)]) :action FREE)
         pos (line:kr start end dur)
-        son (dwg-bowed-tor:ar (* freq vib) amp force 1 pos 0.1 c1 c3 :mistune 8 :impZ 2 :c3tor 10000 :c3 10)
+        son (dwg-bowed-tor:ar (* freq vib) amp-b force 1 pos 0.1 c1 c3 :mistune 8 :impZ 2 :c3tor 10000 :c3 10)
         son (dwg-sound-board:ar son)
         ;; son (+ son (bpf:ar son 118 1))
         ;; son (+ son (bpf:ar son 430 1))
         ;; son (+ son (bpf:ar son 490 1))
         ;; son (* (lpf:ar son 5000) 0.1)
-        son (* son env)]
+        son (* son env amp)]
     (out:ar out-bus [son son])
     )
   )

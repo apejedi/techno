@@ -78,5 +78,5 @@
     }])
 
 (doseq [spec specs]
-  (def-ugen 'overtone.core spec 0)
+  (def-ugen 'techno.ugens spec 0)
   )
