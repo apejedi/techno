@@ -140,12 +140,20 @@
     bowed
     [:C4 [:dur 0.7 :start 0 :end 0.5] :3 :G4 [:dur 0.7 :start 0.7 :end 0] :3]
     0.25 0))
+  (mapcat (fn [k] [(drum-s [k] :c1) (drum-s [k] :c2)])
+                                          [:Kit4-Electro
+                                           :Kit5-Electro
+                                           :Kit15-Electro
+                                           :Kit16-Electro
+                                           :KurzweilKit01
+                                           :KurzweilKit02
+                                           :KurzweilKit05])
   (s/add-p core/player scatterbrain :sc)
   (s/add-p core/player ambient :harmony)
   (s/add-p core/player melissa :harmony)
   (do
-    (s/add-p core/player melissa-motif :motif)
-    (s/add-p core/player techno.drums/melissa-b :main)
+    (zap (midi->hz (note :C4)) (midi->hz (note :Bb3)) :dur 1)
+    (zap (midi->hz (note :F3)) (midi->hz (note :G4)) :dur 1)
     )
 
   (let [[i iv v vi] (map #(map midi->hz
