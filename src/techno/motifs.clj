@@ -135,6 +135,11 @@
   )
 
 (comment
+  (s/play-p
+   (s/phrase-p
+    bowed
+    [:C4 [:dur 0.7 :start 0 :end 0.5] :3 :G4 [:dur 0.7 :start 0.7 :end 0] :3]
+    0.25 0))
   (s/add-p core/player scatterbrain :sc)
   (s/add-p core/player ambient :harmony)
   (s/add-p core/player melissa :harmony)

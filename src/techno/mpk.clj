@@ -28,14 +28,14 @@
    (let [note (:note m)
          control-map {:pad {24 rise-pad 25 sweet 26 prophet 27 bpfsaw2 20 flute 21 overpad 22 bpfsaw 23 sin-inst}
                       :bass {24 acid-bass 25 bass2 26 plk-bass 27 wire-bass 20 bass-synth}
-                      :inst {24 klang-test 25 reverb-test 26 piano 27 ks1 20 bing 21 bowed}}
+                      :inst {24 klang-test 25 reverb-test 26 piano 27 ks1 20 bing 21 bowed 22 rise-fall-pad}}
          drum-map {24 {48 o-kick 49 o-snr 50 o-hat 51 o-clap 44 b-kick 45 b-snr 46 (drum-s [:Kit16-Electro] :c1) 47 (drum-s [:Kit16-Electro] :c2)}}
          drum-map (into drum-map (mapcat (fn [note kit]
                                            (vector [note
                                                     (into {}
                                                           (mapcat (fn [s n] (vector [n (drum-s [kit] s)])) [:k1 :k2 :c1 :s1 :sd1 :p1 :o1 :p2] [48 49 50 51 44 45 46 47])
                                                           )]))
-                                         [25 26 27 20 21 22 23] [:KurzweilKit01 :KurzweilKit02 :KurzweilKit03 :KurzweilKit04 :KurzweilKit05 :KurzweilKit06 :KurzweilKit07]
+                                         [25 26 27 20 21 22 23] [:claves :KurzweilKit02 :KurzweilKit03 :KurzweilKit04 :KurzweilKit05 :KurzweilKit06 :KurzweilKit07]
                                          ))]
      (when (and (>= note 20) (<= note 27) (not (nil? (get-in control-map [@program note]))))
        (reset! cur-synth (get-in control-map [@program note]))
@@ -82,7 +82,7 @@
  :change-inst2)
 
 (on-event [:midi :note-on]
-                (fn [m]
+          (fn [m]
                   (let [chan (inc (:channel m))
                         params (into {}  (mapcat #(vector [(:name %) %]) (:params @cur-synth)))
                         args (cond (contains? params "note") [:note (:data1 m)]

@@ -1019,7 +1019,7 @@
             klang-test
             [:G3  :F#4  :F#4  :G3  :F#4  :F#4  :G3  :F#4  :A3  :G4  :G4  :A3  :G4  :G4  :A3  :G4  :B3  :B4  :B4  :B3  :B4  :B4  :B3  :B4  :C#4  :A4  :A4  :C#4  :A4  :A4
              :C#4  :A4 :1]
-            0.25 1 [:atk 0.01])
+            0.25 1 [:atk 0.01 :dur 1.6])
    :sin (s/phrase-p
             sin-inst
             [:G4  :D5  :G4 :D5  :G4  :D5  :G4  :D5  :A4  :E5  :A4  :E5  :A4  :E5  :A4  :E5  :F#4  :E5  :F#4  :E5  :F#4  :E5  :F#4  :E5  :F#4  :D5  :F#4 :D5  :F#4 :D5  :F#4  :D5]
@@ -1032,6 +1032,10 @@
            flute
            [:G4 :G4 :G4 :12 :E5 :E5 :4 :D5 :D5 :8 :A4 :1 :A4 :1 :A4 :10 :B4 :1 :B4 :B4 :8]
            0.25 0 [])
+   :bowed (s/phrase-p
+           bowed
+           [[:A3 :D4 :A4] :A3 [:A4 :D4] :1 [:A3 :A4] :1 :A3 :A3 [:A4 :D4] [:A3 :D4] :1 :A3 :D4 :1 [:D4 :A4 :A3] :1 [:D4 :A3 :A4] :1 [:A3 :D4 :A4] :1 [:A3 :D4 :A4] :1 [:A3 :D4 :A4] :1 [:A3 :D4 :A4] :A3 :D4 [:A3 :D4 :A4] :3 [:G4 :C4 :G3] :1 [:G3 :C4 :G4] :1 [:G4 :G3 :C4] :1 [:C4 :G4 :G3] :1 [:C4 :G4 :G3] :1 [:C4 :G3 :G4] :1 [:G3 :C4 :G4] :1 [:C4 :G3 :G4] :1 [:C4 :G3 :G4] :1 [:G4 :C4] :G3 [:C4 :G4 :G3] :1 [:C4 :G4 :G3] :1 [:C4 :G3 :G4] :1 [:C4 :G3] :1 [:G4 :C4 :G3] :3 [:A3 :D3] :1 [:A3 :D3] :A3 :D3 [:A3 :D3] :1 :A3 :1 [:A3 :D3] :1 [:A3 :D3] :A3 :D3 :A3 :D3 :A3 :D3 [:A3 [:dur 1.5] :D3 [:dur 1.5]] :1 [:A3 [:dur 5.5] :D3 [:dur 5.5]] :1 [:A3 [:dur 7] :D3 [:dur 7]] :42]
+           0.25 0 [:amp 0.07])
    })
 
 (def sketch
@@ -1141,62 +1145,12 @@
 
 
 (def sketch
-  {:drum1  (s/build-map-p
-            [:4
-             [ dirty-kick [:amp 0.5]   ] [ o-hat []   ] [ o-hat []   ] :1
-             [ (get-in drum-kits [:Kit4-Electro :CYCdh_ElecK01-Kick02.wav]) []   ] :1
-             [ o-snr []   ] :5
-
-             ])
-   :drum2 (drum-p [:Kit15-Electro]
-                  [:4 :cl1 :3] 0.25 )
-   :harmony2  (s/phrase-p
-               bpfsaw2
-               [:C4 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :11 :D4 :1 :D4 :D4 :1 :D4 :D4 :10 :Eb4 :1 :Eb4 :1 :Eb4 :1 :Eb4 :Eb4 :1 :Eb4 :1 :Eb4 :11 :Bb4 :1 :Bb4 :1 :Bb4 :1 :Bb4 :Bb4 :1 :Bb4 :1 :Bb4 :1 :Bb4 :Bb4 :1 :Bb4 :1 :Bb4 :8 :G4 :1 :G4 :1 :G4 :1 :G4 :1 :G4 :G4 :1 :G4 :G4 :1 :G4 :1 :G4 :G4 :14]
-               0.25 0 [])
-   :drum4 (s/build-map-p
-           [[ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Snr03.wav]) []   ] [ b-snr []   ] :1
-            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom02.wav]) []   ] :2
-            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom03.wav]) []   ] :1
-            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Snr03.wav]) []   ] [ b-snr []   ] :1
-            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom02.wav]) []   ] :2
-            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom03.wav]) []   ] :1
-
-            ])
-   :motif3 (fn [b]
-             (let [cfmin  (choose (map midi->hz (scale :C5 :minor)))
-                                        ; cfmin (* (midi->hz 64) (choose [0.5 1 2 4]))
-                   ]
-               (if (= (rand-int 5) 1)
-                 [piano
-                  [:dur (choose [3 1.5])
-                   :atk 0.01
-                   :note (choose (scale :C5 :minor))
-                   :rq 0.4
-                   :amp 0.4]]
-                 ))
-             )
-   :drum3 (s/build-map-p
-           [:2
-            [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Ride01.wav]) []   ] :1
-
-            ])
-   :motif1 (s/phrase-p
-            bass-synth
-            [:Bb3 :1 :G3 :5 :D3 :6 :C3 :16 :Bb3 :1 :G3 :5 :D3 :6 :Eb3 :16]
-            0.25 0 [:release 2.204724409448819 :attack -0.007874015865363473 :bwr 1.3])
-   :harmony1  (s/phrase-p
-               prophet
-               [[:Bb3 :D4 :G4] :31 [:Bb4 :Eb4 :C4] :17 [:G3 :G4]  :17 [:F3 :Eb4 :C4] :27
-                ]
-               0.25 0 [:rq 0.9 :cutoff 4000 :attack 2 :decay 2.4])
-   :kick (drum-p [:Kit15-Electro]
-                 [[o-kick []] :3])
-   :shkr (s/fit-p {1.75 []} (drum-p [:Kit8-Vinyl] [:shkr3 :shkr3 :shkr1 :1]))
-   :arp (s/phrase-p
-         prophet
-         [:C5 :Eb5  :G5  :C5  :Eb5 :G5  :C5 :Eb5  :G5  :C5  :Eb5  :G5  :C5 :Eb5  :G5  :Bb4  :D5  :G5  :Bb4  :D5  :G5  :Bb4  :D5  :G5  :Bb4  :D5  :G5 :Bb4 :G4 :Bb4  :D5  :G4  :Bb4  :D5  :G4 :Bb4  :D5  :G4  :Bb4 :D5  :D5 :3 :F4 :Ab4  :C5  :F4  :Ab4  :C5  :F4  :Ab4  :C5  :F4  :Ab4 :7]
-         0.25 1 [:attack 0.07 :decay 0.9 :amp 1.4])
+  {:harmony1   (s/phrase-p
+                prophet
+                [[:Bb3 :D4 :G4] :31 [:Bb4 :Eb4 :C4] :17 [:G3 :G4]  :17 [:F3 :Eb4 :C4] :27
+                 ]
+                0.25 0 [:rq 0.9 :cutoff 4000 :attack 2 :decay 2.4])
+   :shkr  (s/fit-p {1.75 []} (drum-p [:Kit8-Vinyl] [:shkr3 :shkr3 :shkr1 :1]))
    :congas (let [p (fn [_]
                      {:phrase (gen-beat (:four-beat @beats)
                                         (map #(vector % [:amp 2])
@@ -1219,5 +1173,256 @@
                   a))
                )
              )
+   :drum1   (s/build-map-p
+             [:4
+              [ dirty-kick [:amp 0.5]   ] [ o-hat []   ] [ o-hat []   ] :1
+              [ (get-in drum-kits [:Kit4-Electro :CYCdh_ElecK01-Kick02.wav]) []   ] :1
+              [ o-snr []   ] :5
+
+              ])
+   :bass2 (s/phrase-p
+           bass2
+           [:C5 :2 :G5 :4 :Ab5 :3 :Bb5 :6 :Ab5 :5 :G5 :5 :D5 :6 :G5 :9]
+           0.25 0 [:amp 8.5 :decay 1.6 :cutoff2 5196])
+
+   :claves (s/build-map-p
+            [:2
+             [ (get-in drum-kits [:claves :121391__soundbytez__claves-hit09.wav]) []   ] :1
+             [ (get-in drum-kits [:claves :121383__soundbytez__claves-hit01.wav]) []   ] :1
+             [ (get-in drum-kits [:claves :121387__soundbytez__claves-hit05.wav]) []   ] [ (get-in drum-kits [:claves :121385__soundbytez__claves-hit03.wav]) []   ] :2
+             [ (get-in drum-kits [:claves :121378__soundbytez__claves-decres.wav]) []   ] :1
+             [ (get-in drum-kits [:claves :121384__soundbytez__claves-hit02.wav]) []   ] :3
+
+             ])
+   :motif1 (s/phrase-p
+            bass-synth
+            [:Bb3 :1 :G3 :5 :D3 :6 :C3 :16 :Bb3 :1 :G3 :5 :D3 :6 :Eb3 :16]
+            0.25 0 [:release 2.2 :attack 0.1 :bwr 2.3])
+   :arp (s/phrase-p
+         prophet
+         [:C5 :Eb5  :G5  :C5  :Eb5 :G5  :C5 :Eb5  :G5  :C5  :Eb5  :G5  :C5 :Eb5  :G5  :Bb4  :D5  :G5  :Bb4  :D5  :G5  :Bb4  :D5  :G5  :Bb4  :D5  :G5 :Bb4 :G4 :Bb4  :D5  :G4  :Bb4  :D5  :G4 :Bb4  :D5  :G4  :Bb4 :D5  :D5 :3 :F4 :Ab4  :C5  :F4  :Ab4  :C5  :F4  :Ab4  :C5  :F4  :Ab4 [:decay 1.3 :attack 0.7] :7]
+         0.25 1 [:attack 0.07 :decay 0.9 :amp 1.4])
+   :motif3 (fn
+             ([] [4.75 0.125])
+             ([b]
+              (let [cfmin  (choose (map midi->hz (scale :C5 :minor)))
+                                        ; cfmin (* (midi->hz 64) (choose [0.5 1 2 4]))
+                    ]
+                (if (= (rand-int 2) 1)
+                  [piano
+                   [:dur (choose [3 1.5])
+                    :atk 0.01
+                    :note (choose (scale :C5 :minor))
+                    :rq 0.4
+                    :amp 0.8]]
+                  )))
+             )
+   :drum4  (s/build-map-p
+            [[ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Snr03.wav]) []   ] [ b-snr []   ] :1
+             [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom02.wav]) []   ] :2
+             [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom03.wav]) []   ] :1
+             [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Snr03.wav]) []   ] [ b-snr []   ] :1
+             [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom02.wav]) []   ] :2
+             [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom03.wav]) []   ] :1
+
+             ])
+   :harmony2   (s/phrase-p
+                bpfsaw2
+                [:C4 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :11 :D4 :1 :D4 :D4 :1 :D4 :D4 :10 :Eb4 :1 :Eb4 :1 :Eb4 :1 :Eb4 :Eb4 :1 :Eb4 :1 :Eb4 :11 :Bb4 :1 :Bb4 :1 :Bb4 :1 :Bb4 :Bb4 :1 :Bb4 :1 :Bb4 :1 :Bb4 :Bb4 :1 :Bb4 :1 :Bb4 :8 :G4 :1 :G4 :1 :G4 :1 :G4 :1 :G4 :G4 :1 :G4 :G4 :1 :G4 :1 :G4 :G4 :14]
+                0.25 0 [])
+   :drum2 (drum-p [:Kit15-Electro]
+                  [:4 :cl1 :3] 0.25 )
+   :kick (drum-p [:Kit15-Electro]
+                 [
+                  [o-kick []]
+                  :3
+                  ])
+
+   :drum3  (s/build-map-p
+            [:2
+             [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Ride01.wav]) []   ] :1
+
+             ])
+   :melody (s/phrase-p
+            bass-synth
+            [[:Bb4 :Eb4] [:G4 :C4] [:G3 :D4] :5 [:Bb3 :Eb4] :5 [:G4 :C4] :3]
+            0.25 7 [:attack 0.2 :release 2.5 :detune 0.3 :amp 0.1 :bwr 2])
+   })
+
+(def sketch1
+  {:perc (drum-p [:KurzweilKit08]
+                 [:p3 :2 :p3 :2 :p3 :2 :p3 :3 :p2 :1 :p3 ]
+                 )
+   :snare (drum-p [:Kit10-Vinyl] [[:k1 :k4] :1 :p1 :k1 :k2 :p1 :k1 :1])
+   :off-melody (s/phrase-p
+                bass-synth
+                [:G4 :5 :Bb4 :5 :D4 :5 :Eb4 :5 :G4 :15]
+                0.25 0 [:attack 0.01 :release 2.1 :bwr 2])
+   :drone (s/phrase-p
+           prophet
+           [[:Eb4 :Ab3] :3 [:Ab3 :Eb4] :1 :Ab3 :1 :Ab3 :Eb4 :1 [:Ab3 :Eb4] :1 [:Ab3 :Eb4] :1 [:Ab3 :Eb4] :1 [:Ab3 :Eb4] :1 [:Ab3 :Eb4] :2 [:G3 :D4] :1 [:G3 :D4] :1 [:G3 :D4] :2 [:G3 :D4] :1 [:D4 :G3] :1 [:D4 :G3] :1 [:D4 :G3] :1 [:D4 :G3] :1 [:G3 :D4] :1 [:G3 :D4] :1 [:G3 :D4] :G3 :D4 :1 [:Bb3 :D4] :1 [:Bb3 :D4] :1 [:Bb3 :D4] :1 [:Bb3 :D4] :1 [:Bb3 :D4] :1 [:Bb3 :D4] :1 :Bb3 :D4 :Bb3 :1 :Bb3 :1 [:Eb4 :G4] :1 :Eb4 :1 :Eb4 :1 :Eb4 :1 :Eb4 :1 :Eb4 :1 :Eb4 :1 :Eb4 :1 :Eb4 :1 :Eb4 :Eb4 :3 [:D4 :Bb4] :1 :Bb4 :D4 :Bb4 :D4 :Bb4 :D4 :1 [:Bb4 :D4] :1 [:Bb4 :D4] :1 [:Bb4 :D4] :1 [:Bb4 :D4] :1 [:Bb4 :D4] :1 [:D4 :Bb4] :2 [:Ab4 :Eb4] :1 [:Ab4 :Eb4] :1 [:Ab4 :Eb4] :1 [:Ab4 :Eb4] :1 [:Ab4 :Eb4] :1 [:Ab4 :Eb4] :1 [:Eb4 :Ab4] :1 [:Eb4 :Ab4] :1 :Eb4 :Ab4 [:Eb4 :Ab4] :5 [:C4 :F3] :1 [:C4 :F3] :1 [:C4 :F3] :2 [:C4 :F3] :1 [:C4 :F3] :1 [:F3 :C4] :1 [:F3 :C4] :1 [:C4 :F3] :1 [:F3 :C4] :3 [:D4 :G3] :1 [:G3 :D4] :1 :G3 :D4 [:G3 :D4] :2 [:D4 :G3] :1 [:D4 :G3] :G3 :D4 :1 [:G3 :D4] :1 [:G3 :D4] :1 [:D4 :G3] :17]
+           0.25 0 [:cutoff 4960.629921259842 :amp 2.5984251968503935])
+   :hats (let [p (fn [_]
+                   {:phrase (gen-beat (:four-beat @beats)
+                                      (map #(vector % [:amp 2])
+                                           (mapcat (fn [k] [(drum-s [k] :c1) (drum-s [k] :c2)
+                                                           (drum-s [k] :o1) (drum-s [k] :o2)])
+                                                   [:Kit8-Vinyl
+                                                    :Kit10-Vinyl
+                                                    :Kit13-Acoustic
+                                                    :Kit14-Acoustic
+                                                    :KurzweilKit08
+                                                    :KurzweilKit07
+                                                    :KurzweilKit05])
+                                           )
+                                      12
+                                      true true 1 0.6 0)
+                    :count 0})
+               mem (atom (p nil))]
+           (fn
+             ([] [(s/p-size (get @mem :phrase)) 0.25])
+             ([b]
+              (let [size (s/p-size (get @mem :phrase))
+                    a (get-in @mem [:phrase b])]
+                (cond (>= (:count @mem) 2)
+                      (swap! mem p)
+                      (= size b)
+                      (swap! mem (fn [m] (assoc m :count (inc (:count m))))))
+                a))
+             )
+           )
+   :drum1    (s/build-map-p
+              [:4
+               [ dirty-kick [:amp 0.5]   ] [ o-hat []   ] [ o-hat []   ] :1
+               [ (get-in drum-kits [:Kit4-Electro :CYCdh_ElecK01-Kick02.wav]) []   ] :1
+               [ o-snr []   ] :5
+
+               ])
+   :shkr   (s/fit-p {1.75 []} (drum-p [:Kit8-Vinyl] [:shkr3 :shkr3 :shkr1 :1]))
+   :harmony1    (s/phrase-p
+                 prophet
+                 [[:Bb3 :D4 :G4] :31 [:Bb4 :Eb4 :C4] :17 [:G3 :G4]  :17 [:F3 :Eb4 :C4] :27
+                  ]
+                 0.25 0 [:rq 0.9 :cutoff 4000 :attack 2 :decay 2.4])
+   :motif1 (s/phrase-p
+            bass-synth
+            [:Bb3 :1 :G3 :5 :D3 :5 :C3 [:release 3 :attack 0.1 :bwr 2.3] :17 :Bb3 :1 :G3 :5 :D3 :5 :Eb3 [:release 3 :attack 0.1 :bwr 2.3] :17]
+            0.25 0 [:release 2.2 :attack 0.1 :bwr 2.3])
+   :arp  (s/phrase-p
+          prophet
+          [:C5 :Eb5  :G5  :C5  :Eb5 :G5  :C5 :Eb5  :G5  :C5  :Eb5  :G5  :C5 :Eb5  :G5  :Bb4  :D5  :G5  :Bb4  :D5  :G5  :Bb4  :D5  :G5  :Bb4  :D5  :G5 :Bb4 :G4 :Bb4  :D5  :G4  :Bb4  :D5  :G4 :Bb4  :D5  :G4  :Bb4 :D5  :D5 :3 :F4 :Ab4  :C5  :F4  :Ab4  :C5  :F4  :Ab4  :C5  :F4  :Ab4 [:decay 1.3 :attack 0.7] :7]
+          0.25 1 [:attack 0.07 :decay 0.9 :amp 1.4])
+   :motif3 (fn
+             ([] [4.75 0.25])
+             ([b]
+              (let [cfmin  (choose (map midi->hz (scale :C5 :minor)))
+                                        ; cfmin (* (midi->hz 64) (choose [0.5 1 2 4]))
+                    ]
+                (if (= (rand-int 2) 1)
+                  [piano
+                   [:dur (choose [3 1.5])
+                    :atk 0.01
+                    :note (choose (scale :C5 :minor))
+                    :rq 0.4
+                    :amp 0.2]]
+                  )))
+             )
+   :melody (s/phrase-p
+            bass-synth
+            [[:Bb4 :Eb4] [:G4 :C4] [:G3 :D4] :5 [:Bb3 :Eb4] :5 [:G4 :C4] :3]
+            0.25 7 [:attack 0.2 :release 2.5 :detune 0.3 :amp 0.4 :bwr 2])
+   :drum4   (s/build-map-p
+             [[ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Snr03.wav]) []   ] [ b-snr []   ] :1
+              [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom02.wav]) []   ] :2
+              [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom03.wav]) []   ] :1
+              [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Snr03.wav]) []   ] [ b-snr []   ] :1
+              [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom02.wav]) []   ] :2
+              [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Tom03.wav]) []   ] :1
+
+              ])
+   :harmony2    (s/phrase-p
+                 bpfsaw2
+                 [:C4 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :1 :C4 :11 :D4 :1 :D4 :D4 :1 :D4 :D4 :10 :Eb4 :1 :Eb4 :1 :Eb4 :1 :Eb4 :Eb4 :1 :Eb4 :1 :Eb4 :11 :Bb4 :1 :Bb4 :1 :Bb4 :1 :Bb4 :Bb4 :1 :Bb4 :1 :Bb4 :1 :Bb4 :Bb4 :1 :Bb4 :1 :Bb4 :8 :G4 :1 :G4 :1 :G4 :1 :G4 :1 :G4 :G4 :1 :G4 :G4 :1 :G4 :1 :G4 :G4 :14]
+                 0.25 0 [])
+   :drum2  (drum-p [:Kit15-Electro]
+                   [:4 :cl1 :3] 0.25 )
+   :kick  (drum-p [:Kit15-Electro]
+                  [
+                   [o-kick []]
+                   :3
+                   ])
+   :drum3   (s/build-map-p
+             [:2
+              [ (get-in drum-kits [:KurzweilKit04 :CYCdh_Kurz04-Ride01.wav]) []   ] :1
+
+              ])
+
+   })
+
+(def sketch3
+  {:drum1 (s/build-map-p
+           [[ (get-in drum-kits [:KurzweilKit07 :CYCdh_Kurz07-ClHat01.wav])[]]
+            [ (get-in drum-kits [:KurzweilKit07 :CYCdh_Kurz07-ClHat01.wav])[]] :1
+            [ (get-in drum-kits [:KurzweilKit07 :CYCdh_Kurz07-HfHat01.wav])[]] :2
+            [ (get-in drum-kits [:KurzweilKit06 :CYCdh_Kurz06-ClHat.wav])[]
+             (get-in drum-kits [:Kit15-Electro :CYCdh_ElecK05-ClHat04.wav])[]] :1]
+           )
+   :sweet (s/phrase-p
+           sweet
+           [:Bb5 :7 :Ab5 :7 :F5 :7 :C#5 :3 :Eb5 :3 :F5 :35]
+           0.25 0 [:dur 1.5 :amp 0.8 :atk 0.01 :rq 0.8])
+   :drum2 (drum-p [:Kit15-Electro] [:4
+                                    :cl1 :3])
+   :motif (s/phrase-p
+           ks1
+           [:Bb4 :3 :Ab4 :10 :Eb4 :1 :F#4 :F4 :29]
+           0.25 0 [:coef 0.001 :dur 2.6])
+
+   :kick (s/build-map-p
+          [[o-kick [:amp 0.4]] :3])
+   :rise-fall (s/phrase-p
+               rise-fall-pad2
+               [:C5 :C5 :1 :C5 :C5 :1 :C5 :1 :C5 :C5 :1 :C5 :C5 :1 :C5 :C5 :1 :C5 :1 :Eb5 :Eb5 :1 :Eb5 :Eb5 :Eb5 :1 :Eb5 :Eb5 :Eb5 :Eb5 :1 :Eb5 :Eb5 :5 :Ab4 :Ab4 :1 :Ab4 :Ab4 :Ab4 :1 :Ab4 :Ab4 :Ab4 :1 :Ab4 :1 :Bb4 :1 :Bb4 :Bb4 :Bb4 :Bb4 :1 :Bb4 :1 :Bb4 :Bb4 :Bb4 :Bb4 :4 :C5 :1 :C5 :C5 :C5 :1 :C5 :C5 :1 :C5 :2]
+               0.25 0 [:amp 2.5826772038392196 :t 3.4645669291338583])
+   :bass2 (s/phrase-p
+           bass2
+           [:Eb5 :F5 :Eb5 :C5 :11 :Eb5 :F5 :Eb5 :Bb4 :13]
+           0.25 0 [:decay 3.02362216739204 :amp 5.748031496062992])
+
+   })
+
+(def sketch3
+  {:bpfsaw (s/phrase-p
+            bpfsaw
+            [:Bb4 :Eb5 :2 :C5 :10 :Bb4 :Ab4 :1 :G4 :F4 :2 :Bb4 :8 :Eb5 :2 :C5 :8 :F5 :Eb5 :1 :C5 :Eb5]
+            0.25 0 [:dur 1.5 :atk 0.01 :rq 0.9])
+
+   :bass2  (s/phrase-p
+            bass2
+            [:Eb5 :F5 :Eb5 :C5 :11 :Eb5 :F5 :Eb5 :Bb4 :13]
+            0.25 0 [:decay 3.02362216739204 :amp 5.748031496062992])
+   :rise-fall  (s/phrase-p
+                rise-fall-pad2
+                [:C5 :C5 :1 :C5 :C5 :1 :C5 :1 :C5 :C5 :1 :C5 :C5 :1 :C5 :C5 :1 :C5 :1 :Eb5 :Eb5 :1 :Eb5 :Eb5 :Eb5 :1 :Eb5 :Eb5 :Eb5 :Eb5 :1 :Eb5 :Eb5 :5 :Ab4 :Ab4 :1 :Ab4 :Ab4 :Ab4 :1 :Ab4 :Ab4 :Ab4 :1 :Ab4 :1 :Bb4 :1 :Bb4 :Bb4 :Bb4 :Bb4 :1 :Bb4 :1 :Bb4 :Bb4 :Bb4 :Bb4 :4 :C5 :1 :C5 :C5 :C5 :1 :C5 :C5 :1 :C5 :2]
+                0.25 0 [:amp 2.5826772038392196 :t 3.4645669291338583])
+   :kick  (s/build-map-p
+           [[o-kick [:amp 0.4]] :3])
+   :motif (s/phrase-p
+           ks1
+           [:Bb4 :3 :Ab4 :10 :Eb4 :1 :F#4 :F4 :29]
+           0.25 0 [:coef 0.001 :dur 2.6])
+   :drum2  (drum-p [:Kit15-Electro] [:4
+                                     :cl1 :3])
+   :sweet  (s/phrase-p
+            sweet
+            [:Bb5 :7 :Ab5 :7 :F5 :7 :C#5 :3 :Eb5 :3 :F5 :35]
+            0.25 0 [:dur 1.5 :amp 0.8 :atk 0.01 :rq 0.8])
+   :drum1  (s/build-map-p
+            [[ (get-in drum-kits [:KurzweilKit07 :CYCdh_Kurz07-ClHat01.wav])[]]
+             [ (get-in drum-kits [:KurzweilKit07 :CYCdh_Kurz07-ClHat01.wav])[]] :1
+             [ (get-in drum-kits [:KurzweilKit07 :CYCdh_Kurz07-HfHat01.wav])[]] :2
+             [ (get-in drum-kits [:KurzweilKit06 :CYCdh_Kurz06-ClHat.wav])[]
+              (get-in drum-kits [:Kit15-Electro :CYCdh_ElecK05-ClHat04.wav])[]] :1]
+            )
 
    })

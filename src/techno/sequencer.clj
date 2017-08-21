@@ -347,6 +347,8 @@
      ;;   (println "playing "
      ;;            (reduce (fn [a b] (str (to-str a) " " (to-str b) " ")) beat-actions)
      ;;            " for beat " cur-beat " raw-beat" orig-beat))
+     ;; (when (= cur-beat 1)
+     ;;   (println "start"))
      (loop [actions (partition 2 beat-actions) ret false]
        (let [[instrument args] (first actions)
              args (if (not (nil? p-bus)) (concat args [:out-bus p-bus]) args)
@@ -438,7 +440,7 @@
                      (assoc-in cur [id k] new-p)
                      )))
           ;; (if (or (= k :test)
-          ;;          false)
+          ;;          true)
           ;;   (println "playing " k " with beat " final-beat " orig " beat
           ;;            ;(.get counter) " size " size
           ;;                                 ;" time " (.getTime (java.util.Date.))
@@ -647,7 +649,9 @@
                               (merge {:data pattern
                                       :size (p-size pattern (get-st sequencer))} attrs))
                        )))
-       (when  (and (not (contains? @pattern-groups key)) (not (contains? attrs :no-group)))
+       (when  (and (not (get-in @sequencer-data [id :one-shot] false))
+                   (not (contains? @pattern-groups key))
+                   (not (contains? attrs :no-group)))
          (let [vol (get attrs :volume 1)
                p-group (group)
                p-bus (get-bus)
@@ -724,8 +728,8 @@
   )
 
 (defn build-sequencer
-  ([source-synth bus] (build-sequencer source-synth bus 1 false))
-  ([source-synth bus step one-shot] (build-sequencer source-synth bus 1 false -1))
+  ([source-synth bus] (build-sequencer source-synth bus 0.25 false))
+  ([source-synth bus step one-shot] (build-sequencer source-synth bus 0.25 false -1))
   ([source-synth bus step one-shot reset-bus]
    (let [uid (trig-id)
          listen-to (if one-shot 3 bus)
@@ -739,6 +743,7 @@
                               ))
      (swap! sequencer-data assoc-in [(to-sc-id synth) :uid] uid)
      (swap! sequencer-data assoc-in [(to-sc-id synth) :reset-bus] reset-bus)
+     (swap! sequencer-data assoc-in [(to-sc-id synth) :one-shot] one-shot)
      (on-trigger synth uid
                  (fn [beat]
                    (handle-beat-trigger synth beat (node-get-control source-synth :step) one-shot)
@@ -910,7 +915,9 @@
 
 (defn mod-amp [sequencer pattern delta]
   (if (not (nil? (get-in @pattern-fx [pattern :mixer])))
-    (ctl (get-in @pattern-fx [pattern :mixer]) :volume (+ delta (node-get-control (get-in @pattern-fx [pattern :mixer]) :volume)))
+    (let [cur (+ delta (node-get-control (get-in @pattern-fx [pattern :mixer]) :volume))
+          cur (if (<= cur 0) 0 cur)]
+        (ctl (get-in @pattern-fx [pattern :mixer]) :volume cur))
       (mod-actions
        sequencer pattern
        (fn [[inst args]]
@@ -1361,7 +1368,8 @@ e.g. (chord-p inst (chord :C4 :minor)) -> [inst [note1] inst [note2] inst [note3
       (let [size (get-in @sequencer-data [(to-sc-id s) :size])
             size (+ 1 (/ (- size 1) step))
             size (+ 1 (* (- (* times size) 1) step))]
-          (set-size s size)))
+        (set-size s size)
+        ))
     (start-s s)
     )
   )

@@ -68,6 +68,7 @@
           (concat
            [o-kick  b-kick r-kick b-snr dirty-kick g-kick o-snr o-hat]
            (flatten (map vals (vals (group-samples (drum-kits :claves)))))
+           (flatten (map vals (vals (group-samples (drum-kits :congas)))))
            ))))
 
   (sweet :dur 0.2)

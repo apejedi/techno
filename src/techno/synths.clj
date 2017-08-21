@@ -7,12 +7,12 @@
 
 (defsynth sweet [note 60 dur 1 amp 1 vib 0.02 out-bus 0]
   (let [freq (midicps note)
-        ratios [1 3/4 1/5 2/7 11/5 5/8]
+        ratios (map float [1 3/4 1/5 2/7 11/5 5/8])
         freqs (map #(* % freq) ratios)
         freqs (map #(vibrato:kr % 3 vib)
                    freqs)
-        amps (map #(/ 1 %) (range 1 (inc (count ratios))))
-        sig (sin-osc freqs amps)
+        amps (map #(float (/ 1 %)) (range 1 (inc (count ratios))))
+        sig (klang:ar [freqs amps])
         attack (* 0.2 dur)
         sustain (* 0.4 dur)
         release (* 0.4 dur)
@@ -223,6 +223,7 @@
                     [0.2 0.1 0.4 0.1 0.1 0.1]
                     (repeat num (double (/ 1 num)))
                     ])
+        ;sig (hpf:ar sig 300)
         env (env-gen (perc (* atk dur) (* (- 1 atk) dur)) :action FREE)
         sig (* sig env amp)]
     (out out-bus [sig sig])
@@ -467,6 +468,21 @@
 ;;     (out:ar 0 sig)
 ;;     )
 ;;   )
+(defsynth rise-fall-pad2
+  [freq 440 t 4 amt 0.3 amp 0.8 out-bus 0]
+  (let [f-env      (env-gen (perc t t) 1 1 0 1 FREE)
+        src        (saw [freq (* freq 1.01)])
+        signal     (rlpf (* 0.3 src)
+                         (+ (* 0.6 freq) (* f-env 2 freq)) 0.2)
+        k          (/ (* 2 amt) (- 1 amt))
+        distort    (/ (* (+ 1 k) signal) (+ 1 (* k (abs signal))))
+        gate       (pulse (* 2 (+ 1 (sin-osc:kr 0.05))))
+        compressor (compander distort gate 0.01 1 0.5 0.01 0.01)
+        dampener   (+ 1 (* 0.5 (sin-osc:kr 0.5)))
+        reverb     (free-verb compressor 0.5 0.5 dampener)
+        echo       (comb-n reverb 0.4 0.3 0.5)
+        sig (* amp echo)]
+    (out:ar out-bus [sig sig])))
 
 (defsynth rise-pad [freq 440 t 3 attack 0.5 amp 1 detune 0.1 rq 0.5 out-bus 0]
   (let [dur (- 1 attack)
