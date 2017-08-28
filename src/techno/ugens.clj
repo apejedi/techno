@@ -75,6 +75,43 @@
             :default 241}]
     :rates #{:ar}
     :summary "DWG Sound Board wut"
+    }
+   {:name "DWGPlucked2"
+    :args [{:name "freq",
+            :default 440
+            :doc "Frequency"}
+           {:name "amp"
+            :default 0.5
+            :doc "Key pulsation strenght. Betwen 0 and 1."}
+           {:name "gate"
+            :default 1
+            :doc "Releases synth when value changes from >0 to 0."}
+           {:name "pos"
+            :default 0.14
+            :doc "Relative pluck position from 0 to 1."}
+           {:name "c1"
+            :default 1
+            :doc "Inverse of DC decay time."}
+           {:name "c3"
+            :default 30
+            :doc "Hight frequency loss factor."}
+           {:name "inp"
+            :default 0
+            :doc "Plucking signal. Could be first part of plucked sample for doing conmuted synthesis."}
+           {:name "release"
+            :default 0.1
+            :doc "Release time in seconds."}
+           {:name "mistune"
+            :default 1.008
+            :doc "Factor for detuning second string."}
+           {:name "mp"
+            :default 0.55
+            :doc "Exitation mixer. 1 is only first. 0 is only second string."}
+           {:name "gc"
+            :default 0.01
+            :doc "Coupling string factor."}]
+    :rates #{:ar}
+    :summary "DWG Plucked"
     }])
 
 (doseq [spec specs]

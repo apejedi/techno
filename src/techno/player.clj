@@ -1,6 +1,6 @@
-(ns techno.sequencer2
+(ns techno.player
   (:import [java.util.concurrent ScheduledThreadPoolExecutor TimeUnit ThreadPoolExecutor]
-           [java.io Writer]))
+           ))
 
 (defrecord PoolInfo [thread-pool jobs-ref id-count-ref])
 (defrecord MutablePool [pool-atom])
@@ -12,7 +12,6 @@
 (defonce patterns (atom {}))
 (declare mk-pool)
 (declare schedule-job)
-(declare stop-s)
 (declare now)
 (declare update-size)
 (declare handle-beat-trigger)
@@ -25,6 +24,18 @@
     )
   )
 
+(defn gcd
+      [a b]
+      (if (zero? b)
+      a
+      (recur b, (mod a b))))
+
+(defn lcm
+      [a b]
+      (/ (* a b) (gcd a b)))
+;; to calculate the lcm for a variable number of arguments
+(defn lcmv [& v] (reduce lcm v))
+
 (defn- get-job [id]
   (get @(:jobs-ref @pool) id)
   )
@@ -36,20 +47,51 @@
     ))
 
 (defn get-s
-  ([speed] (get-s speed 1))
-  ([speed step & [options]]
+  ([bpm & [options]]
    (if (or (nil? @pool) (.isShutdown (:thread-pool @pool)))
      (swap! pool (fn [_] (mk-pool))))
-   (let [period (/ 1000 (/ speed step))
+   (let [period (/ 60000 bpm 4)
          args (if (not (nil? options)) options {})
          job (schedule-job @pool
-                           handle-beat-trigger
+                           play
                            period
-                           (merge {:speed speed :step step :beat 1 :size 1}
+                           (merge {:bpm bpm :beat 1 :size 1 :div 4}
                           args))]
      (:id job)
      ))
-   )
+  )
+
+(defn- update-player [id]
+  (let [divs (map #(get % :div) (get @patterns id))
+        div (apply lcmv divs)]
+    )
+  )
+
+
+(defn play [id]
+  (let [state (:state (get @(:jobs-ref @pool) id))
+        beat (:beat @state)
+        size (:size @state)
+        s-div (:div @state)]
+    (doseq [[k v] (get @patterns id)
+            div (get v :div)
+            step (/ s-div div)]
+      (when (or (= 1 beat) (= 0 (mod beat step)))
+        (let [bar (/ beat div)
+              note (mod beat div)]
+          (doseq [[a args] (partition 2 (get-in v [bar note]))]
+              (apply a args)
+              ))))
+    (if (> beat size)
+      (swap! state assoc :beat 1)
+      (swap! state assoc :beat (inc beat))))
+  )
+
+(defn add-p [id pattern key]
+  (update-player)
+  (swap! patterns assoc-in [id key] pattern)
+  )
+
 
 (defn set-size [id size]
   (swap! (:state (get-job id)) assoc :size size)
@@ -61,136 +103,10 @@
 (defn set-sp [id speed]
   (let [step (:step @(:state (get-job id)))]
     (stop-s id true)
-    (get-s speed step {:id id})
+    (get-s speed {:id id})
    )
   )
 
-(defn add-p
-  "(add-p sequencer pattern) adds the given pattern to the patterns being played by the sequencer"
-  ([sequencer pattern] (add-p sequencer pattern (gensym "pat") false))
-  ([sequencer pattern key] (add-p sequencer pattern key false))
-  ([sequencer pattern key wrap]
-   (let [id sequencer
-         cur-val (get @patterns id {})
-         watcher-key (keyword (gensym "pattern"))]
-     (swap! patterns (fn [p]
-                       (assoc p id
-                              (assoc cur-val key {:data pattern :wrap wrap}))))
-     (update-size sequencer)
-     (if (instance? clojure.lang.Atom pattern)
-       (do
-         (add-watch pattern watcher-key (fn [& args] (update-size sequencer)))
-         )
-       )
-     ))
-  )
-
-(defn rm-p [sequencer pattern]
-    "(rm-p sequencer pattern) stops the given pattern from being played"
-  (let [id sequencer
-        cur-val (get @patterns id {})]
-    (swap! patterns assoc id
-           (if (keyword? pattern)
-             (dissoc cur-val pattern)
-             (into {}
-                   (remove
-                    (fn [[k v]] (= (get-val-if-ref pattern) (get-val-if-ref (v :data))))
-                    cur-val
-                    )))
-
-           )
-    (update-size sequencer)
-    )
-  )
-(defn play
-  "Function to play instruments on the given beat"
-  ([cur-beat pattern] (play cur-beat pattern false))
-  ([cur-beat pattern wrap]
-   (let [beat-actions
-         (cond
-           (fn? pattern) (pattern cur-beat)
-           (map? pattern) (pattern cur-beat)
-           (sequential? pattern)
-           (if (<= cur-beat (count pattern)) (nth pattern (dec cur-beat))))]
-     ;(println (System/currentTimeMillis))
-     ;; (println cur-beat)
-     ;; (if (> (count beat-actions) 0)
-     ;;   (println "playing "
-     ;;            (reduce (fn [a b] (str (to-str a) " " (to-str b) " ")) beat-actions)
-     ;;            " for beat " cur-beat))
-     (dorun
-      (for [[instrument args] (partition 2 beat-actions)]
-        (if (not (nil? instrument))
-          (let [inst (apply instrument args)]
-            (if (and (instance? overtone.studio.inst.Inst instrument) ;;If instrument has a gate argument, set it to 0 after trigger
-                     (some #(= (:name %) "gate") (:params instrument)))
-              (do
-                ;; (at (+ (now)
-                ;;        (* (if (>= (.indexOf args :dur) 0)
-                ;;             (nth args (inc (.indexOf args :dur)))
-                ;;             1
-                ;;             ) 1000))
-                ;;     (ctl inst :gate 0)
-                ;;     )
-                )
-              )
-            ))))))
-  )
-
-(defn- handle-beat-trigger [id]
-  (let [job (get-job id)
-        job-state @(:state job)
-        size (:size job-state)
-        step (:step job-state)
-        stepped-size (inc (/ (dec size) step))
-        beat (cond
-               (> (:beat job-state) stepped-size) 1
-               true (:beat job-state))
-        step-beat (fn [beat step]
-                    (let [res (inc (* (dec beat) step))]
-                      (cond (=  (mod res (int res)) 0.0)
-                           (int res)
-                           true res)))
-        stepped-beat (step-beat beat step)]
-    ;(println "playing " stepped-beat)
-    (doseq [[k p] (get @patterns id)]
-      (let [val (get-val-if-ref (p :data))
-            wrap (p :wrap)
-            size (cond
-                   (map? val) (apply max (keys val))
-                   (sequential? val) (count val)
-                   true 1)
-            wrap-beat (fn [beat size]
-                        (let [s (+ 1 (/ (- size 1) step))
-                              steps (cycle (range 1 (inc s)))
-                              w (nth steps (dec beat))]
-                          (step-beat w step)
-                          )
-                        )
-            final-beat (if (and wrap (> stepped-beat size))
-                         (wrap-beat beat size)
-                         stepped-beat)]
-        (play final-beat val)
-        ))
-    (dosync
-     (swap! (:state job) assoc :beat (inc beat)))
-    )
-  )
-(defn- update-size [id]
-  (let [sequencer (get-job id)]
-    (swap! (:state sequencer) assoc :size
-           (reduce (fn [c p]
-                     (let [val (get-val-if-ref (p :data))]
-                       (max c
-                            (cond
-                              (map? val)  (apply max (keys val))
-                              (sequential? val) (count val)
-                              true (get-in sequencer [:state :size])))
-                       ))
-                   1
-                   (vals (get @patterns (:id sequencer)))
-                   )))
-  )
 
 (defn- format-date
   "Format date object as a string such as: 15:23:35s"
@@ -438,21 +354,3 @@
   "Return the current time in ms"
   []
   (System/currentTimeMillis))
-
-(defn- mod-p [sequencer pattern attr val]
-  (swap! patterns (fn [p]
-                     (let [id sequencer
-                           [key pat] (first
-                                      (filter (fn [[k v]]
-                                                (= (v :data)  pattern)) (p id)))]
-                       (if (not (nil? key))
-                         (assoc-in p [id key attr] val)
-                         p
-                         )
-                       ))))
-(defn wrap-p
-  ([sequencer pattern] (wrap-p sequencer pattern true))
-  ([sequencer pattern val]
-   (mod-p sequencer pattern :wrap val)
-   )
-  )
