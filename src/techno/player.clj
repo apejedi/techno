@@ -1,6 +1,6 @@
 (ns techno.player
   (:import [java.util.concurrent ScheduledThreadPoolExecutor TimeUnit ThreadPoolExecutor]
-           ))
+           [java.io Writer]))
 
 (defrecord PoolInfo [thread-pool jobs-ref id-count-ref])
 (defrecord MutablePool [pool-atom])
@@ -11,6 +11,8 @@
 (defonce pool (atom nil))
 (defonce patterns (atom {}))
 (declare mk-pool)
+(declare play)
+(declare stop-s)
 (declare schedule-job)
 (declare now)
 (declare update-size)
@@ -50,46 +52,82 @@
   ([bpm & [options]]
    (if (or (nil? @pool) (.isShutdown (:thread-pool @pool)))
      (swap! pool (fn [_] (mk-pool))))
-   (let [period (/ 60000 bpm 4)
+   (let [div (get options :div 4)
+         size (get options :size 4)
+         period (/ 60000 bpm div)
          args (if (not (nil? options)) options {})
          job (schedule-job @pool
                            play
                            period
-                           (merge {:bpm bpm :beat 1 :size 1 :div 4}
+                           (merge {:bpm bpm :beat 1 :size size :div div}
                           args))]
      (:id job)
      ))
   )
 
 (defn- update-player [id]
-  (let [divs (map #(get % :div) (get @patterns id))
-        div (apply lcmv divs)]
+  (try
+    (let [divs (map #(get % :div) (vals (get @patterns id)))
+          div (apply lcmv divs)
+          state (:state (get @(:jobs-ref @pool) id))
+          bpm (:bpm @state)
+          size (apply max
+                      (map
+                       (fn [p]
+                         (let [b (apply max (filter number? (keys p)))
+                               s (* div (dec b))
+                               step (/ div (get p :div))
+                               s (+ s (* step
+                                         (if (not (empty? (get p b)))
+                                           (apply max (keys (get p b)))
+                                           1)))]
+                           s
+                           ))
+                       (vals (get @patterns id))))]
+      (stop-s id true false)
+      (get-s bpm {:id id :div div :size size})
+      )
+    (catch Exception e
+      (println (str "caught exception: " (.getMessage e))))
     )
   )
 
-
+(def t {1 {1 [println ["first"]]} 2 {1 [println ["second"]] 3 [println ["note3"]]} :div 4})
 (defn play [id]
-  (let [state (:state (get @(:jobs-ref @pool) id))
-        beat (:beat @state)
-        size (:size @state)
-        s-div (:div @state)]
-    (doseq [[k v] (get @patterns id)
-            div (get v :div)
-            step (/ s-div div)]
-      (when (or (= 1 beat) (= 0 (mod beat step)))
-        (let [bar (/ beat div)
-              note (mod beat div)]
-          (doseq [[a args] (partition 2 (get-in v [bar note]))]
-              (apply a args)
-              ))))
-    (if (> beat size)
-      (swap! state assoc :beat 1)
-      (swap! state assoc :beat (inc beat))))
+  (try
+    (let [state (:state (get @(:jobs-ref @pool) id))
+          beat (:beat @state)
+          size (:size @state)
+          s-div (:div @state)]
+      ;; (println "beat " beat)
+      (doseq [[k v] (get @patterns id)]
+        (let [div (get v :div)
+              step (/ s-div div)]
+          ;(println "step " step)
+          (when (or (= 1 beat) (= 0 (mod (dec beat) step)))
+            (let [bar  (/ (if (= 0 (mod beat div))
+                            beat
+                            (+ beat (- div (mod beat div))))
+                          div)
+                  note (mod beat s-div)
+                  note (if (= 0 note) div note)]
+              ;; (println "bar " bar "note " note)
+              (doseq [[a args] (partition 2 (get-in v [bar note]))]
+                (apply a args)
+                ))
+            ))
+        )
+      (if (>= beat size)
+        (swap! state assoc :beat 1)
+        (swap! state assoc :beat (inc beat)))
+      )
+    (catch Exception e (println (.getMessage e))
+           (.printStackTrace e)))
   )
 
 (defn add-p [id pattern key]
-  (update-player)
   (swap! patterns assoc-in [id key] pattern)
+  (update-player id)
   )
 
 
@@ -307,9 +345,11 @@
   ([id pool] (cancel-job-id id pool true)))
 
 (defn stop-s
-  ([id] (stop-s id false))
-  ([id immediate]
-   (swap! patterns dissoc id)
+  ([id] (stop-s id false true))
+  ([id immediate] (stop-s id immediate true))
+  ([id immediate reset]
+   (when reset
+     (swap! patterns dissoc id))
    (cancel-job-id id pool immediate))
   )
 
