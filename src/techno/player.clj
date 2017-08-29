@@ -1,4 +1,6 @@
 (ns techno.player
+  (:use [overtone.core]
+        [techno.synths])
   (:import [java.util.concurrent ScheduledThreadPoolExecutor TimeUnit ThreadPoolExecutor]
            [java.io Writer]))
 
@@ -12,6 +14,7 @@
 (defonce patterns (atom {}))
 (declare mk-pool)
 (declare play)
+(declare p-size)
 (declare stop-s)
 (declare schedule-job)
 (declare now)
@@ -66,6 +69,16 @@
      ))
   )
 
+(defn p-size [p & [div]]
+  (let [b (apply max (filter number? (keys p)))
+        s (* (get p :div) (dec b))
+        step (if (not (nil? div)) (/ div (get p :div)) 1)
+        s (+ s (* step (if (not (empty? (get p b)))
+                         (apply max (keys (get p b)))
+                         1)))]
+    s
+    )
+  )
 (defn- update-player [id]
   (try
     (let [divs (map #(get % :div) (vals (get @patterns id)))
@@ -105,14 +118,14 @@
            s-div (:div @state)]
        ;; (println "beat " beat)
        (doseq [[k v] (get @patterns id)]
-         (let [;beat (if (< (:size v) beat) (mod beat (:size v)) beat)
+         (let [beat (if (< (:size v) beat) (mod beat (:size v)) beat)
                div (get v :div)
                step (/ s-div div)]
            (when (or (= 1 beat) (= 0 (mod (dec beat) step)))
              (let [bar (inc (int (/ (dec beat) s-div)))
                    note (inc (int (/ (dec (mod beat s-div)) step)))
                    note (if (= 0 note) div note)]
-               (println "k " k "bar " bar "note " note)
+               ;; (println "k " k "bar " bar "note " note)
                (doseq [[a args] (partition 2 (get-in v [bar note]))]
                  (apply a args)
                  ))
@@ -126,15 +139,20 @@
            (.printStackTrace e)))
   )
 
-;; (def p (get-s 10))
+;; (def p (get-s 120))
 ;; (stop-s p)
-;; (do
-;;   (add-p p
-;;          {:div 4 1 {1 [println ["first"]] 2 []}} :fourth)
-;;   (add-p p
-;;          {:div 8 1 {1 [println ["second"]] 8 []}} :eigth)
-;;   (add-p p
-;;    {:div 1 1 {1 [techno.synths/o-clap []]}} :third))
+(let [k [o-kick []]
+      o [(techno.drum-patterns/drum-s [:Kit8-Vinyl] :o1) []]
+      h [o-hat []]
+      c [o-clap []]
+      patterns {:kicks {:div 4 1 {1 k 4 []}}
+                :hats {:div 16 1 {1 h 3 h 4 h 5 h 9 h 12 h 14 h 15 h 16 h}
+                       2 { 2 h 3 h 4 h 5 h 16 []}}
+                :clap {:div 4 1 {2 c} 2 {1 c 3 c 4 c} 3 {4 []}}}]
+  (add-p p
+         (:clap patterns) :clap)
+
+  )
 
 (defn add-p [id pattern key]
   (swap! patterns assoc-in [id key] pattern)
@@ -156,6 +174,79 @@
    )
   )
 
+(defn phrase-p [inst pattern div & [space args]]
+  (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
+                         (instance? overtone.sc.synth.Synth inst))
+                   (cond (some #(= (:name %) "freq") (:params inst)) :freq
+                         (some #(= (:name %) "note") (:params inst)) :note
+                         true false))
+        note-p #(do %
+                 ;if (= note-arg :freq) (midi->hz (note %)) (note %)
+                 )
+        is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
+        div (int (/ 1 div))]
+      (loop [p {:div div} pattern pattern beat 1]
+        (let [mk-note #(vector inst (vec (concat [note-arg (note-p %)] args)))
+              a (first pattern)
+              pattern (rest pattern)
+              end? (= (count pattern) 0)
+              bar (inc (int (/ (dec beat) div)))
+              n (inc (int (dec (mod beat div))))
+              n (if (= 0 n) div n)
+              x (print "a " a "beat " beat "bar " bar "n " n)
+              d (cond (is-space? a) (-> a name Integer/parseInt)
+                      true 1)
+              beat (+ beat
+                      (cond (is-space? a)
+                            (cond (= n 1) (dec d) (= (+ n d) div) (inc d) true d)
+                            true d))
+              x (println " new beat " beat)
+              a (cond (sequential? a) (vec (mapcat mk-note a))
+                      (is-space? a) []
+                      true (mk-note a))
+              p (if (or (not (= a [])) end?)
+                  (assoc-in p [bar n] a) p)]
+          (if end?
+            p
+            (recur p pattern beat))
+          )))
+  )
+
+(defn phrase-p [inst pattern div & [space args]]
+  (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
+                         (instance? overtone.sc.synth.Synth inst))
+                   (cond (some #(= (:name %) "freq") (:params inst)) :freq
+                         (some #(= (:name %) "note") (:params inst)) :note
+                         true false))
+        note-p #(if (= note-arg :freq) (midi->hz (note %)) (note %))
+        is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
+        div (int (/ 1 div))]
+      (loop [p {:div div} pattern pattern bar 1 n 1]
+        (let [mk-note #(vector inst (vec (concat [note-arg (note-p %)] args)))
+              a (first pattern)
+              pattern (rest pattern)
+              end? (= (count pattern) 0)
+              new-n (cond (is-space? a)
+                          (if (= n 1)
+                            (dec (+ n (-> a name Integer/parseInt)))
+                            (+ n (-> a name Integer/parseInt)))
+                          true (inc n))
+              new-bar (+ bar (int (/ (dec new-n) div)))
+              new-n (int (if (> new-n div) (mod new-n div) new-n))
+              x (println "a: " a "new-bar " new-bar " new-n " new-n)
+              a (cond (sequential? a) (vec (mapcat mk-note a))
+                      (is-space? a) []
+                      true (mk-note a))
+              p (if (or (not (= a [])) end?)
+                  (assoc-in
+                   p [(if end? new-bar bar) (if end? new-n n)]
+                   a)
+                  p)]
+          (if end?
+            p
+            (recur p pattern new-bar new-n))
+          )))
+  )
 
 (defn- format-date
   "Format date object as a string such as: 15:23:35s"
