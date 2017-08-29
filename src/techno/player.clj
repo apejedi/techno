@@ -6,7 +6,7 @@
 (defrecord MutablePool [pool-atom])
 (defrecord RecurringJob [id ms-period
                          job pool-info
-                         scheduled? state])
+                         scheduled? state counter])
 
 (defonce pool (atom nil))
 (defonce patterns (atom {}))
@@ -59,8 +59,9 @@
          job (schedule-job @pool
                            play
                            period
-                           (merge {:bpm bpm :beat 1 :size size :div div}
-                          args))]
+                           (merge {:bpm bpm :size size :div div}
+                                  args)
+                           (ref 1))]
      (:id job)
      ))
   )
@@ -73,7 +74,7 @@
           bpm (:bpm @state)
           size (apply max
                       (map
-                       (fn [p]
+                       (fn [[k p]]
                          (let [b (apply max (filter number? (keys p)))
                                s (* div (dec b))
                                step (/ div (get p :div))
@@ -81,9 +82,10 @@
                                          (if (not (empty? (get p b)))
                                            (apply max (keys (get p b)))
                                            1)))]
+                           (swap! patterns assoc-in [id k :size] s)
                            s
                            ))
-                       (vals (get @patterns id))))]
+                       (get @patterns id)))]
       (stop-s id true false)
       (get-s bpm {:id id :div div :size size})
       )
@@ -92,38 +94,47 @@
     )
   )
 
-(def t {1 {1 [println ["first"]]} 2 {1 [println ["second"]] 3 [println ["note3"]]} :div 4})
+
 (defn play [id]
   (try
-    (let [state (:state (get @(:jobs-ref @pool) id))
-          beat (:beat @state)
-          size (:size @state)
-          s-div (:div @state)]
-      ;; (println "beat " beat)
-      (doseq [[k v] (get @patterns id)]
-        (let [div (get v :div)
-              step (/ s-div div)]
-          ;(println "step " step)
-          (when (or (= 1 beat) (= 0 (mod (dec beat) step)))
-            (let [bar  (/ (if (= 0 (mod beat div))
-                            beat
-                            (+ beat (- div (mod beat div))))
-                          div)
-                  note (mod beat s-div)
-                  note (if (= 0 note) div note)]
-              ;; (println "bar " bar "note " note)
-              (doseq [[a args] (partition 2 (get-in v [bar note]))]
-                (apply a args)
-                ))
-            ))
-        )
-      (if (>= beat size)
-        (swap! state assoc :beat 1)
-        (swap! state assoc :beat (inc beat)))
-      )
+    (dosync
+     (let [state (:state (get @(:jobs-ref @pool) id))
+           counter (:counter (get @(:jobs-ref @pool) id))
+           beat @counter
+           size (:size @state)
+           s-div (:div @state)]
+       ;; (println "beat " beat)
+       (doseq [[k v] (get @patterns id)]
+         (let [;beat (if (< (:size v) beat) (mod beat (:size v)) beat)
+               div (get v :div)
+               step (/ s-div div)]
+           (when (or (= 1 beat) (= 0 (mod (dec beat) step)))
+             (let [bar (inc (int (/ (dec beat) s-div)))
+                   note (inc (int (/ (dec (mod beat s-div)) step)))
+                   note (if (= 0 note) div note)]
+               (println "k " k "bar " bar "note " note)
+               (doseq [[a args] (partition 2 (get-in v [bar note]))]
+                 (apply a args)
+                 ))
+             ))
+         )
+       (if (>= beat size)
+         (ref-set counter 1)
+         (commute counter inc))
+       ))
     (catch Exception e (println (.getMessage e))
            (.printStackTrace e)))
   )
+
+;; (def p (get-s 10))
+;; (stop-s p)
+;; (do
+;;   (add-p p
+;;          {:div 4 1 {1 [println ["first"]] 2 []}} :fourth)
+;;   (add-p p
+;;          {:div 8 1 {1 [println ["second"]] 8 []}} :eigth)
+;;   (add-p p
+;;    {:div 1 1 {1 [techno.synths/o-clap []]}} :third))
 
 (defn add-p [id pattern key]
   (swap! patterns assoc-in [id key] pattern)
@@ -190,7 +201,7 @@
 (defn- schedule-job
   "Schedule the fun to execute periodically in pool-info's pool with the
   specified initial-delay and ms-period. Returns a RecurringJob record."
-  [pool-info fun ms-period job-args]
+  [pool-info fun ms-period job-args counter]
   (let [ms-period     (long ms-period)
         ^ScheduledThreadPoolExecutor t-pool (:thread-pool pool-info)
         start-time    (System/currentTimeMillis)
@@ -209,7 +220,8 @@
                                         :job job
                                         :pool-info pool-info
                                         :scheduled? (atom true)
-                                        :state (atom job-args)})]
+                                        :state (atom job-args)
+                                        :counter counter})]
        (commute jobs-ref assoc id job-info)
        job-info))))
 
