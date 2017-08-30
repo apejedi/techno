@@ -1,6 +1,7 @@
 (ns techno.player
-  (:use [overtone.core]
-        [techno.synths])
+  (:use [overtone.core :exclude [now stop show-schedule]]
+        [techno.synths]
+        )
   (:import [java.util.concurrent ScheduledThreadPoolExecutor TimeUnit ThreadPoolExecutor]
            [java.io Writer]))
 
@@ -17,7 +18,7 @@
 (declare p-size)
 (declare stop-s)
 (declare schedule-job)
-(declare now)
+(declare now2)
 (declare update-size)
 (declare handle-beat-trigger)
 (declare shutdown-pool-now!)
@@ -139,20 +140,25 @@
            (.printStackTrace e)))
   )
 
-;; (def p (get-s 120))
-;; (stop-s p)
-(let [k [o-kick []]
-      o [(techno.drum-patterns/drum-s [:Kit8-Vinyl] :o1) []]
-      h [o-hat []]
-      c [o-clap []]
-      patterns {:kicks {:div 4 1 {1 k 4 []}}
-                :hats {:div 16 1 {1 h 3 h 4 h 5 h 9 h 12 h 14 h 15 h 16 h}
-                       2 { 2 h 3 h 4 h 5 h 16 []}}
-                :clap {:div 4 1 {2 c} 2 {1 c 3 c 4 c} 3 {4 []}}}]
-  (add-p p
-         (:clap patterns) :clap)
-
+(defn pp-pattern [pattern]
+  (doseq [[b a] pattern]
+    (println b " " (apply str (map )))
+    )
   )
+;; (def p (get-s 40))
+;; (stop-s p)
+;; (let [k [o-kick []]
+;;       o [(techno.drum-patterns/drum-s [:Kit8-Vinyl] :o1) []]
+;;       h [o-hat []]
+;;       c [o-clap []]
+;;       patterns {:kicks {:div 4 1 {1 k 4 []}}
+;;                 :hats {:div 16 1 {1 h 3 h 4 h 5 h 9 h 12 h 14 h 15 h 16 h}
+;;                        2 { 2 h 3 h 4 h 5 h 16 []}}
+;;                 :clap {:div 4 1 {2 c} 2 {1 c 3 c 4 c} 3 {4 []}}}]
+;;   (add-p p
+;;          (:clap patterns) :clap)
+
+;;   )
 
 (defn add-p [id pattern key]
   (swap! patterns assoc-in [id key] pattern)
@@ -181,72 +187,42 @@
                          (some #(= (:name %) "note") (:params inst)) :note
                          true false))
         note-p #(do %
-                 ;if (= note-arg :freq) (midi->hz (note %)) (note %)
-                 )
+                  ;(if (= note-arg :freq) (midi->hz (note %)) (note %))
+                  )
         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
-        div (int (/ 1 div))]
+        is-note? #(and (keyword? %) (re-find #"^\w" (name %)))
+        div (int (/ 1 div))
+        get-pos (fn [beat]
+                  (let [bar (if (= 0 (mod beat div)) (/ beat div) (inc (int (/ beat div))))
+                        n (mod beat div)
+                        n (if (= 0 n) div n)]
+                    [bar n]))]
       (loop [p {:div div} pattern pattern beat 1]
         (let [mk-note #(vector inst (vec (concat [note-arg (note-p %)] args)))
               a (first pattern)
               pattern (rest pattern)
               end? (= (count pattern) 0)
-              bar (inc (int (/ (dec beat) div)))
-              n (inc (int (dec (mod beat div))))
-              n (if (= 0 n) div n)
-              x (print "a " a "beat " beat "bar " bar "n " n)
-              d (cond (is-space? a) (-> a name Integer/parseInt)
+              [bar n] (get-pos beat)
+              ;; x (print "a " a "beat " beat "bar " bar "n " n)
+              d (cond (is-space? a)
+                      (if (is-note? (first pattern))
+                        (inc (-> a name Integer/parseInt))
+                        (-> a name Integer/parseInt))
+                      (is-space? (first pattern)) 0
                       true 1)
-              beat (+ beat
-                      (cond (is-space? a)
-                            (cond (= n 1) (dec d) (= (+ n d) div) (inc d) true d)
-                            true d))
-              x (println " new beat " beat)
+              beat (+ beat d)
               a (cond (sequential? a) (vec (mapcat mk-note a))
                       (is-space? a) []
                       true (mk-note a))
-              p (if (or (not (= a [])) end?)
-                  (assoc-in p [bar n] a) p)]
+              p (cond (not (= a [])) (assoc-in p [bar n] a)
+                      (and end? (> d 0)) (assoc-in p (get-pos beat) [])
+                      true p)]
           (if end?
             p
             (recur p pattern beat))
           )))
   )
 
-(defn phrase-p [inst pattern div & [space args]]
-  (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
-                         (instance? overtone.sc.synth.Synth inst))
-                   (cond (some #(= (:name %) "freq") (:params inst)) :freq
-                         (some #(= (:name %) "note") (:params inst)) :note
-                         true false))
-        note-p #(if (= note-arg :freq) (midi->hz (note %)) (note %))
-        is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
-        div (int (/ 1 div))]
-      (loop [p {:div div} pattern pattern bar 1 n 1]
-        (let [mk-note #(vector inst (vec (concat [note-arg (note-p %)] args)))
-              a (first pattern)
-              pattern (rest pattern)
-              end? (= (count pattern) 0)
-              new-n (cond (is-space? a)
-                          (if (= n 1)
-                            (dec (+ n (-> a name Integer/parseInt)))
-                            (+ n (-> a name Integer/parseInt)))
-                          true (inc n))
-              new-bar (+ bar (int (/ (dec new-n) div)))
-              new-n (int (if (> new-n div) (mod new-n div) new-n))
-              x (println "a: " a "new-bar " new-bar " new-n " new-n)
-              a (cond (sequential? a) (vec (mapcat mk-note a))
-                      (is-space? a) []
-                      true (mk-note a))
-              p (if (or (not (= a [])) end?)
-                  (assoc-in
-                   p [(if end? new-bar bar) (if end? new-n n)]
-                   a)
-                  p)]
-          (if end?
-            p
-            (recur p pattern new-bar new-n))
-          )))
-  )
 
 (defn- format-date
   "Format date object as a string such as: 15:23:35s"
@@ -440,12 +416,12 @@
   ([job] (cancel-job job false))
   ([id pool] (cancel-job-id id pool false)))
 
-(defn kill
-  "kill a recurring or scheduled job forcefully either using a
-  corresponding record or unique id. If you specify an id, you also
-  need to pass the associated pool."
-  ([job] (cancel-job job true))
-  ([id pool] (cancel-job-id id pool true)))
+;; (defn kill
+;;   "kill a recurring or scheduled job forcefully either using a
+;;   corresponding record or unique id. If you specify an id, you also
+;;   need to pass the associated pool."
+;;   ([job] (cancel-job job true))
+;;   ([id pool] (cancel-job-id id pool true)))
 
 (defn stop-s
   ([id] (stop-s id false true))
@@ -468,7 +444,7 @@
 
 (defn- format-start-time
   [date]
-  (if (< date (now))
+  (if (< date (now2))
     ""
     (str ", starts at: " (format-date date))))
 
@@ -493,7 +469,7 @@
           (map #(println (job-string %)) jobs))))))
 
 
-(defn now
+(defn now2
   "Return the current time in ms"
   []
   (System/currentTimeMillis))
