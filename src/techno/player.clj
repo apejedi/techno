@@ -30,6 +30,19 @@
     )
   )
 
+(defn get-pos [beat div]
+       (let [bar (if (= 0 (mod beat div)) (/ beat div) (inc (int (/ beat div))))
+             n (mod beat div)
+             n (if (= 0 n) div n)]
+         [(int bar) (int n)]))
+
+(defn find-in [coll x]
+  (some
+   (fn [[k v]]
+     (cond (= k x) [k]
+           (map? v) (if-let [r (find-in v x)]
+                      (into [k] r))))
+   coll))
 (defn gcd
       [a b]
       (if (zero? b)
@@ -139,13 +152,83 @@
     (catch Exception e (println (.getMessage e))
            (.printStackTrace e)))
   )
-
+(defn get-action-str [action & [samples sample-var]]
+  (let [sample-var (if (not (nil? sample-var)) (symbol sample-var))
+        action (vec
+                (mapcat
+                 (fn [[a arg]]
+                   (let [note-arg
+                         (if (or (instance? overtone.studio.inst.Inst a)
+                                 (instance? overtone.sc.synth.Synth a))
+                           (cond (some #(= (:name %) "freq") (:params a)) :freq
+                                 (some #(= (:name %) "note") (:params a)) :note
+                                 true false) false)
+                         arg (if note-arg
+                               (loop [arg arg cur (first arg) prev nil final []]
+                                 (if (> (count arg) 0)
+                                   (recur (rest arg)
+                                          (first (rest arg)) cur
+                                          (conj final
+                                                (if (= prev note-arg)
+                                                  (cond (= note-arg :freq) (list 'midi->hz (list 'note (find-note-name (hz->midi cur))))
+                                                        (= note-arg :note) (list 'note (find-note-name cur)))
+                                                  cur)))
+                                   final))
+                               arg)
+                         ]
+                     (vector a arg " "))
+                   )
+                 (partition 2 action)))
+        action (vec (map
+                     #(cond (and (not (nil? samples))
+                                 (= overtone.sc.sample.PlayableSample (type %)))
+                            (list 'get-in sample-var
+                                  (find-in samples (keyword
+                                                      (clojure.string/replace (:name %) " " ""))))
+                            (or (= (type %) overtone.studio.inst.Inst)
+                                (= (type %) overtone.sc.synth.Synth)
+                                (= overtone.sc.sample.PlayableSample (type %)))
+                            (:name %)
+                            (sequential? %) (vec %)
+                            true %)
+                     action))
+        action (if (= [] (first action)) [] action)
+        action-str (map str action)]
+                                        ;(str "[ " (apply str action) " ]")
+    (str "[" (clojure.string/join " " action-str) "]")
+    ))
 (defn pp-pattern [pattern]
-  (doseq [[b a] pattern]
-    (println b " " (apply str (map )))
+  (let [p (into (sorted-map) (into {} (filter #(number? (first %)) pattern)))
+        bars (keys p)
+        bar (if (not (empty? bars)) (apply max bars) 1)
+        note (if (not (empty? (get pattern bar)))
+               (apply max (keys (get pattern bar)))
+               1)
+        p (if (empty? (get-in pattern [bar note])) (assoc-in p [bar note] [:end]) p)
+        notes (map #(into (sorted-map) %) (vals p))
+        notes (map (fn [a] (into {} (map (fn [[k v]] [k
+                                                    (get-action-str v)
+                                                    ]) a))) notes)]
+    (clojure.pprint/print-table (range 1 (inc (:div pattern))) notes)
     )
   )
 ;; (def p (get-s 40))
+
+;; (add-p p
+;;        (let [l [:dur 3]
+;;                                  a [:Ab2 l]
+;;                                  f [:F#2 l]
+;;                                  main [:Eb3 :Bb4 :Eb3 :Bb4 l :1 :Eb3 :Bb4]]
+;;                              (phrase-p
+;;                               piano
+;;                               (concat a main
+;;                                       a main
+;;                                       f main
+;;                                       f main
+;;                                       [:Bb4] [:C5 l])
+;;                               (double (/ 1 4))
+;;                               )
+;;                              ) :piano)
 ;; (stop-s p)
 ;; (let [k [o-kick []]
 ;;       o [(techno.drum-patterns/drum-s [:Kit8-Vinyl] :o1) []]
@@ -180,17 +263,40 @@
    )
   )
 
+(defn build-map-p [pattern & [div]]
+  (let [div (if div (/ 1 div) 4)]
+    (loop [p {:div div} pattern pattern beat 1]
+      (let [a (first pattern)
+            pos (get-pos beat div)
+            pattern (rest pattern)
+            end? (empty? pattern)
+            beat (+ beat
+                    (cond (and end? (keyword? a)) 0
+                          (keyword? a) (-> a name Integer/parseInt)
+                          true 1))
+            p (cond (sequential? a) (assoc-in p pos a)
+                    (and end? (keyword? a)) (assoc-in p (get-pos beat div) [])
+                    true p)]
+        (println a beat)
+        (if end?
+          p
+          (recur p pattern beat))
+        )
+      )
+    )
+  )
 (defn phrase-p [inst pattern div & [space args]]
   (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
                          (instance? overtone.sc.synth.Synth inst))
                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
                          (some #(= (:name %) "note") (:params inst)) :note
                          true false))
-        note-p #(do %
-                  ;(if (= note-arg :freq) (midi->hz (note %)) (note %))
+        note-p #(do ;%
+                  (if (= note-arg :freq) (midi->hz (note %)) (note %))
                   )
         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
-        is-note? #(and (keyword? %) (re-find #"^\w" (name %)))
+        is-note? #(or (and (keyword? %) (re-find #"^\w" (name %))) (and (sequential? %) (fn? (first %))))
+        is-arg? #(and (sequential? %) (not (fn? (first %))))
         div (int (/ 1 div))
         get-pos (fn [beat]
                   (let [bar (if (= 0 (mod beat div)) (/ beat div) (inc (int (/ beat div))))
@@ -198,22 +304,28 @@
                         n (if (= 0 n) div n)]
                     [bar n]))]
       (loop [p {:div div} pattern pattern beat 1]
-        (let [mk-note #(vector inst (vec (concat [note-arg (note-p %)] args)))
+        (let [mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args)))))
               a (first pattern)
               pattern (rest pattern)
-              end? (= (count pattern) 0)
               [bar n] (get-pos beat)
               ;; x (print "a " a "beat " beat "bar " bar "n " n)
               d (cond (is-space? a)
                       (if (is-note? (first pattern))
                         (inc (-> a name Integer/parseInt))
                         (-> a name Integer/parseInt))
-                      (is-space? (first pattern)) 0
+                      (or (is-space? (first pattern)) (and (is-arg? (first pattern)) (is-space? (second pattern)))) 0
                       true 1)
               beat (+ beat d)
-              a (cond (sequential? a) (vec (mapcat mk-note a))
+              a (cond (sequential? a) (vec (mapcat #(cond (is-arg? (second %))
+                                                          (mk-note (first %) (second %))
+                                                          (is-note? (second %))
+                                                          (vec (concat (mk-note (first %)) (mk-note (second %))))
+                                                          true (mk-note (first %)))
+                                                   (partition 2 a)))
                       (is-space? a) []
-                      true (mk-note a))
+                      true (if (is-arg? (first pattern)) (mk-note a (first pattern)) (mk-note a)))
+              pattern (if (is-arg? (first pattern)) (rest pattern) pattern)
+              end? (= (count pattern) 0)
               p (cond (not (= a [])) (assoc-in p [bar n] a)
                       (and end? (> d 0)) (assoc-in p (get-pos beat) [])
                       true p)]

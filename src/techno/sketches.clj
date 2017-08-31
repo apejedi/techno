@@ -22,9 +22,9 @@
       )
     )
 
-  (let [comp bells
-        parts (keys comp)]
-    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 1.6))
+  (let [comp melissa
+        parts [:a]]
+    (apply s/play-p (conj (vec (vals (select-keys comp parts))) 0.6))
     )
   )
 
