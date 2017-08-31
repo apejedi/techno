@@ -1,6 +1,6 @@
 (ns techno.player
   (:use [overtone.core :exclude [now stop show-schedule]]
-        [techno.synths]
+        ;[techno.synths]
         )
   (:import [java.util.concurrent ScheduledThreadPoolExecutor TimeUnit ThreadPoolExecutor]
            [java.io Writer]))
@@ -16,6 +16,7 @@
 (declare mk-pool)
 (declare play)
 (declare p-size)
+(declare set-size)
 (declare stop-s)
 (declare schedule-job)
 (declare now2)
@@ -95,9 +96,9 @@
   )
 (defn- update-player [id]
   (try
-    (let [divs (map #(get % :div) (vals (get @patterns id)))
+    (let [state (:state (get @(:jobs-ref @pool) id))
+          divs (conj (map #(get % :div) (vals (get @patterns id))) (:div @state))
           div (apply lcmv divs)
-          state (:state (get @(:jobs-ref @pool) id))
           bpm (:bpm @state)
           size (apply max
                       (map
@@ -113,8 +114,10 @@
                            s
                            ))
                        (get @patterns id)))]
-      (stop-s id true false)
-      (get-s bpm {:id id :div div :size size})
+      (when (or (not (= 0 (mod div (:div @state)))) (> div (:div @state)))
+        (stop-s id true false)
+        (get-s bpm {:id id :div div :size size}))
+      (set-size id size)
       )
     (catch Exception e
       (println (str "caught exception: " (.getMessage e))))
@@ -206,42 +209,25 @@
                1)
         p (if (empty? (get-in pattern [bar note])) (assoc-in p [bar note] [:end]) p)
         notes (map #(into (sorted-map) %) (vals p))
-        notes (map (fn [a] (into {} (map (fn [[k v]] [k
-                                                    (get-action-str v)
-                                                    ]) a))) notes)]
-    (clojure.pprint/print-table (range 1 (inc (:div pattern))) notes)
+        notes (map (fn [a b] (assoc (into {} (map (fn [[k v]] [k
+                                                             (get-action-str v)
+                                                             ]) a)) 0 b)) notes bars)]
+    (clojure.pprint/print-table (range 0 (inc (:div pattern))) notes)
     )
   )
-;; (def p (get-s 40))
-
+;; (def p (get-s 120 {:div 16}))
 ;; (add-p p
-;;        (let [l [:dur 3]
-;;                                  a [:Ab2 l]
-;;                                  f [:F#2 l]
-;;                                  main [:Eb3 :Bb4 :Eb3 :Bb4 l :1 :Eb3 :Bb4]]
-;;                              (phrase-p
-;;                               piano
-;;                               (concat a main
-;;                                       a main
-;;                                       f main
-;;                                       f main
-;;                                       [:Bb4] [:C5 l])
-;;                               (double (/ 1 4))
-;;                               )
-;;                              ) :piano)
+;;        (phrase-p
+;;         bpfsaw [:Eb4 :C4 :6 :G4 :2 :Bb4 :Ab4 :1 :F3] 1/8 0 [:dur 0.9 :atk 0.01 :rq 0.5]) :test)
+;; (add-p p
+;;        (phrase-p
+;;         bass-synth [:Eb4 :C4 :6 :G4 :2 :Bb4 :Ab4 :1 :F3] 1/4 0 [:attack 0.01 :release 0.4 :bwr 2]) :test2)
+;; (add-p p
+;;        (build-map-p [[o-kick []] :3] 1/4) :kick)
+;; (let [h [o-hat []]]
+;;     (add-p p
+;;            (build-map-p [h h h :2 h h h :4 h h h :1] 1/16) :hat))
 ;; (stop-s p)
-;; (let [k [o-kick []]
-;;       o [(techno.drum-patterns/drum-s [:Kit8-Vinyl] :o1) []]
-;;       h [o-hat []]
-;;       c [o-clap []]
-;;       patterns {:kicks {:div 4 1 {1 k 4 []}}
-;;                 :hats {:div 16 1 {1 h 3 h 4 h 5 h 9 h 12 h 14 h 15 h 16 h}
-;;                        2 { 2 h 3 h 4 h 5 h 16 []}}
-;;                 :clap {:div 4 1 {2 c} 2 {1 c 3 c 4 c} 3 {4 []}}}]
-;;   (add-p p
-;;          (:clap patterns) :clap)
-
-;;   )
 
 (defn add-p [id pattern key]
   (swap! patterns assoc-in [id key] pattern)
@@ -264,27 +250,29 @@
   )
 
 (defn build-map-p [pattern & [div]]
-  (let [div (if div (/ 1 div) 4)]
-    (loop [p {:div div} pattern pattern beat 1]
+  (let [div (if div (int (/ 1 div)) 4)]
+    (loop [p {:div div} pattern pattern beat 1 start true]
       (let [a (first pattern)
             pos (get-pos beat div)
             pattern (rest pattern)
             end? (empty? pattern)
             beat (+ beat
-                    (cond (and end? (keyword? a)) 0
-                          (keyword? a) (-> a name Integer/parseInt)
-                          true 1))
+                    (cond
+                      (keyword? (first pattern)) 0
+                      (keyword? a) (if (or start end?) (-> a name Integer/parseInt)
+                                       (inc (-> a name Integer/parseInt)))
+                      true 1))
             p (cond (sequential? a) (assoc-in p pos a)
                     (and end? (keyword? a)) (assoc-in p (get-pos beat div) [])
                     true p)]
-        (println a beat)
         (if end?
           p
-          (recur p pattern beat))
+          (recur p pattern beat false))
         )
       )
     )
   )
+
 (defn phrase-p [inst pattern div & [space args]]
   (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
                          (instance? overtone.sc.synth.Synth inst))
@@ -294,46 +282,73 @@
         note-p #(do ;%
                   (if (= note-arg :freq) (midi->hz (note %)) (note %))
                   )
+        mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args)))))
         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
         is-note? #(or (and (keyword? %) (re-find #"^\w" (name %))) (and (sequential? %) (fn? (first %))))
-        is-arg? #(and (sequential? %) (not (fn? (first %))))
-        div (int (/ 1 div))
-        get-pos (fn [beat]
-                  (let [bar (if (= 0 (mod beat div)) (/ beat div) (inc (int (/ beat div))))
-                        n (mod beat div)
-                        n (if (= 0 n) div n)]
-                    [bar n]))]
-      (loop [p {:div div} pattern pattern beat 1]
-        (let [mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args)))))
-              a (first pattern)
-              pattern (rest pattern)
-              [bar n] (get-pos beat)
-              ;; x (print "a " a "beat " beat "bar " bar "n " n)
-              d (cond (is-space? a)
-                      (if (is-note? (first pattern))
-                        (inc (-> a name Integer/parseInt))
-                        (-> a name Integer/parseInt))
-                      (or (is-space? (first pattern)) (and (is-arg? (first pattern)) (is-space? (second pattern)))) 0
-                      true 1)
-              beat (+ beat d)
-              a (cond (sequential? a) (vec (mapcat #(cond (is-arg? (second %))
-                                                          (mk-note (first %) (second %))
-                                                          (is-note? (second %))
-                                                          (vec (concat (mk-note (first %)) (mk-note (second %))))
-                                                          true (mk-note (first %)))
-                                                   (partition 2 a)))
-                      (is-space? a) []
-                      true (if (is-arg? (first pattern)) (mk-note a (first pattern)) (mk-note a)))
-              pattern (if (is-arg? (first pattern)) (rest pattern) pattern)
-              end? (= (count pattern) 0)
-              p (cond (not (= a [])) (assoc-in p [bar n] a)
-                      (and end? (> d 0)) (assoc-in p (get-pos beat) [])
-                      true p)]
-          (if end?
-            p
-            (recur p pattern beat))
-          )))
+        is-arg? #(and (sequential? %) (or (number? (first %)) (number? (second %))))]
+    (build-map-p (map (fn [a] (cond (sequential? a)
+                                   (vec (mapcat #(cond (is-arg? (second %)) (mk-note (first %) (second %))
+                                                       (is-note? (second %)) (vec (concat (mk-note (first %)) (mk-note (second %))))
+                                                       true (mk-note (first %)))
+                                                (partition 2 2 [args] a)))
+                                   (is-space? a) a
+                                   true (mk-note a)))
+                      pattern)))
   )
+
+;; (defn phrase-p [inst pattern div & [space args]]
+;;   (let [space (if space space 0)
+;;         note-arg (if (or (instance? overtone.studio.inst.Inst inst)
+;;                          (instance? overtone.sc.synth.Synth inst))
+;;                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
+;;                          (some #(= (:name %) "note") (:params inst)) :note
+;;                          true false))
+;;         note-p #(do ;%
+;;                   (if (= note-arg :freq) (midi->hz (note %)) (note %))
+;;                   )
+;;         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
+;;         is-note? #(or (and (keyword? %) (re-find #"^\w" (name %))) (and (sequential? %) (fn? (first %))))
+;;         is-arg? #(and (sequential? %) (or (number? (first %)) (number? (second %))))
+;;         div (int (/ 1 div))
+;;         get-pos (fn [beat]
+;;                   (let [bar (if (= 0 (mod beat div)) (/ beat div) (inc (int (/ beat div))))
+;;                         n (mod beat div)
+;;                         n (if (= 0 n) div n)]
+;;                     [bar n]))]
+;;       (loop [p {:div div} pattern pattern beat 1]
+;;         (let [mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args)))))
+;;               a (first pattern)
+;;               pattern (rest pattern)
+;;               [bar n] (get-pos beat)
+;;               d (cond (is-space? a)
+;;                       (if (is-note? (first pattern))
+;;                         (inc (-> a name Integer/parseInt))
+;;                         (-> a name Integer/parseInt))
+;;                       (or ;(is-space? (first pattern))
+;;                           (and (is-arg? (first pattern)) (is-space? (second pattern)))) 0
+;;                       true (+ space 1))
+;;               old-beat beat
+;;               beat (+ beat d)
+;;               ;x (println "a " a "beat " beat "pos " (get-pos beat))
+              ;; a (cond (sequential? a) (vec (mapcat #(cond (is-arg? (second %))
+              ;;                                             (mk-note (first %) (second %))
+              ;;                                             (is-note? (second %))
+              ;;                                             (vec (concat (mk-note (first %)) (mk-note (second %))))
+              ;;                                             true (mk-note (first %)))
+              ;;                                      (partition 2 2 [args] a)))
+;;                       (is-space? a) []
+;;                       true (if (is-arg? (first pattern)) (mk-note a (first pattern)) (mk-note a)))
+;;               pattern (if (is-arg? (first pattern)) (rest pattern) pattern)
+;;               end? (= (count pattern) 0)
+;;               p (cond (not (= a [])) (assoc-in p [bar n] a)
+;;                       (and end? (> d 0)) (assoc-in p (get-pos beat) [])
+;;                       true p)
+;;               p (if (and end? (not (is-space? a)) (> space 0)) (assoc-in p (get-pos (+ old-beat space)) []) p)]
+;;           (if end?
+;;             p
+;;             (recur p pattern beat))
+;;           )))
+;;   )
 
 
 (defn- format-date
@@ -521,7 +536,7 @@
         job-info (get jobs-info id)]
     (cancel-job job-info cancel-immediately?)))
 
-(defn stop
+(defn stop2
   "Stop a recurring or scheduled job gracefully either using a
   corresponding record or unique id. If you specify an id, you also
   need to pass the associated pool."
@@ -571,7 +586,7 @@
   (cond
    (= RecurringJob (type job)) (recurring-job-string job)))
 
-(defn show-schedule
+(defn show-schedule2
   "Pretty print all of the pool's scheduled jobs"
   ([pool]
      (let [jobs (scheduled-jobs pool)]
