@@ -114,6 +114,7 @@
                            s
                            ))
                        (get @patterns id)))]
+      ;(println div (:div @state))
       (when (or (not (= 0 (mod div (:div @state)))) (> div (:div @state)))
         (stop-s id true false)
         (get-s bpm {:id id :div div :size size}))
@@ -234,6 +235,11 @@
   (update-player id)
   )
 
+(defn rm-p [id pattern key]
+  (swap! patterns (fn [p] (assoc p id (dissoc (get p id) pattern))))
+  (update-player id)
+  )
+
 
 (defn set-size [id size]
   (swap! (:state (get-job id)) assoc :size size)
@@ -299,7 +305,7 @@
                                              a)]
                                      a))
                          pattern
-                         (conj (vec (rest pattern)) :end))))
+                         (conj (vec (rest pattern)) :end)) div))
   )
 
 ;; (defn phrase-p [inst pattern div & [space args]]

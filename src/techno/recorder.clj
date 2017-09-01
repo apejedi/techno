@@ -8,6 +8,7 @@
            (java.awt.event KeyListener KeyEvent))
 
   (:require [techno.sequencer :as s]
+            [techno.player :as p]
             [techno.core :as core]))
 
 
@@ -180,7 +181,7 @@
     )
   )
 
-;(start-record-pattern)
+                                        ;(start-record-pattern)
 (defn start-record-pattern []
   (reset! time-pattern (java.util.LinkedList.))
   (reset! recording true)
@@ -233,6 +234,23 @@
                    {}
                    @time-pattern)]
      p
+     ))
+  )
+
+(defn mk-map-p
+  ([bpm div]
+   (let [quant (float (/ bpm 60 div)) ;;duration of step
+         begin (first (first @time-pattern))
+         pat (reduce (fn [pat [o a]]
+                       (let [o (int (Math/floor (/ (- o begin) quant 1000000000)))
+                             pos (p/get-pos o div)
+                             c (get-in pat pos [])
+                             a (vec (concat c a))]
+                         (assoc-in pat pos a)
+                         ))
+                     {:div div}
+                     @time-pattern)]
+     pat
      ))
   )
 

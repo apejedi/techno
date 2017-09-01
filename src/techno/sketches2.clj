@@ -27,7 +27,7 @@
    :bpfsaw (p/phrase-p
             bpfsaw
             [:G4 :B4  :A5  :G4  :B4  :G5 :G4 :B4  :F#5  :G4  :B4  :E5  :F#4  :A4  :D5 :3]
-            0.25 1 [:dur 1.25 :atk 0.01])
+            1/10 1 [:dur 0.6 :atk 0.01])
    :flute (p/phrase-p
            flute
            [:G4 :G4 :G4 :12 :E5 :E5 :4 :D5 :D5 :8 :A4 :1 :A4 :1 :A4 :10 :B4 :1 :B4 :B4 :8]
