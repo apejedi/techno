@@ -1,6 +1,6 @@
 (ns techno.player
   (:use [overtone.core :exclude [now stop show-schedule]]
-        ;[techno.synths]
+        [techno.synths]
         )
   (:import [java.util.concurrent ScheduledThreadPoolExecutor TimeUnit ThreadPoolExecutor]
            [java.io Writer]))
@@ -286,14 +286,20 @@
         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
         is-note? #(or (and (keyword? %) (re-find #"^\w" (name %))) (and (sequential? %) (fn? (first %))))
         is-arg? #(and (sequential? %) (or (number? (first %)) (number? (second %))))]
-    (build-map-p (map (fn [a] (cond (sequential? a)
-                                   (vec (mapcat #(cond (is-arg? (second %)) (mk-note (first %) (second %))
-                                                       (is-note? (second %)) (vec (concat (mk-note (first %)) (mk-note (second %))))
-                                                       true (mk-note (first %)))
-                                                (partition 2 2 [args] a)))
-                                   (is-space? a) a
-                                   true (mk-note a)))
-                      pattern)))
+    (build-map-p (mapcat (fn [a b]  (let [a [(cond (sequential? a)
+                                                   (vec (mapcat #(cond (is-arg? (second %)) (mk-note (first %) (second %))
+                                                                       (is-note? (second %)) (vec (concat (mk-note (first %)) (mk-note (second %))))
+                                                                       true (mk-note (first %)))
+                                                                (partition 2 2 [args] a)))
+                                                   (is-space? a) a
+                                                   true (mk-note a))]
+                                         a (if (and (not (is-space? (first a)))
+                                                    (not (is-space? b)) space)
+                                             (conj a (keyword (str space)))
+                                             a)]
+                                     a))
+                         pattern
+                         (conj (vec (rest pattern)) :end))))
   )
 
 ;; (defn phrase-p [inst pattern div & [space args]]
