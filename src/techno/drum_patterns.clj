@@ -75,7 +75,10 @@
 
 (defn drum-p2 [kits pattern & [div]]
   (techno.player/phrase-p nil pattern div nil []
-            (fn [n & [n-args]] (vector (drum-s kits n)  (if n-args n-args []))))
+                          (fn [n & [n-args]]
+                            (if (keyword? n)
+                              (vector (drum-s kits n)  (if n-args n-args []))
+                              [n (if n-args n-args [])])))
   )
 
 (defn drum-p [kits & patterns]

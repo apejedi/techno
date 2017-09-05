@@ -389,9 +389,10 @@
             pos (get-pos beat div)
             pattern (rest pattern)
             end? (empty? pattern)
+            prev-b beat
             beat (if (= :| a)
                    (cond (= 0 (mod beat div))
-                         (cond (is-space? (first pattern)) beat
+                         (cond (or end? (is-space? (first pattern))) beat
                                true (inc beat))
                          (or (is-space? (first pattern)) end?) (n-div (inc beat))
                          true (inc (n-div (inc beat))))
@@ -402,8 +403,9 @@
                                          (inc (-> a name Integer/parseInt)))
                         true 1)))
             p (cond  (sequential? a) (assoc-in p pos a)
-                     (and end? (or (and (is-space? a) (> (-> a name Integer/parseInt) 0))
-                                   (= :| a) ))
+                     (and end? (or (and (is-space? a)
+                                        (> (-> a name Integer/parseInt) 0))
+                                   (and (not (= 0 (mod prev-b div))) (= :| a)) ))
                      (assoc-in p (get-pos beat div) [])
                      true p)]
         (if end?
