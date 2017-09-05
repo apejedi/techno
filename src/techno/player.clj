@@ -15,8 +15,12 @@
 (defonce patterns (atom {}))
 (declare mk-pool)
 (declare play)
+(declare get-state)
+(declare active?)
 (declare p-size)
+(declare scheduled-jobs)
 (declare set-size)
+(declare seq-to-p)
 (declare stop-s)
 (declare schedule-job)
 (declare now2)
@@ -60,6 +64,13 @@
   (get @(:jobs-ref @pool) id)
   )
 
+(defn get-state
+  ([id] @(:state (get @(:jobs-ref @pool) id)))
+  ([id key]
+   (get @(:state (get @(:jobs-ref @pool) id)) key)
+   )
+  )
+
 (defn- to-str [inst]
   (if (and (coll? inst) (contains? inst :name))
     (:name inst)
@@ -96,30 +107,31 @@
   )
 (defn- update-player [id]
   (try
-    (let [state (:state (get @(:jobs-ref @pool) id))
-          divs (conj (map #(get % :div) (vals (get @patterns id))) (:div @state))
-          div (apply lcmv divs)
-          bpm (:bpm @state)
-          size (apply max
-                      (map
-                       (fn [[k p]]
-                         (let [b (apply max (filter number? (keys p)))
-                               s (* div (dec b))
-                               step (/ div (get p :div))
-                               s (+ s (* step
-                                         (if (not (empty? (get p b)))
-                                           (apply max (keys (get p b)))
-                                           1)))]
-                           (swap! patterns assoc-in [id k :size] s)
-                           s
-                           ))
-                       (get @patterns id)))]
-      ;(println div (:div @state))
-      (when (or (not (= 0 (mod div (:div @state)))) (> div (:div @state)))
-        (stop-s id true false)
-        (get-s bpm {:id id :div div :size size}))
-      (set-size id size)
-      )
+    (when (not (empty? (get @patterns id)))
+        (let [state (:state (get @(:jobs-ref @pool) id))
+              divs (conj (map #(get % :div) (vals (get @patterns id))) (:div @state))
+              div (apply lcmv divs)
+              bpm (:bpm @state)
+              size (apply max
+                          (map
+                           (fn [[k p]]
+                             (let [b (apply max (filter number? (keys p)))
+                                   s (* div (dec b))
+                                   step (/ div (get p :div))
+                                   s (+ s (* step
+                                             (if (not (empty? (get p b)))
+                                               (apply max (keys (get p b)))
+                                               1)))]
+                               (swap! patterns assoc-in [id k :size] s)
+                               s
+                               ))
+                           (get @patterns id)))]
+                                        ;(println div (:div @state))
+          (when (or (not (= 0 (mod div (:div @state)))) (> div (:div @state)))
+            (stop-s id true false)
+            (get-s bpm {:id id :div div :size size}))
+          (set-size id size)
+          ))
     (catch Exception e
       (println (str "caught exception: " (.getMessage e))))
     )
@@ -137,15 +149,19 @@
        ;; (println "beat " beat)
        (doseq [[k v] (get @patterns id)]
          (let [beat (if (< (:size v) beat) (mod beat (:size v)) beat)
+               beat (if (= beat 0) (:size v) beat)
                div (get v :div)
                step (/ s-div div)]
            (when (or (= 1 beat) (= 0 (mod (dec beat) step)))
              (let [bar (inc (int (/ (dec beat) s-div)))
                    note (inc (int (/ (dec (mod beat s-div)) step)))
-                   note (if (= 0 note) div note)]
+                   note (if (= 0 note) div note)
+                   p-fx (techno.sequencer/get-pattern-fx k)]
                ;; (println "k " k "bar " bar "note " note)
                (doseq [[a args] (partition 2 (get-in v [bar note]))]
-                 (apply a args)
+                 (let [args (if (not (nil? (:bus p-fx))) (concat args [:out-bus (:bus p-fx)]) args)
+                       args (if (not (nil? (:group p-fx))) (concat [[:head (:group p-fx)]] args) args)]
+                   (when (not (nil? a)) (apply a args)))
                  ))
              ))
          )
@@ -156,6 +172,7 @@
     (catch Exception e (println (.getMessage e))
            (.printStackTrace e)))
   )
+
 (defn get-action-str [action & [samples sample-var]]
   (let [sample-var (if (not (nil? sample-var)) (symbol sample-var))
         action (vec
@@ -216,7 +233,7 @@
     (clojure.pprint/print-table (range 0 (inc (:div pattern))) notes)
     )
   )
-;; (def p (get-s 120 {:div 16}))
+;; (def p (get-s 120))
 ;; (add-p p
 ;;        (phrase-p
 ;;         bpfsaw [:Eb4 :C4 :6 :G4 :2 :Bb4 :Ab4 :1 :F3] 1/8 0 [:dur 0.9 :atk 0.01 :rq 0.5]) :test)
@@ -227,19 +244,29 @@
 ;;        (build-map-p [[o-kick []] :3] 1/4) :kick)
 ;; (let [h [o-hat []]]
 ;;     (add-p p
-;;            (build-map-p [h h h :2 h h h :4 h h h :1] 1/16) :hat))
+;;            (build-map-p [h h h :2 h h h :4 h h h :1] 1/3) :hat))
 ;; (stop-s p)
 
-(defn add-p [id pattern key]
-  (swap! patterns assoc-in [id key] pattern)
+(defn add-p
+  ([id pattern key] (add-p id pattern key {}))
+  ([id pattern key attrs]
+   (techno.sequencer/handle-pattern-fx key {} false)
+   (swap! patterns assoc-in [id key] (seq-to-p pattern))
+   (update-player id)
+   nil)
+  )
+
+(defn rm-p [id key]
+  (techno.sequencer/handle-pattern-fx key {} true)
+  (if (= key :all)
+    (swap! patterns dissoc id)
+    (swap! patterns (fn [p] (assoc p id (dissoc (get p id) key)))))
   (update-player id)
   )
 
-(defn rm-p [id pattern key]
-  (swap! patterns (fn [p] (assoc p id (dissoc (get p id) pattern))))
-  (update-player id)
+(defn mod-amp [sequencer pattern delta]
+  (techno.sequencer/mod-amp nil pattern delta)
   )
-
 
 (defn set-size [id size]
   (swap! (:state (get-job id)) assoc :size size)
@@ -250,27 +277,135 @@
   )
 (defn set-sp [id speed]
   (let [step (:step @(:state (get-job id)))]
-    (stop-s id true)
+    (stop-s id true false)
     (get-s speed {:id id})
+    (update-player id)
    )
   )
 
+(defn active? [id]
+  (if (and (not (nil? @pool)) (not (.isShutdown (:thread-pool @pool))))
+      (contains? (scheduled-jobs) id))
+  )
+
+;; (defn build-rest-p [pattern & [div]]
+;;   (let [div (if div (int (/ 1 div)) (:div pattern))
+;;         div (if div div 4)
+;;         size (p-size (assoc pattern :div div))]
+;;     (loop [p [] beat 1 space 0 start? true prev 0]
+;;       (let [end? (>= beat size)
+;;             action (get-in pattern (get-pos beat div) [])
+;;             is-action (and (sequential? action) (not (nil? (first action))))
+;;             [x y] (map #(- %1 %2)
+;;                        (get-pos beat div)
+;;                        (get-pos (if start? beat prev) div))
+;;             start? (and start? (not is-action))
+;;             ;n (if (or start? end?) space (dec space))
+;;             sep (if (or (> x 0) (> y 1))
+;;                   (vec (concat (repeat x :|) (if (> y 1) [(keyword (str y))] []))) [])
+;;             p (if (or is-action end?)
+;;                 (vec (concat p sep
+;;                              ;(if (> n 0) [(keyword (str n))] [])
+;;                              [action]
+;;                              ))
+;;                 p)
+;;             space (if is-action 0 (inc space))
+;;             prev (if is-action beat prev)]
+;;         (if end?
+;;           p
+;;           (recur p (inc beat) space start? prev)
+;;           )))
+;;     )
+;;   )
+
+(defn build-rest-p [pattern & [div]]
+  (let [div (if div (int (/ 1 div)) (:div pattern))
+        div (if div div 4)
+        size (p-size (assoc pattern :div div))
+        is-action? #(and (sequential? %) (not (nil? (first %))))]
+    (loop [p [] cur 1 prev 1]
+      (let [action (get-in pattern (get-pos cur div))
+            is-action (is-action? action)
+            end? (>= cur size)
+            p (if (or is-action end?)
+                (let [pos1 (get-pos prev div)
+                      pos2 (get-pos cur div)
+                      space (cond (and (not is-action) end?
+                                       (not (= (first pos1) (first pos2))))
+                                  (second pos2)
+                                  (and (not is-action) end?) (dec (second pos2))
+                                  (= (first pos1) (first pos2))
+                                  (dec (- (second pos2) (second pos1)))
+                                  true (dec (second pos2)))
+                      space (if (> space 0) [(keyword (str space))])
+                      sep (concat (repeat (- (first pos2) (first pos1)) :|)
+                                  space)]
+                  (vec (concat p sep (if is-action [action])))
+                  )
+                p)
+            prev (if is-action cur prev)]
+        (if end?
+          p
+          (recur p (inc cur) prev)
+          )))
+    )
+  )
+
+(defn build-phrase-p [pattern]
+  (let [action (first (filter #(not (nil? (first %))) (map (fn [b] (get-in pattern (get-pos b (:div pattern)))) (range 1 (inc (p-size pattern))))) )
+        inst (first action)
+        params (vec (flatten (into [] (filter (fn [[k v]] (and (not (= k :note)) (not (= k :freq)))) (partition 2 (second action))))))
+        rest-p (build-rest-p pattern)
+        phrase-p (vec (map
+                       #(if (sequential? %)
+                          (let [a (map (fn [[a params]]
+                                       (let [m (into {} (vec (map vec (partition 2 params))))]
+                                         (cond (contains? m :freq) (find-note-name (hz->midi (:freq m)))
+                                               (contains? m :note) (find-note-name (:note m)))
+                                         )) (partition 2 %))]
+                            (if (> (count a) 1)
+                              (vec a)
+                              (first a))
+                            )
+                          %) rest-p))]
+    [inst phrase-p (/ 1 (:div pattern)) params]
+    )
+  )
+(defn is-phrase? [pattern]
+  (let [size (p-size pattern)
+        pattern (into {} (mapcat
+                          (fn [b]
+                            [(vector b (get-in pattern (get-pos b (:div pattern)) []))])
+                          (range 1 (inc size))))]
+    (techno.sequencer/is-phrase? pattern))
+  )
+
 (defn build-map-p [pattern & [div]]
-  (let [div (if div (int (/ 1 div)) 4)]
+  (let [div (if div (int (/ 1 div)) 4)
+        n-div #(int (* (Math/ceil (/ % div)) div))
+        is-space? #(and (keyword? %) (re-find #"^\d" (name %)))]
     (loop [p {:div div} pattern pattern beat 1 start true]
       (let [a (first pattern)
             pos (get-pos beat div)
             pattern (rest pattern)
             end? (empty? pattern)
-            beat (+ beat
-                    (cond
-                      (keyword? (first pattern)) 0
-                      (keyword? a) (if (or start end?) (-> a name Integer/parseInt)
-                                       (inc (-> a name Integer/parseInt)))
-                      true 1))
-            p (cond (sequential? a) (assoc-in p pos a)
-                    (and end? (keyword? a)) (assoc-in p (get-pos beat div) [])
-                    true p)]
+            beat (if (= :| a)
+                   (cond (= 0 (mod beat div))
+                         (cond (is-space? (first pattern)) beat
+                               true (inc beat))
+                         (or (is-space? (first pattern)) end?) (n-div (inc beat))
+                         true (inc (n-div (inc beat))))
+                   (+ beat
+                      (cond
+                        (keyword? (first pattern)) 0
+                        (keyword? a) (if (or start end?) (-> a name Integer/parseInt)
+                                         (inc (-> a name Integer/parseInt)))
+                        true 1)))
+            p (cond  (sequential? a) (assoc-in p pos a)
+                     (and end? (or (and (is-space? a) (> (-> a name Integer/parseInt) 0))
+                                   (= :| a) ))
+                     (assoc-in p (get-pos beat div) [])
+                     true p)]
         (if end?
           p
           (recur p pattern beat false))
@@ -279,7 +414,63 @@
     )
   )
 
-(defn phrase-p [inst pattern div & [space args]]
+(defn merge-p [& patterns]
+  (let [divs (map #(get % :div) patterns)
+        div (apply lcmv divs)
+        size (apply max
+                          (map
+                           (fn [p]
+                             (let [b (apply max (filter number? (keys p)))
+                                   s (* div (dec b))
+                                   step (/ div (get p :div))
+                                   s (+ s (* step
+                                             (if (not (empty? (get p b)))
+                                               (apply max (keys (get p b)))
+                                               1)))]
+                               s
+                               ))
+                           patterns))]
+    (reduce
+     (fn [p b]
+       (reduce
+        (fn [p c]
+          (let [pos (get-pos b (:div c))
+                a (get-in c pos)
+                o (get-in p pos)]
+              (if (and (sequential? a) (not (nil? a)))
+                (assoc-in p pos
+                          (if (sequential? o)
+                            (vec (concat o a))
+                            a))
+                p))
+          )
+        p
+        patterns)
+       )
+     {:div div}
+     (range 1 (inc size)))
+    )
+  )
+
+(defn seq-to-p [pattern]
+  (if (not (contains? pattern :div))
+    (let [step (techno.sequencer/get-step pattern)
+          div (int (/ 1 step))
+          size (techno.sequencer/i-step (techno.sequencer/p-size pattern step))
+          offsets (map techno.sequencer/i-step (range 1 (+ size step) step))]
+      (reduce
+       (fn [p o]
+         (if (or (= size o) (and (sequential? (get pattern o)) (not (nil? (get pattern o)))))
+           (assoc-in p (get-pos (int (+ 1 (/ (- o 1) step))) div) (get pattern o))
+           p)
+         )
+       {:div div 1 {}}
+       offsets)
+      )
+    pattern)
+  )
+
+(defn phrase-p [inst pattern div & [space args mk-note]]
   (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
                          (instance? overtone.sc.synth.Synth inst))
                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
@@ -288,17 +479,20 @@
         note-p #(do ;%
                   (if (= note-arg :freq) (midi->hz (note %)) (note %))
                   )
-        mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args)))))
+        mk-note (if mk-note mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args))))))
         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
         is-note? #(or (and (keyword? %) (re-find #"^\w" (name %))) (and (sequential? %) (fn? (first %))))
-        is-arg? #(and (sequential? %) (or (number? (first %)) (number? (second %))))]
-    (build-map-p (mapcat (fn [a b]  (let [a [(cond (sequential? a)
-                                                   (vec (mapcat #(cond (is-arg? (second %)) (mk-note (first %) (second %))
-                                                                       (is-note? (second %)) (vec (concat (mk-note (first %)) (mk-note (second %))))
-                                                                       true (mk-note (first %)))
-                                                                (partition 2 2 [args] a)))
-                                                   (is-space? a) a
-                                                   true (mk-note a))]
+        is-arg? #(and (sequential? %) (or (number? (first %)) (number? (second %))))
+        space (if (and (number? space) (> space 0)) space nil)]
+    (build-map-p (mapcat (fn [a b]  (let [a [(cond (is-arg? a) nil
+                                                  (sequential? a)
+                                                  (vec (mapcat #(cond (is-arg? (second %)) (mk-note (first %) (second %))
+                                                                      (is-note? (second %)) (vec (concat (mk-note (first %)) (mk-note (second %))))
+                                                                      true (mk-note (first %)))
+                                                               (partition 2 2 [args] a)))
+                                                  (is-space? a) a
+                                                  (is-note? a) (mk-note a (if (is-arg? b) b))
+                                                  true a)]
                                          a (if (and (not (is-space? (first a)))
                                                     (not (is-space? b)) space)
                                              (conj a (keyword (str space)))
@@ -308,60 +502,13 @@
                          (conj (vec (rest pattern)) :end)) div))
   )
 
-;; (defn phrase-p [inst pattern div & [space args]]
-;;   (let [space (if space space 0)
-;;         note-arg (if (or (instance? overtone.studio.inst.Inst inst)
-;;                          (instance? overtone.sc.synth.Synth inst))
-;;                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
-;;                          (some #(= (:name %) "note") (:params inst)) :note
-;;                          true false))
-;;         note-p #(do ;%
-;;                   (if (= note-arg :freq) (midi->hz (note %)) (note %))
-;;                   )
-;;         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
-;;         is-note? #(or (and (keyword? %) (re-find #"^\w" (name %))) (and (sequential? %) (fn? (first %))))
-;;         is-arg? #(and (sequential? %) (or (number? (first %)) (number? (second %))))
-;;         div (int (/ 1 div))
-;;         get-pos (fn [beat]
-;;                   (let [bar (if (= 0 (mod beat div)) (/ beat div) (inc (int (/ beat div))))
-;;                         n (mod beat div)
-;;                         n (if (= 0 n) div n)]
-;;                     [bar n]))]
-;;       (loop [p {:div div} pattern pattern beat 1]
-;;         (let [mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args)))))
-;;               a (first pattern)
-;;               pattern (rest pattern)
-;;               [bar n] (get-pos beat)
-;;               d (cond (is-space? a)
-;;                       (if (is-note? (first pattern))
-;;                         (inc (-> a name Integer/parseInt))
-;;                         (-> a name Integer/parseInt))
-;;                       (or ;(is-space? (first pattern))
-;;                           (and (is-arg? (first pattern)) (is-space? (second pattern)))) 0
-;;                       true (+ space 1))
-;;               old-beat beat
-;;               beat (+ beat d)
-;;               ;x (println "a " a "beat " beat "pos " (get-pos beat))
-              ;; a (cond (sequential? a) (vec (mapcat #(cond (is-arg? (second %))
-              ;;                                             (mk-note (first %) (second %))
-              ;;                                             (is-note? (second %))
-              ;;                                             (vec (concat (mk-note (first %)) (mk-note (second %))))
-              ;;                                             true (mk-note (first %)))
-              ;;                                      (partition 2 2 [args] a)))
-;;                       (is-space? a) []
-;;                       true (if (is-arg? (first pattern)) (mk-note a (first pattern)) (mk-note a)))
-;;               pattern (if (is-arg? (first pattern)) (rest pattern) pattern)
-;;               end? (= (count pattern) 0)
-;;               p (cond (not (= a [])) (assoc-in p [bar n] a)
-;;                       (and end? (> d 0)) (assoc-in p (get-pos beat) [])
-;;                       true p)
-;;               p (if (and end? (not (is-space? a)) (> space 0)) (assoc-in p (get-pos (+ old-beat space)) []) p)]
-;;           (if end?
-;;             p
-;;             (recur p pattern beat))
-;;           )))
-;;   )
 
+
+
+
+(defn get-p
+  ([id]
+   (get @patterns id)))
 
 (defn- format-date
   "Format date object as a string such as: 15:23:35s"
@@ -567,19 +714,24 @@
   ([id immediate] (stop-s id immediate true))
   ([id immediate reset]
    (when reset
-     (swap! patterns dissoc id))
+     (doseq [[k v] (get @patterns id)]
+       (rm-p id k))
+     ;(swap! patterns dissoc id)
+     )
    (cancel-job-id id pool immediate))
   )
 
 (defn scheduled-jobs
   "Returns a set of all current jobs (both scheduled and recurring)
   for the specified pool."
-  [pool]
-  (let [pool-atom pool
-        ;pool-atom (:pool-atom pool)
-        jobs     @(:jobs-ref @pool-atom)
-        jobs     (vals jobs)]
-    jobs))
+  ([] (scheduled-jobs pool))
+  ([pool]
+   (if (or (nil? @pool) (.isShutdown (:thread-pool @pool)))
+     {}
+     (let [pool-atom pool
+                                        ;pool-atom (:pool-atom pool)
+           jobs     @(:jobs-ref @pool-atom)]
+       jobs))))
 
 (defn- format-start-time
   [date]

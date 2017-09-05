@@ -688,6 +688,36 @@
        )))
   )
 
+(defn get-pattern-fx [key]
+  (get @pattern-fx key)
+  )
+(defn handle-pattern-fx [key attrs kill-group]
+  (when (and (contains? @pattern-groups key) kill-group)
+         ;; (kill (get-in @pattern-groups [pattern :id]))
+         (when (not (nil? (get-in @pattern-fx [key :mixer])))
+           (ctl (get-in @pattern-fx [key :mixer]) :start-release 1)
+           )
+         (when (not (nil? (get-in @pattern-fx [key :bus])))
+           (return-bus (get-in @pattern-fx [key :bus]))
+           )
+         (swap! pattern-groups
+              dissoc key)
+         )
+  (when  (and (not kill-group)
+              (not (contains? @pattern-groups key))
+              (not (contains? attrs :no-group)))
+    (let [vol (get attrs :volume 1)
+          p-group (group)
+          p-bus (get-bus)
+          mixer (p-mixer [:tail p-group] p-bus :volume vol)]
+      (swap! pattern-groups assoc key p-group)
+      (when (not (nil? p-bus))
+        (swap! pattern-fx assoc-in [key :mixer] mixer)
+        (swap! pattern-fx assoc-in [key :bus] p-bus)
+        (swap! pattern-fx assoc-in [key :group] p-group))
+      )
+    )
+  )
 
 
 
@@ -930,13 +960,14 @@
     (let [cur (+ delta (node-get-control (get-in @pattern-fx [pattern :mixer]) :volume))
           cur (if (<= cur 0) 0 cur)]
         (ctl (get-in @pattern-fx [pattern :mixer]) :volume cur))
-      (mod-actions
-       sequencer pattern
-       (fn [[inst args]]
-         (let [arg-map (into {} (map vec (partition 2 args)))
-               amp (if (contains? arg-map :amp) (:amp arg-map) 0.8)
-               args (vec (mapcat #(if (not (= :amp (first %))) % []) (partition 2 args)))]
-           [inst (conj args :amp (+ amp delta))]))))
+      ;; (mod-actions
+      ;;  sequencer pattern
+      ;;  (fn [[inst args]]
+      ;;    (let [arg-map (into {} (map vec (partition 2 args)))
+      ;;          amp (if (contains? arg-map :amp) (:amp arg-map) 0.8)
+      ;;          args (vec (mapcat #(if (not (= :amp (first %))) % []) (partition 2 args)))]
+      ;;      [inst (conj args :amp (+ amp delta))])))
+      )
   )
 
 (defn set-arg [sequencer pattern arg val]

@@ -3,37 +3,110 @@
   (:use [overtone.core]
         [overtone.inst.synth]
         [techno.player :as p]
-        [techno.synths]))
-
-(comment
-  (def player (get-s 95))
-  (stop-s player)
-  (p/add-p player (:klang bells) :klang)
-  (p/add-p player (:bpfsaw bells) :sin)
-  (p/add-p player (:sin bells) :s)
-  (p/add-p player (:bowed bells) :bowed)
+        [techno.synths]
+        [techno.samples]
+        [techno.drum-patterns]
+        )
   )
 
-(def bells
-  {:klang (p/phrase-p
-            klang-test
-            [:G3  :F#4  :F#4  :G3  :F#4  :F#4  :G3  :F#4  :A3  :G4  :G4  :A3  :G4  :G4  :A3  :G4  :B3  :B4  :B4  :B3  :B4  :B4  :B3  :B4  :C#4  :A4  :A4  :C#4  :A4  :A4
-             :C#4  :A4]
-            0.25 1 [:atk 0.01 :dur 1.6])
-   :sin (p/phrase-p
-            sin-inst
-            [:G4  :D5  :G4 :D5  :G4  :D5  :G4  :D5  :A4  :E5  :A4  :E5  :A4  :E5  :A4  :E5  :F#4  :E5  :F#4  :E5  :F#4  :E5  :F#4  :E5  :F#4  :D5  :F#4 :D5  :F#4 :D5  :F#4  :D5]
-            0.25 1 [:dur 0.7 :amp 0.5])
-   :bpfsaw (p/phrase-p
+(comment
+  (def player (get-s 80))
+  (def player 21)
+  (stop-s player)
+  (p/set-sp player 90)
+  (p/rm-p player :hats)
+  (let [patterns {:kick (p/drums
+                         [:Kit4-Electro :Kit10-Vinyl]
+                         [:k1 :|]
+                         1/8)
+                  :hats (p/drums
+                         [:Kit10-Vinyl]
+                         [:o1 :| :c1 :c2 :1 :c1 :|
+                          :c2 :c1 :c1 :|]
+                         1/4)
+                  :clap (p/drums
+                         [:Kit15-Electro]
+                         [:cl1 :| :|]
+                         1/4)
+                  :bass (p/phrase-p
+                         acid-bass
+                         [:C2 :3 :A1 :1 :B1 :| :| :|]
+                         1/8 0 [:dur 0.4])
+                  }]
+    (p/rm-p player :all)
+    (doseq [[k p] patterns]
+      (p/add-p player p k)
+      )
+    )
+
+  )
+
+(def template
+  {:drum1 (drum-p2 [:Kit15-Electro] [])
+   :drum2 (drum-p2 [:Kit16-Electro] [])
+   :drum3 (drum-p2 [:Kit9-Vinyl] [])
+   :drum4 (drum-p2 [:KurzweilKit08] [])
+   :motif1 (p/phrase-p
             bpfsaw
-            [:G4 :B4  :A5  :G4  :B4  :G5 :G4 :B4  :F#5  :G4  :B4  :E5  :F#4  :A4  :D5 :3]
-            1/10 1 [:dur 0.6 :atk 0.01])
-   :flute (p/phrase-p
-           flute
-           [:G4 :G4 :G4 :12 :E5 :E5 :4 :D5 :D5 :8 :A4 :1 :A4 :1 :A4 :10 :B4 :1 :B4 :B4 :8]
-           0.25 0 [])
-   :bowed (p/phrase-p
-           bowed
-           [[:A3 :D4 :A4] :A3 [:A4 :D4] :1 [:A3 :A4] :1 :A3 :A3 [:A4 :D4] [:A3 :D4] :1 :A3 :D4 :1 [:D4 :A4 :A3] :1 [:D4 :A3 :A4] :1 [:A3 :D4 :A4] :1 [:A3 :D4 :A4] :1 [:A3 :D4 :A4] :1 [:A3 :D4 :A4] :A3 :D4 [:A3 :D4 :A4] :3 [:G4 :C4 :G3] :1 [:G3 :C4 :G4] :1 [:G4 :G3 :C4] :1 [:C4 :G4 :G3] :1 [:C4 :G4 :G3] :1 [:C4 :G3 :G4] :1 [:G3 :C4 :G4] :1 [:C4 :G3 :G4] :1 [:C4 :G3 :G4] :1 [:G4 :C4] :G3 [:C4 :G4 :G3] :1 [:C4 :G4 :G3] :1 [:C4 :G3 :G4] :1 [:C4 :G3] :1 [:G4 :C4 :G3] :3 [:A3 :D3] :1 [:A3 :D3] :A3 :D3 [:A3 :D3] :1 :A3 :1 [:A3 :D3] :1 [:A3 :D3] :D3 :42]
-           0.25 0 [:amp 0.07])
+            []
+            0.25 0 [])
+   :motif2 (p/phrase-p
+            overpad
+            []
+            0.25 0 [])
+   :motif3 (p/phrase-p
+            bass2
+            []
+            0.25 0 [])
+   :motif4 (p/phrase-p
+            plk-bass
+            []
+            0.25 0 [])
+   :motif5 (p/phrase-p
+            bpfsaw
+            []
+            0.25 0 [])
+   :harmony1 (p/phrase-p
+            bpfsaw
+            []
+            0.25 0 [])
+   :harmony2 (p/phrase-p
+            overpad
+            []
+            0.25 0 [])
+   :harmony3 (p/phrase-p
+            bass2
+            []
+            0.25 0 [])
+   :harmony4 (p/phrase-p
+            plk-bass
+            []
+            0.25 0 [])
+   :harmony5 (p/phrase-p
+            bpfsaw
+            []
+            0.25 0 [])
+
+   }
+  )
+
+(def sketch
+  {:flute (p/phrase-p
+           bass-synth
+           [:A2 :| :| :D3 :| :| :G3 :| :| :D3 :| :| :A2 :| :| :| :|]
+           1/4 0 [:attack 1 :release 4 :bwr 1])
+
+   :klang (p/phrase-p
+           reverb-test
+           [:A3 :8 :D4 :8 :G4 :| :| :| :|]
+           1/4 0 [:decay 5.354330708661418])
+   :sin (p/phrase-p
+         rise-pad
+         [[:G4 :F3 :D4] :12 [:E4 :B4 :G3] :12 [:C4 :A3 :G4 :D3] :| :| :| :| :| :|]
+         1/4 0 [:t 4])
+   :bpfsaw (p/phrase-p
+            bing
+            [:C3 :G3 :D4 :B4 :| :|]
+            1/4 0 [:decay 1.8425197582545243])
+
    })

@@ -238,11 +238,13 @@
   )
 
 (defn mk-map-p
+  ([] (mk-map-p (p/get-state core/player :bpm) (p/get-state core/player :div)))
   ([bpm div]
-   (let [quant (float (/ bpm 60 div)) ;;duration of step
+   (println bpm div)
+   (let [quant (float (/ 60 bpm div)) ;;duration of step
          begin (first (first @time-pattern))
          pat (reduce (fn [pat [o a]]
-                       (let [o (int (Math/floor (/ (- o begin) quant 1000000000)))
+                       (let [o (inc (int (Math/floor (/ (- o begin) quant 1000000000))))
                              pos (p/get-pos o div)
                              c (get-in pat pos [])
                              a (vec (concat c a))]

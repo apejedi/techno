@@ -1426,3 +1426,26 @@
             )
 
    })
+
+(def lo-fi
+  {:motif1 (s/phrase-p
+            bass2
+            [:G1 :2 :G1 :12]
+            0.25 0 [:cutoff2 3307 :decay 2.4])
+   :drum1 (s/fit-p {1.75 []} (drum-p [:Kit8-Vinyl] [:shkr3 :shkr3 :shkr1 :5]))
+   :harmony1 (s/phrase-p
+              bpfsaw
+              [[:G3 :Bb3 :D4] :15 [:C4 :F3 :Ab3] :15
+                                        ;[:G3 :Bb3 :D4] :15 [:C4 :F3 :Ab3] :15
+               [:G3 :Bb3 :D4] :15 (chord :C3 :m7) :15
+               (chord :D3 :m7) :15 (chord :Ab3 :M7) :15
+                                        ;[:F3 :D4 :Eb4] :15 (chord :)
+               ]
+              0.25 0 [:atk 0.3 :dur 2.9133858267716537 :rq 0.5826771740368971])
+
+   :harmony2 (s/phrase-p
+              bpfsaw
+              [[:F3 :C4 :Ab3 :G4 :Eb4] :14 [:G4 :Bb3] [:G3 :D4] :15 [:G4 :C4 :Eb4] :14 [:Bb3 :G3 :D4] :F4 :14 [:Ab3 :Eb4 :G4 :F3 :C4] :15 [:Bb3 :Eb3 :G3 :Eb4] :7 :D4 :7 [:C4 :G4 :Eb4]]
+              0.25 0 [:atk 0.35433072274125466 :dur 2.9133858267716537 :rq 0.5])
+
+   })

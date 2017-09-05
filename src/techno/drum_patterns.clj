@@ -1,7 +1,6 @@
 (ns techno.drum-patterns
   (:use [techno.drums]
         [techno.sequencer :as s :exclude [t]]
-        [techno.core :as core]
         [techno.synths]
         [overtone.core]
         [overtone.inst.synth]
@@ -49,18 +48,21 @@
   (let [sounds (reduce into [] (map #(drum-kits %) kits))
         s-map {:t "Tom" :k "Kick" :c "ClHat" :cl "Clap"
                :cy "Cymbal" :cr "Crash" :r "Rim" :ri "Ride" :p "Perc"
-               :h "HfHat" :f "Fx" :o "OpHat" :sd "SdSt" :s "Snr"}]
+               :h "HfHat" :f "Fx" :o "OpHat" :sd "SdSt" :s "Snr"}
+        lookup (cond (string? snd) snd
+                     (keyword? snd) (let [[_ k n] (re-find #"(?i)([a-z]+)(\d+)*" (name snd))]
+                                      (str
+                                       (if (contains? s-map (keyword k))
+                                         (get s-map (keyword k)) (name k))
+                                       n)))
+        re #"(?i)([a-z]+)[^0-9a-z]*([0-9]+)*"
+        re2 #"(?i)([a-z]+)[^0-9a-z]*([0-9]+)*\."]
     (some (fn [s]
-            (let [re #"(?i)([a-z]+)[^0-9a-z]*([0-9]+)"
-                  [res name-in n-in] (last (re-seq re (cond (string? snd) snd
-                                                            (keyword? snd) (let [[_ k n] (re-find #"(?i)([a-z]+)(\d+)*" (name snd))]
-                                                                            (str
-                                                                             (if (contains? s-map (keyword k))
-                                                                               (get s-map (keyword k)) (name k))
-                                                                             n)))))
-                  [cur cur-in curn-in] (last (re-seq re (name (first s))))
+            (let [
+                  [res name-in n-in] (last (re-seq re lookup))
+                  [cur cur-in curn-in] (last (re-seq re2 (name (first s))))
                   name-in (if (nil? name-in) in name-in)
-                  cur-in (if (< (count (re-seq re (name (first s)))) 2)  (name (first s)) cur-in)]
+                  cur-in (if (< (count (re-seq re2 (name (first s)))) 2)  (name (first s)) cur-in)]
               (if (and (.contains
                         (.toLowerCase cur-in) (.toLowerCase name-in))
                        (or (nil? curn-in) (nil? n-in)
@@ -69,6 +71,11 @@
             )
           sounds)
    )
+  )
+
+(defn drum-p2 [kits pattern & [div]]
+  (techno.player/phrase-p nil pattern div nil []
+            (fn [n & [n-args]] (vector (drum-s kits n)  (if n-args n-args []))))
   )
 
 (defn drum-p [kits & patterns]
@@ -206,25 +213,6 @@
          ))
 
 
-(defn test-drums [patterns play & [times kits speed]]
-  (let [kits (if kits kits [:Kit3-Acoustic :Kit16-Electro :Kit10-Vinyl])
-        a [:amp 0.5]
-        speed (if speed speed 1.3)
-        times (if times times 1)]
-    (if play
-      (apply s/play-p
-             (concat (map (fn [[k v]] (if (> (count v) 0) (drum-p kits v))) patterns)
-                   [speed times]))
-      (doseq [[k v] patterns]
-                                        ;(s/pp-pattern (drum-p kits v))
-        (if (> (count v) 0)
-          (s/add-p
-           core/player
-           (drum-p kits v)
-           k)
-          (s/rm-p core/player k))
-        ))
-    ))
 
 (defn euclid-p [m n action & [rotate-at]]
   (let [init (vec (concat (repeat m [action]) (repeat (- n m) [nil])))

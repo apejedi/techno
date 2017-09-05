@@ -6,6 +6,7 @@
         [techno.samples]
         )
   (:require [techno.sequencer :as s]
+            [techno.player :as p]
             [clojure.tools.reader.edn :as edn]
             [clojure.tools.reader.reader-types :as readers]
             [clojure.string :as string]
@@ -88,8 +89,9 @@
   )
 
 (defn get-patterns []
-  (if (and (not (nil? player)) (node-active? player))
-    (keys (s/get-p player))
+  (cond (p/active? player) (keys (p/get-p player))
+        (and (node? player) (not (nil? player)) (node-active? player))
+        (keys (s/get-p player))
     )
   )
 
@@ -104,7 +106,15 @@
   )
 
 (defn get-pattern-str [pattern & [type sequencer]]
-  (let [type (if type type "rest")]
+  (let [type (if type type "rest")
+        pattern (if (keyword? pattern) (if (node? player)
+                                         (get (s/get-p player pattern) :data)
+                                         (p/get-p player pattern)) pattern)
+        get-p (if (contains? pattern :div) p/get-p s/get-p)
+        build-rest-p (if (contains? pattern :div) p/build-rest-p s/build-rest-p)
+        is-phrase? (if (contains? pattern :div) p/is-phrase? s/is-phrase?)
+        build-phrase-p (if (contains? pattern :div) p/build-phrase-p s/build-phrase-p)
+        alias (if (contains? pattern :div) "p" "s")]
     (if (= type "map")
       (apply
        str
@@ -116,25 +126,25 @@
            (str k " "
                 (techno.sequencer/get-action-str v techno.samples/drum-kits "drum-kits")
                 "
-")) (get (s/get-p player pattern) :data))
+")) (get (get-p player pattern) :data))
         ["}"]))
-      (let [pattern (if (keyword? pattern) (get (s/get-p player pattern) :data) pattern)
-            is-phrase (s/is-phrase? pattern)
-            p (s/build-rest-p pattern)]
+      (let [is-phrase (is-phrase? pattern)
+            div (if (contains? pattern :div) (/ 1 (:div pattern)) (s/get-step pattern))
+            p (build-rest-p pattern)]
         (if (not is-phrase)
           (let [strs (map #(if (sequential? %)
                          (techno.sequencer/get-action-str % techno.samples/drum-kits "drum-kits")
                          (str % "\n"))
                       p)
             p-str (clojure.string/join " " strs)]
-              (str "(s/build-map-p
+              (str "(" alias "/build-map-p
 [" p-str "
-])"))
-          (let [[inst phrase-p step params] (s/build-phrase-p pattern)]
-            (str "(s/phrase-p
+] " div ")"))
+          (let [[inst phrase-p step params] (build-phrase-p pattern)]
+            (str "(" alias "/phrase-p
  " (:name inst) "
 " phrase-p "
-0.25 0 " params ")")
+" step " 0 " params ")")
             )
           )
         )
@@ -235,27 +245,29 @@
   )
 
 (defn get-merged-str [& patterns]
-  (let [pat (apply s/merge-p patterns)]
-    (s/pp-pattern
+  (let [merge-p (if (contains? (first patterns) :div) p/merge-p s/merge-p)
+        pp-pattern (if (contains? (first patterns) :div) p/pp-pattern s/pp-pattern)
+        pat (apply merge-p patterns)]
+    (pp-pattern
      pat)
     )
   )
 
-(defn get-pattern-fx [pattern]
-  (let [pattern (if (string? pattern) (keyword (subs pattern 1)) pattern)
-        fx (map
-            (fn [[k v]]
-              (str
-               (name k) ": ["
-               (apply str
-                      (map (fn [p]
-                             (str (:name p) ": "
-                                  (node-get-control v (keyword (:name p))) " "))
-                           (:pnames (:sdef v))))
-               "]
-"))
-            (s/p-fx pattern))
-        fx (apply str fx)]
-    fx
-    )
-  )
+;; (defn get-pattern-fx [pattern]
+;;   (let [pattern (if (string? pattern) (keyword (subs pattern 1)) pattern)
+;;         fx (map
+;;             (fn [[k v]]
+;;               (str
+;;                (name k) ": ["
+;;                (apply str
+;;                       (map (fn [p]
+;;                              (str (:name p) ": "
+;;                                   (node-get-control v (keyword (:name p))) " "))
+;;                            (:pnames (:sdef v))))
+;;                "]
+;; "))
+;;             (s/p-fx pattern))
+;;         fx (apply str fx)]
+;;     fx
+;;     )
+;;   )
