@@ -35,11 +35,13 @@
     )
   )
 
-(defn get-pos [beat div]
-       (let [bar (if (= 0 (mod beat div)) (/ beat div) (inc (int (/ beat div))))
-             n (mod beat div)
-             n (if (= 0 n) div n)]
-         [(int bar) (int n)]))
+(defn get-pos [beat div & [size s-div]]
+  (let [step (if s-div (/ s-div div) div)
+        beat (if (and size (> beat size)) (mod beat size) beat)
+        bar (if (= 0 (mod beat div)) (/ beat div) (inc (int (/ beat div))))
+        n (mod beat div)
+        n (if (= 0 n) div n)]
+    [(int bar) (int n)]))
 
 (defn find-in [coll x]
   (some
@@ -502,6 +504,9 @@
                                      a))
                          pattern
                          (conj (vec (rest pattern)) :end)) div))
+  )
+
+(defn scale-p [scale notes]
   )
 
 

@@ -62,7 +62,7 @@
         theta (/ 6.28319 size)
         h 0.84
         ratio 0.618033988749895
-        markers (range 1 (+ size div) div)
+        markers (range 1 (inc size))
         patterns (conj (into [] (p/get-p player))
                        [:legend {:data (zipmap markers (repeat (count markers) [:d]))}])
         gen-color (fn [circle]
@@ -82,11 +82,8 @@
                   (map
                    (fn [[k v] n]
                      (let [data v
-                           data (if (map? data) data {1 []})
-                           data-size (get v :size (apply max (keys data)))
-                           data (apply dissoc data
-                                       (filter #(> % data-size) (keys data)))
-                           pattern-size (/ (dec data-size) step)
+                           data (if (map? data) data {:div 4 1 {1 []}})
+                           pattern-size (p/p-size data)
                            data (s/stretch-p data size)]
                          (doseq [[o a] data]
                            (let [offset (int (/ (- o 1) step))

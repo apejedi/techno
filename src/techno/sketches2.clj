@@ -42,10 +42,110 @@
   )
 
 (def template
-  {:drum1 (drum-p2 [:Kit15-Electro] [])
-   :drum2 (drum-p2 [:Kit16-Electro] [])
-   :drum3 (drum-p2 [:Kit9-Vinyl] [])
-   :drum4 (drum-p2 [:KurzweilKit08] [])
+  {:drum1 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit15-Electro]
+             []
+             1/4))
+   :drum2 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit15-Electro]
+             []
+             1/4))
+   :drum3 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit15-Electro]
+             []
+             1/4))
+   :drum4 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit15-Electro]
+             []
+             1/4))
+   :drum5 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit15-Electro]
+             []
+             1/4))
+   :drum6 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit15-Electro]
+             []
+             1/4))
+   :drum7 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit15-Electro]
+             []
+             1/4))
+   :drum8 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit15-Electro]
+             []
+             1/4))
    :motif1 (p/phrase-p
             bpfsaw
             []
@@ -91,22 +191,86 @@
   )
 
 (def sketch
-  {:flute (p/phrase-p
-           bass-synth
+  {:tabla  (let []
+             (drum-p2
+              [:tabla]
+              [:dhin  :ge :| :ge :1 :te :tin :|])
+             )
+   :rise   (p/phrase-p
+            rise-pad
+            [[:G4 :F3 :D4] :12 [:E4 :B4 :G3] :12 [:C4 :A3 :G4 :D3] :| :| :| :| :| :|]
+            1/4 0 [:t 4])
+   :bing (p/phrase-p
+          bing
+          [:C3 :1 :G3 :1 :D4 :1 :B4 :| :|]
+          1/8 0 [:decay 1.8])
+   :bell   (p/phrase-p
+            reverb-test
+            [:A3 :8 :D4 :8 :G4 :| :| :| :|]
+            1/4 0 [:decay 5.354330708661418])
+   :bass  (p/phrase-p
+           prophet
            [:A2 :| :| :D3 :| :| :G3 :| :| :D3 :| :| :A2 :| :| :| :|]
-           1/4 0 [:attack 1 :release 4 :bwr 1])
+           1/4 0 [:t 5 :attack 1 :release 4 :bwr 0.2 :cutoff 400])
 
-   :klang (p/phrase-p
-           reverb-test
-           [:A3 :8 :D4 :8 :G4 :| :| :| :|]
-           1/4 0 [:decay 5.354330708661418])
-   :sin (p/phrase-p
-         rise-pad
-         [[:G4 :F3 :D4] :12 [:E4 :B4 :G3] :12 [:C4 :A3 :G4 :D3] :| :| :| :| :| :|]
-         1/4 0 [:t 4])
-   :bpfsaw (p/phrase-p
-            bing
-            [:C3 :G3 :D4 :B4 :| :|]
-            1/4 0 [:decay 1.8425197582545243])
+   })
 
+(def exp3
+  {:beat1 (p/build-map-p
+           [[o-kick []] :1
+            [b-kick []]
+            [o-kick []] [o-kick []] :1
+            [o-clap [] o-snr []] :1
+            [o-kick []] :1
+            [b-kick []]
+            [o-kick []] [o-kick []]
+            [o-snr [:amp 0.5] (drum-s [:Kit15-Electro] :cl1) [:amp 2]] :2]
+           0.25)
+   :kick (p/build-map-p
+          [[o-kick []] :3  ]
+          0.25)
+   :beat2 (p/build-map-p
+           [:1
+            [ (drum-s [:Kit15-Electro] :cl2) []]
+            [ (drum-s [:Kit15-Electro] :cl2) []   ]
+            [ (drum-s [:Kit15-Electro] :cl1) []   ] :2
+            [ (drum-s [:Kit15-Electro] :cl1) []   ]
+            [ (drum-s [:Kit15-Electro] :cl2) []   ]
+            [ (drum-s [:Kit15-Electro] :cl1) []   ] :1
+            [ (drum-s [:Kit15-Electro] :cl1) []   ]
+            [ (drum-s [:Kit15-Electro] :cl2) []   ]
+            [ (drum-s [:Kit15-Electro] :cl1) []   ]
+            [ o-snr []   ] :2])
+   :harmony (p/phrase-p
+             prophet
+             [[:C#4 :F#3] [:C#4 :F#3]
+              [:C#4 :F#3] [:F#3 :C#4]
+              [:C#4 :F#3]
+                                        ;[:C#4 :F#3] [:F#3 :C#4] [:C#4 :F#3] [:F#3 :C#4]
+              :3
+              [:A3 :D3] [:A3 :D3] [:A3 :D3] [:A3 :D3] [:A3 :D3] :3
+              [:B3 :E3] [:B3 :E3]  [:B3 :E3] [:B3 :E3]
+              [:B3 :E3] :3]
+             0.25 2 [:attack 0.001 :decay 1.3 :amp 0.5 :cutoff 2000])
+   :arp (let [a [:D4 :F#4  :A4]
+              b [:C#4 :E4  :Ab4]
+              c [:C#4  :F#3 :A3]]
+          (p/phrase-p
+           bpfsaw
+           (flatten (concat (repeat 10 a) (repeat 6 b) (repeat 16 c)))
+           0.25 0 [:dur 0.7 :atk 0.1 :rq 0.6]))
+   :harmony2 (p/phrase-p
+              bpfsaw2
+              [[:A5 :A5]
+               [:A5 :A5] :A5 :2 :Ab5 [:Ab5 :Ab5] [:Ab5 :Ab5] [:Ab5 :Ab5] :Ab5 :1 :F#5 [:F#5 :F#5] :F#5 :F#5 :5 [:D5 :D5] :D5 :D5 :C#5 [:C#5 :C#5] [:C#5 :C#5] :C#5 [:rel 3 :sus 1] :24]
+              0.25 3 [:rel 2])
+   :clap (drum-p2
+          [:Kit15-Electro]
+          [:4 :cl1 :3] 0.25)
+   :motif (let [a [:E4 :1 :C#5 :2 :C#5 :2 :C#5 :2 :C#5 :1 :C#5 :2]
+                b [:F#4 :1 :C#5 :2 :C#5 :2 :C#5 :2 :C#5 :1 :C#5 :2]]
+            (p/phrase-p
+             bass2
+             (flatten (concat (repeat 6 a) (repeat 6 b) ))
+             0.25 0 [:decay 2.4 :amp 2.4 :cutoff 6362 :cutoff2 3362]))
    })

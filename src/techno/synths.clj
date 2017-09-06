@@ -829,7 +829,7 @@
     )
   )
 
-(defsynth g-kick [amp 1 out-bus 0]
+(defsynth g-kick [amp 1 out-bus 0 dur 0.3]
   (let [snd (sin-osc:ar (* (env-gen:ar (envelope [1000 69 60] [0.015 0.1] :exponential)) (midiratio [-0.1 0 0.1])))
         snd (mix:ar snd)
         snd (tanh (* snd 10))
@@ -837,8 +837,10 @@
         snd (b-peak-eq:ar snd (x-line:kr 2000 100 0.3) 2 8)
         snd (+ snd (delay-c:ar snd 0.01 (lin-lin (sin-osc 4) -1 1 0.0 0.001)))
         snd (rlpf:ar snd 8000 0.7)
-        snd (* snd (env-gen:ar (envelope [0 1 0.7 0.7 0] [0.001 0.01 0.3 0.02]) :action FREE))
-        snd (clip:ar (* snd 0.6) -1 1)]
+        snd (* snd (env-gen:ar
+                    (envelope [0 1 0.7 0.7 0]
+                              [(* 0.01 dur) (* 0.3) (* 0.2 dur) (* 0.4 dur)]) :action FREE))
+        snd (clip:ar (* snd 0.6 amp) -1 1)]
     (out:ar out-bus [snd snd])
     )
   )

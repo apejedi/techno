@@ -202,7 +202,7 @@
                      (dec start)
                      (dec end)))))
         start (readers/get-line-number r)]
-    (loop [cur (edn/read {:eof false} r) patterns {}
+    (loop [cur (edn/read {:eof false} r) patterns (sorted-map)
            start start end (readers/get-line-number r)]
       (if cur
         (let [[e f g h] cur
@@ -213,7 +213,7 @@
                                   (or (not sketch) (nil? sketch) (= b sketch)))
                              (reduce
                               (fn [m [k v]]
-                                ;(println (str k) (get-val (str v) start end))
+                                ;; (println (str k) (get-val (str v) start end))
                                 (assoc m (str k) (get-val (str v) start end)))
                               patterns
                               g)
@@ -227,7 +227,8 @@
           (recur (edn/read {:eof false} r) patterns end (readers/get-line-number r)))
         (if return-map?
           patterns
-          (seq (map seq patterns))))
+          (seq (map seq patterns))
+          ))
       )
     )
   )
