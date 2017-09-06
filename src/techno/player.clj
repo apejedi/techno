@@ -474,7 +474,47 @@
     pattern)
   )
 
-(defn phrase-p [inst pattern div & [space args mk-note]]
+;; (defn phrase-p [inst pattern div & [space args mk-note]]
+;;   (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
+;;                          (instance? overtone.sc.synth.Synth inst))
+;;                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
+;;                          (some #(= (:name %) "note") (:params inst)) :note
+;;                          true false))
+;;         note-p #(do ;%
+;;                   (if (= note-arg :freq) (midi->hz (note %)) (note %))
+;;                   )
+;;         mk-note (if mk-note mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args))))))
+;;         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
+;;         is-n? #(and (keyword? %) (re-find #"^\w" (name %)))
+;;         is-note? #(or is-n? (and (sequential? %) (is-n? (first %))))
+;;         is-arg? #(and (sequential? %) (or (number? (first %)) (number? (second %)) (empty? %)))
+;;         space (if (and (number? space) (> space 0)) space nil)]
+;;     (build-map-p (mapcat (fn [a b]
+;;                            (let [a (cond (is-arg? a) nil
+;;                                          (sequential? a)
+;;                                          (vec (mapcat #(cond (is-arg? (second %)) (mk-note (first %) (second %))
+;;                                                              (is-note? (second %)) (vec (concat (mk-note (first %)) (mk-note (second %))))
+;;                                                              true (mk-note (first %)))
+;;                                                       (partition 2 2 [args] a)))
+;;                                          (is-space? a) a
+;;                                          (is-note? a) (mk-note a (if (is-arg? b) b))
+;;                                          true a)
+;;                                  a (if (nil? a) [] [a])
+;;                                  a (if (do (println b)
+;;                                            (and (not (is-space? (first a)))
+;;                                                 (not (is-space? b))
+;;                                                 space))
+;;                                      (conj a (keyword (str space)))
+;;                                      a)
+;;                                  ]
+;;                              a)
+;;                            )
+;;                          pattern
+;;                          (conj (vec (rest pattern)) :end)
+;;                          ) div))
+;;   )
+
+(defn phrase-p [inst pattern div & [space args mk-note ret-seq]]
   (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
                          (instance? overtone.sc.synth.Synth inst))
                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
@@ -485,27 +525,31 @@
                   )
         mk-note (if mk-note mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args))))))
         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
-        is-note? #(or (and (keyword? %) (re-find #"^\w" (name %))) (and (sequential? %) (fn? (first %))))
-        is-arg? #(and (sequential? %) (or (number? (first %)) (number? (second %))))
-        space (if (and (number? space) (> space 0)) space nil)]
-    (build-map-p (mapcat (fn [a b]  (let [a [(cond (is-arg? a) nil
-                                                  (sequential? a)
-                                                  (vec (mapcat #(cond (is-arg? (second %)) (mk-note (first %) (second %))
-                                                                      (is-note? (second %)) (vec (concat (mk-note (first %)) (mk-note (second %))))
-                                                                      true (mk-note (first %)))
-                                                               (partition 2 2 [args] a)))
-                                                  (is-space? a) a
-                                                  (is-note? a) (mk-note a (if (is-arg? b) b))
-                                                  true a)]
-                                         a (if (and (not (is-space? (first a)))
-                                                    (not (is-space? b)) space)
-                                             (conj a (keyword (str space)))
-                                             a)]
-                                     a))
-                         pattern
-                         (conj (vec (rest pattern)) :end)) div))
+        is-arg? #(and (sequential? %) (or (number? (first %)) (number? (second %)) (empty? %)))
+        is-n? #(and (keyword? %) (not (nil? (re-find #"^[a-zA-z]" (name %)))))
+        is-note? #(or (is-n? %) (and (sequential? %) (not (is-arg? %)) (is-n? (first %))))
+        space (if (and (number? space) (> space 0)) (keyword (str space)) nil)
+        mk-action (fn [a b]
+                    (cond (and (is-note? a) (sequential? a))
+                          [(vec (apply concat (phrase-p inst a div 0 args mk-note true)))]
+                          (is-note? a) [(mk-note a (if (is-arg? b) b args))]
+                          (is-arg? a) nil
+                          true [a]))
+        pattern (mapcat (fn [a b]
+                             (let [res (mk-action a b)
+                                        ;x (println a b  (and (is-note? a) (is-note? b)))
+                                   res (if (and (is-note? a) (is-note? b) space) (conj res space) res)]
+                               res
+                               ))
+                           pattern
+                           (conj (vec (rest pattern)) nil))]
+    (if ret-seq
+      pattern
+      (build-map-p
+       pattern
+       div))
+    )
   )
-
 (defn scale-p [scale notes]
   )
 
