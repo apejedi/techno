@@ -19,7 +19,7 @@
 
 (def drum-kit (atom {}))
 
-;(event-debug-off)
+;(event-debug-on)
 
 
 (on-event
@@ -33,7 +33,7 @@
          drum-map (into drum-map (mapcat (fn [note kit]
                                            (vector [note
                                                     (into {}
-                                                          (mapcat (fn [s n] (vector [n (drum-s [kit] s)])) [:k1 :k2 :c1 :s1 :sd1 :p1 :o1 :p2] [48 49 50 51 44 45 46 47])
+                                                          (mapcat (fn [s n] (vector [n s])) (vals (get drum-kits kit)) (range 48 73))
                                                           )]))
                                          [25 26 27 20 21 22 23] [:claves :KurzweilKit02 :KurzweilKit03 :KurzweilKit04 :KurzweilKit05 :KurzweilKit06 :KurzweilKit07]
                                          ))]
@@ -92,9 +92,11 @@
                         args (vec (concat args (flatten (mapcat (fn [[k v]] [(keyword k) v]) (get @synth-params (:name @cur-synth) [])))))]
                                         ;(println (partition 2 (get ctr-map chan)))
                     (when (not (nil? @cur-synth))
-                        (when (= @program :drum)
-                          (techno.recorder/record-action [(get @drum-kit (:data1 m)) []])
-                          (apply (get @drum-kit (:data1 m)) [])
+                      (when (= @program :drum)
+                        (let [d (get @drum-kit (:data1 m))]
+                          (when (not (nil? d))
+                            (techno.recorder/record-action [d []])
+                            (apply d [])))
                           )
                       (when (not (= @program :drum))
                         (techno.recorder/record-action [@cur-synth args])

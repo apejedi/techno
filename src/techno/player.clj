@@ -382,6 +382,8 @@
     (techno.sequencer/is-phrase? pattern))
   )
 
+
+
 (defn build-map-p [pattern & [div]]
   (let [div (if div (int (/ 1 div)) 4)
         n-div #(int (* (Math/ceil (/ % div)) div))
