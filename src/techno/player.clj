@@ -525,8 +525,8 @@
                   )
         mk-note (if mk-note mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args))))))
         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
-        is-arg? #(and (sequential? %) (or (number? (first %)) (number? (second %)) (empty? %)))
-        is-n? #(and (keyword? %) (not (nil? (re-find #"^[a-zA-z]" (name %)))))
+        is-arg? #(and (sequential? %)  (or (empty? %) (and (or (number? (first %)) (number? (second %))) (or (keyword? (first %)) (keyword? (second %))))))
+        is-n? #(or (number? %) (and (keyword? %) (not (nil? (re-find #"^[a-zA-z]" (name %))))))
         is-note? #(or (is-n? %) (and (sequential? %) (not (is-arg? %)) (is-n? (first %))))
         space (if (and (number? space) (> space 0)) (keyword (str space)) nil)
         mk-action (fn [a b]
@@ -535,10 +535,11 @@
                           (is-note? a) [(mk-note a (if (is-arg? b) b args))]
                           (is-arg? a) nil
                           true [a]))
+        ;x (println pattern (conj (vec (rest pattern)) nil))
         pattern (mapcat (fn [a b]
-                             (let [res (mk-action a b)
-                                        ;x (println a b  (and (is-note? a) (is-note? b)))
-                                   res (if (and (is-note? a) (is-note? b) space) (conj res space) res)]
+                          (let [;x (println a b  (and (is-note? a) (is-note? b)))
+                                res (mk-action a b)
+                                res (if (and (is-note? a) (is-note? b) space) (conj res space) res)]
                                res
                                ))
                            pattern
@@ -550,7 +551,12 @@
        div))
     )
   )
+
 (defn scale-p [scale notes]
+  (let [pitches (map find-pitch-class-name scale)
+        notes (map #(inc (.indexOf pitches (find-pitch-class-name (if (keyword? %) (note %) %)))) notes)]
+    notes
+    )
   )
 
 
