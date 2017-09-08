@@ -37,11 +37,28 @@
 
 (defn get-pos [beat div & [size s-div]]
   (let [step (if s-div (/ s-div div) div)
-        beat (if (and size (> beat size)) (mod beat size) beat)
-        bar (if (= 0 (mod beat div)) (/ beat div) (inc (int (/ beat div))))
-        n (mod beat div)
+        beat (cond (= size 1) 1
+                   (and size (> beat size))
+                   (if (= (mod beat size) 0)
+                     (min size div)
+                     (mod beat size))
+               true beat)
+        ret-beat (if s-div (or (= 1 beat) (= 0 (mod (dec beat) step))) true)
+        bar (cond s-div (inc (int (/ (dec beat) s-div)))
+              (= 0 (mod beat div)) (/ beat div)
+              true (inc (int (/ beat div))))
+        n (if s-div
+            (inc (int (/ (dec (mod beat s-div)) step)))
+            (mod beat div))
         n (if (= 0 n) div n)]
-    [(int bar) (int n)]))
+    (if ret-beat
+      [(int bar) (int n)]
+      [0 0])
+    ))
+
+(defn get-beat [bar note div]
+  (+ (* (dec bar) div) note)
+  )
 
 (defn find-in [coll x]
   (some
@@ -420,6 +437,25 @@
     )
   )
 
+(defn stretch-p [pattern size]
+  (let [o-size (p-size pattern)
+        size (if (sequential? size)
+               (p-size {:div (:div pattern) (first size) {(second size) []}})
+               size)]
+    (reduce
+     (fn [p b]
+       (let [pos (get-pos b (:div p) o-size)
+             action (get-in pattern pos)
+             pos2 (get-pos b (:div p))]
+         (if (or (= b size) (not (empty? action)))
+           (assoc-in p pos2 action)
+           p)
+         )
+       )
+     {:div (:div pattern)}
+     (range 1 (inc size)))
+    )
+  )
 (defn merge-p [& patterns]
   (let [divs (map #(get % :div) patterns)
         div (apply lcmv divs)

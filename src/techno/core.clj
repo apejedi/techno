@@ -1,12 +1,13 @@
 (ns techno.core
   (:import (java.io InputStream FileInputStream))
   (:use [overtone.core]
-        [techno.ring :as r]
         [techno.synths]
         [techno.samples]
         )
   (:require [techno.sequencer :as s]
             [techno.player :as p]
+            [techno.ring :as r]
+            [techno.ring2 :as r2]
             [clojure.tools.reader.edn :as edn]
             [clojure.tools.reader.reader-types :as readers]
             [clojure.string :as string]
@@ -58,6 +59,7 @@
                            ))
   (s/set-st player 0.25)
   (r/ring player 100 10 50)
+  (r2/ring player 100 10 50)
   (s/reset-s player)
   (techno.grid/mk-grid
    6 6 core/player
