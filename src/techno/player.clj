@@ -13,6 +13,7 @@
 
 (defonce pool (atom nil))
 (defonce patterns (atom {}))
+(defonce listeners (atom {}))
 (declare mk-pool)
 (declare play)
 (declare get-state)
@@ -42,7 +43,7 @@
                    (if (= (mod beat size) 0)
                      (min size div)
                      (mod beat size))
-               true beat)
+                   true beat)
         ret-beat (if s-div (or (= 1 beat) (= 0 (mod (dec beat) step))) true)
         bar (cond s-div (inc (int (/ (dec beat) s-div)))
               (= 0 (mod beat div)) (/ beat div)
@@ -102,7 +103,7 @@
      (swap! pool (fn [_] (mk-pool))))
    (let [div (get options :div 4)
          size (get options :size 4)
-         period (/ 60000 bpm div)
+         period (/ 60000000 bpm div)
          args (if (not (nil? options)) options {})
          job (schedule-job @pool
                            play
@@ -114,16 +115,22 @@
      ))
   )
 
-(defn p-size [p & [div]]
+(defn add-listener [player key f]
+  (swap! listeners assoc-in [player key] f)
+  )
+
+(defn p-size [p & [s-div]]
   (let [b (apply max (filter number? (keys p)))
-        s (* (get p :div) (dec b))
-        step (if (not (nil? div)) (/ div (get p :div)) 1)
-        s (+ s (* step (if (not (empty? (get p b)))
-                         (apply max (keys (get p b)))
-                         1)))]
+        step (if (not (nil? s-div)) (/ s-div (get p :div)) 1)
+        s (* (get p :div) (dec b) step)
+        note (if (not (empty? (get p b)))
+               (apply max (keys (get p b)))
+               1)
+        s (+ s (* step note))]
     s
     )
   )
+
 (defn- update-player [id]
   (try
     (when (not (empty? (get @patterns id)))
@@ -184,6 +191,8 @@
                  ))
              ))
          )
+       (doseq [f (vals (get @listeners id))]
+         (f beat))
        (if (>= beat size)
          (ref-set counter 1)
          (commute counter inc))
@@ -269,7 +278,7 @@
 (defn add-p
   ([id pattern key] (add-p id pattern key {}))
   ([id pattern key attrs]
-   (techno.sequencer/handle-pattern-fx key {} false)
+   (techno.sequencer/handle-pattern-fx key attrs false)
    (swap! patterns assoc-in [id key] (seq-to-p pattern))
    (update-player id)
    nil)
@@ -282,6 +291,12 @@
     (swap! patterns (fn [p] (assoc p id (dissoc (get p id) key)))))
   (update-player id)
   )
+
+(defn mod-p [& args]
+  (let [val (last args)
+        path (butlast args)]
+      (swap! patterns assoc-in path val)
+    nil))
 
 (defn mod-amp [sequencer pattern delta]
   (techno.sequencer/mod-amp nil pattern delta)
@@ -445,7 +460,7 @@
     (reduce
      (fn [p b]
        (let [pos (get-pos b (:div p) o-size)
-             action (get-in pattern pos)
+             action (get-in pattern pos [])
              pos2 (get-pos b (:div p))]
          (if (or (= b size) (not (empty? action)))
            (assoc-in p pos2 action)
@@ -602,8 +617,9 @@
 
 
 (defn get-p
-  ([id]
-   (get @patterns id)))
+  [& path]
+  (get-in @patterns path)
+  )
 
 (defn- format-date
   "Format date object as a string such as: 15:23:35s"
@@ -662,7 +678,7 @@
                                       #(fun id)
                                       0
                                       ms-period
-                                      TimeUnit/MILLISECONDS)
+                                      TimeUnit/MICROSECONDS)
            job-info (map->RecurringJob {:id id
                                         :ms-period ms-period
                                         :job job
@@ -811,7 +827,7 @@
    (when reset
      (doseq [[k v] (get @patterns id)]
        (rm-p id k))
-     ;(swap! patterns dissoc id)
+     (swap! listeners dissoc id)
      )
    (cancel-job-id id pool immediate))
   )

@@ -187,7 +187,10 @@
             bpfsaw
             []
             0.25 0 [])
-
+   :metronome (p/phrase-p
+               bing
+               [:C4 :|]
+               1/4)
    }
   )
 
@@ -361,12 +364,56 @@
              1/4))
    :bass (p/phrase-p
           prophet
-          [:A2 :2 :A2   :| :1 :A2 :1 :D3 :| :2 :D3 :| :1 :D3 :|
-           :Bb2 :2 :Bb2 :| :2 :Bb2 :| :B2 :2 :B2 :| :1 :B2 :|]
-          1/4 0 [:decay 1 :attack -0.07874015748031496])
+          [:A2 :2 :A2 :| :2 :A2 :| :D3 :2 :D3 :| :2 :D3 :| :Bb2 :2 :Bb2 :| :2 :Bb2 :| :B2 :2 :B2 :| :2 :B2     :|]
+ 1/4 0 [:decay 1 :attack -0.07874015748031496])
    :klang (p/phrase-p
            klang-test
-           [:D5 :2 :D6 :| :A5 :| :| :7 :F5 :| :5 :F5 :| :3 :A5 :| :2 :E5 :3 :A5 :| :| :D5 :3 :D6 :2 :A5 :| :| :| :7 :E5 :| :5 :E5 :| :3 :A5 :| :2 :G5 :4 :A5 :| :|]
+           [:D5 :3 :D6 :| :A5 :| :| :7 :F5 :| :5 :F5 :| :3 :A5 :| :2 :E5 :3 :A5 :| :| :D5 :3 :D6 :| :A5 :| :| :7 :E5 :| :5 :E5 :| :3 :A5 :| :2 :G5 :4 :A5 :| :8]
            1/8 0 [:atk -0.007874015865363473])
+
+   })
+
+(def drumaa
+  {:drum2 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:KurzweilKit07]
+             [:k1    :| :c1 :1 :c2 :|
+              :2 :k2 :| :c1 :1 :s1 :|]
+             1/4))
+   :drum3 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:KurzweilKit05]
+             [:sd :| ;:3 :sd :1 :sd :1 :sd :|
+              ]
+             1/8))
+   :drum4 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:KurzweilKit07]
+             [:s1 :| :s2 :|]
+             1/4))
 
    })
