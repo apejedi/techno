@@ -19,7 +19,7 @@
 
 (def drum-kit (atom {}))
 
-;(event-debug-on)
+;(event-debug-off)
 
 
 (on-event
@@ -31,11 +31,19 @@
                       :inst {24 klang-test 25 reverb-test 26 piano 27 ks1 20 bing 21 bowed 22 rise-fall-pad2 23 plucked}}
          drum-map {24 {48 o-kick 49 o-snr 50 o-hat 51 o-clap 44 b-kick 45 b-snr 46 (drum-s [:Kit16-Electro] :c1) 47 (drum-s [:Kit16-Electro] :c2)}}
          drum-map (into drum-map (mapcat (fn [note kit]
-                                           (vector [note
-                                                    (into {}
-                                                          (mapcat (fn [s n] (vector [n s])) (vals (get drum-kits kit)) (range 48 73))
-                                                          )]))
-                                         [25 26 27 20 21 22 23] [:claves :KurzweilKit02 :KurzweilKit03 :KurzweilKit04 :KurzweilKit05 :KurzweilKit06 :KurzweilKit07]
+                                           (let [sounds (group-samples (get drum-kits kit))]
+                                             (vector [note
+                                                      (into {}
+                                                            (mapcat (fn [s n] (vector [n s])) (apply concat (map vals (vals (group-samples (get drum-kits kit))))) (range 48 84))
+                                                              )
+                                                        ;; (into {}
+                                                        ;;       (mapcat (fn [s n] (vector [n s])) (vals (get drum-kits kit)) (range 48 73))
+                                                        ;;       )
+                                                        ])))
+                                         [25 26 27 20 21 22 23
+                                          32 33 34 35
+                                          28 29 30 31] [:claves :KurzweilKit02 :KurzweilKit03 :KurzweilKit04 :KurzweilKit05 :KurzweilKit06 :KurzweilKit07
+                                                        :Kit10-Vinyl :Kit11-Vinyl :Kit13-Acoustic :Kit8-Vinyl :Kit6-Electro :Kit9-Vinyl :Kit7-Electro :tabla]
                                          ))]
      (when (and (>= note 20) (<= note 27) (not (nil? (get-in control-map [@program note]))))
        (reset! cur-synth (get-in control-map [@program note]))
