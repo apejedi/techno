@@ -877,3 +877,10 @@
     (out:ar out-bus [son son])
     )
   )
+
+;; (demo 3
+;;       (let [snd (pulse:ar (+ 200 (* (sin-osc:ar 100) 50)) (lin-lin:kr (sin-osc:kr 3) -1 1 0.1 0.9))
+
+;;             snd (moog-ff:ar snd (x-line:kr 500 1200 3))
+;;             ]
+;;         [snd snd]))

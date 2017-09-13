@@ -118,6 +118,7 @@
   (ap/with-applet wheel
     (let [[circle beat] (if (not (nil? circle)) [circle beat] (q/state :cursor))
           pattern (p/get-p @player (nth (keys @points) circle))
+          pattern (if (nil? pattern) {:div 1 1 {1 []}} pattern)
           size (p/p-size pattern (p/get-state @player :div))
           action (get-in pattern (p/get-pos beat (:div pattern)
                                             size (p/get-state @player :div)))]
@@ -375,129 +376,130 @@
                                        (= key :down) -1
                                        true 0))
               pattern (nth (keys @points) circle)
-              new-pattern (nth (keys @points) n-circle)
-              data (p/get-p @player new-pattern)
-              div (p/get-p @player new-pattern :div)
-              n-div (/ (p/get-state @player :div) div)
-              step (fn [d o]
-                     (cond (= d :left) (dec (int (* (Math/floor (/ o n-div)) n-div)))
-                           (= d :right) (inc (int (* (Math/ceil (/ o n-div)) n-div)))
-                           true o))
-              n-slot (mod (step key slot) size)
-              n-slot (if (= 0 n-slot) size n-slot)
-              display-cursor (q/state :display-cursor)
-              text-box (q/state :action-text)
-              pos-box (q/state :action-pos)
-              key-event @(:key-event (meta wheel))
-              cur-action (get-cur-action)
-              cur-body (get (p/get-p @player pattern) :body {})
-              old-pos (p/get-pos slot div size (p/get-state @player :div))
-              pos (p/get-pos n-slot div size (p/get-state @player :div))]
-          (let [g (.getGraphics wheel)
-                    [circle slot] (q/state :cursor)]
-                (.beginDraw g)
-                (q/fill 0 0 0)
-                (q/rect 100 50 300 100)
-                (q/fill 255 255 255)
-                (q/text (str pos) 100 100)
-                (.endDraw g))
-          (when (or (= :left key) (= :right key) (= :up key) (= :down key) (= 10 (q/key-code)))
-            ;; (when (.isControlDown key-event)
-            ;;   (eval-action "[]"))
-            (swap!
-             state
-             (fn [s]
-               (cond
-                 (and display-cursor
-                      (or (= :left key) (= :right key) (= :up key) (= :down key)))
-                 (assoc (assoc s :cursor [n-circle n-slot]) :old-cursor [circle slot])
-                 (= 10 (q/key-code)) (assoc s :display-cursor (not display-cursor))
-                 true s)))
-            ;; (when (.isControlDown key-event)
-            ;;   (p/set-action @player new-pattern beat cur-action)
-            ;;   (when (contains? cur-body cur-beat)
-            ;;     (p/mod-p @player new-pattern :body
-            ;;              (assoc cur-body beat (get cur-body cur-beat)))))
-            (when (and (or (= :left key) (= :right key)) (.isShiftDown key-event))
-              (p/mod-p @player new-pattern (first pos) (second pos)
-                       (p/get-p @player pattern (first old-pos) (second old-pos)))
-              (p/mod-p @player pattern (first old-pos) (second old-pos) nil)
+              new-pattern (nth (keys @points) n-circle)]
+          (let [data (p/get-p @player new-pattern)
+                data (if (nil? data) {:div 1 1 {1 []}} data)
+                old-data (p/get-p @player pattern)
+                old-data (if (nil? old-data) {:div 1 1 {1 []}} old-data)
+                div (:div data)
+                n-div (/ (p/get-state @player :div) div)
+                step (fn [d o]
+                       (cond (= d :left) (dec (int (* (Math/floor (/ o n-div)) n-div)))
+                             (= d :right) (inc (int (* (Math/ceil (/ o n-div)) n-div)))
+                             true o))
+                n-slot (mod (step key slot) size)
+                n-slot (if (= 0 n-slot) size n-slot)
+                display-cursor (q/state :display-cursor)
+                text-box (q/state :action-text)
+                pos-box (q/state :action-pos)
+                key-event @(:key-event (meta wheel))
+                cur-action (get-cur-action)
+                cur-body (get old-data :body {})
+                old-pos (p/get-pos slot div size (p/get-state @player :div))
+                pos (p/get-pos n-slot div size (p/get-state @player :div))]
+            (let [g (.getGraphics wheel)
+                  [circle slot] (q/state :cursor)]
+              (.beginDraw g)
+              (q/fill 0 0 0)
+              (q/rect 100 50 300 100)
+              (q/fill 255 255 255)
+              (q/text (str pos) 100 100)
+              (.endDraw g))
+            (when (or (= :left key) (= :right key) (= :up key) (= :down key) (= 10 (q/key-code)))
+              ;; (when (.isControlDown key-event)
+              ;;   (eval-action "[]"))
+              (swap!
+               state
+               (fn [s]
+                 (cond
+                   (and display-cursor
+                        (or (= :left key) (= :right key) (= :up key) (= :down key)))
+                   (assoc (assoc s :cursor [n-circle n-slot]) :old-cursor [circle slot])
+                   (= 10 (q/key-code)) (assoc s :display-cursor (not display-cursor))
+                   true s)))
+
+              (when (and (or (= :left key) (= :right key)) (.isShiftDown key-event))
+                (p/mod-p @player new-pattern (first pos) (second pos)
+                         (get-in old-data old-pos)
+                         ;(p/get-p @player pattern (first old-pos) (second old-pos))
+                         )
+                (p/mod-p @player pattern (first old-pos) (second old-pos) nil)
+                (draw-state)
+                )
+              (draw-cursor)
+              )
+            (when (and (= 73 (q/key-code)) (.isControlDown key-event)) ;i
+              (p/add-p @player
+                       (p/stretch-p
+                        data
+                        [(inc
+                          (apply max (filter number? (keys data))))
+                         div])
+                       new-pattern)
+              (draw-state)
+              (draw-cursor)
+              )
+            (when (and (= 73 (q/key-code)) (.isShiftDown key-event)) ;i
+              (p/add-p @player
+                       (assoc-in
+                        data
+                        [(inc
+                          (apply max (filter number? (keys data))))
+                         div] [])
+                       new-pattern)
+              (draw-state)
+              (draw-cursor)
+              )
+            (when (and (= 68 (q/key-code)) (.isShiftDown key-event)) ;d
+              (p/add-p @player
+                       (assoc-in
+                        (p/stretch-p
+                         data
+                         [(-
+                           (apply max (filter number? (keys data))) 2)
+                          div])
+                        [(dec (apply max (filter number? (keys data))))
+                         div]
+                        [])
+                       new-pattern)
+              (draw-state)
+              (draw-cursor)
+              )
+            (when (and (= 68 (q/key-code)) (.isControlDown key-event)) ;d
+              (p/add-p @player
+                       (p/stretch-p
+                        data
+                        [(dec
+                          (apply max (filter number? (keys data))))
+                         div])
+                       new-pattern)
+              (draw-state)
+              (draw-cursor)
+              )
+            (when (and (= 88 (q/key-code)) (.isControlDown key-event)) ;x
+              (eval-action "[]")
+              )
+            (when (and (= 67 (q/key-code)) (.isControlDown key-event)) ;c
+              (swap! state assoc :copy
+                     (get-in data pos)
+                     ;(p/get-p @player new-pattern (first pos) (second pos))
+                     )
+              )
+            (when (and (= 86 (q/key-code)) (.isControlDown key-event)) ;v
+              (p/mod-p @player new-pattern (first pos) (second pos) (q/state :copy))
+              )
+            (when (and (= 82 (q/key-code)) (.isControlDown key-event)) ;r
               (draw-state)
               )
-            ;; (when (and (not (nil? text-box)) (not (nil? pos-box)) (.isVisible text-box) (not (= 10 (q/key-code))))
-            ;;   (.setText text-box (if (contains? (get (p/get-p @player pattern) :body {}) beat)
-            ;;                        (get-in (p/get-p @player pattern) [:body beat])
-            ;;                        (p/get-action-str (get-cur-action))))
-            ;;   (.setText pos-box (str new-pattern " " beat))
-            ;;   )
-            (draw-cursor)
-            )
-          (when (and (= 73 (q/key-code)) (.isControlDown key-event)) ;i
-            (p/add-p @player
-                     (p/stretch-p
-                      data
-                      [(inc
-                        (apply max (filter number? (keys data))))
-                       div])
-                     new-pattern)
-            (draw-state)
-            (draw-cursor)
-            )
-          (when (and (= 73 (q/key-code)) (.isShiftDown key-event)) ;i
-            (p/add-p @player
-                     (assoc-in
-                      data
-                      [(inc
-                        (apply max (filter number? (keys data))))
-                       div] [])
-                     new-pattern)
-            (draw-state)
-            (draw-cursor)
-            )
-          (when (and (= 68 (q/key-code)) (.isShiftDown key-event)) ;d
-            (p/add-p @player
-                     (assoc-in
-                      (p/stretch-p
-                       data
-                       [(-
-                         (apply max (filter number? (keys data))) 2)
-                        div])
-                      [(dec (apply max (filter number? (keys data))))
-                       div]
-                      [])
-                     new-pattern)
-            (draw-state)
-            (draw-cursor)
-            )
-          (when (and (= 68 (q/key-code)) (.isControlDown key-event)) ;d
-            (p/add-p @player
-                     (p/stretch-p
-                      data
-                      [(dec
-                        (apply max (filter number? (keys data))))
-                       div])
-                     new-pattern)
-            (draw-state)
-            (draw-cursor)
-            )
-          (when (and (= 88 (q/key-code)) (.isControlDown key-event)) ;x
-            (eval-action "[]")
-            )
-          (when (and (= 67 (q/key-code)) (.isControlDown key-event)) ;c
-            (swap! state assoc :copy (p/get-p @player new-pattern (first pos) (second pos)))
-            )
-          (when (and (= 86 (q/key-code)) (.isControlDown key-event)) ;v
-            (p/mod-p @player new-pattern (first pos) (second pos) (q/state :copy))
-            )
-          (when (and (= 82 (q/key-code)) (.isControlDown key-event)) ;r
-            (draw-state)
-            )
-          (when (and (= 83 (q/key-code)) (.isControlDown key-event)) ;s
-            (p/add-p
-             @player
-             (p/stretch-p (p/get-p @player new-pattern)
-                          pos)
-             new-pattern)
+            (when (and (= 83 (q/key-code)) (.isControlDown key-event)) ;s
+              (p/add-p
+               @player
+               (p/stretch-p
+                data
+                ;(p/get-p @player new-pattern)
+                pos)
+               new-pattern)
+              )
             )
           ;; (when (= :e key)
           ;;   (draw-action)

@@ -144,6 +144,10 @@
                              (let [b (apply max (filter number? (keys p)))
                                    s (* div (dec b))
                                    step (/ div (get p :div))
+                                   ;; x (println k " bar-size " s " note-size " (* step
+                                   ;;           (if (not (empty? (get p b)))
+                                   ;;             (apply max (keys (get p b)))
+                                   ;;             1)))
                                    s (+ s (* step
                                              (if (not (empty? (get p b)))
                                                (apply max (keys (get p b)))
@@ -828,6 +832,7 @@
      (doseq [[k v] (get @patterns id)]
        (rm-p id k))
      (swap! listeners dissoc id)
+     ;(swap! patterns dissoc id)
      )
    (cancel-job-id id pool immediate))
   )
