@@ -636,3 +636,57 @@
             [:A4 :E5] :6]
            1/4 6 [:t 2])
    })
+
+(def randob
+  {:motif1 (p/phrase-p
+            bass2
+            [:D1 :1 :Bb1 :1 :D1 :1 :Bb1 :| :2 :D1 :1 :Bb1 :| :D1 :1 :Bb1 :1 :Bb1 :1 :G1 :| :Bb1 :7]
+            1/8 0 [:decay 1.2283465055030163 :cutoff2 944])
+   :overp (p/phrase-p
+           overpad
+           [:G3 :1 :G4 :1 :Bb4 :1 :C5 :| :2 :F3 :1 :G4 :| :G3 :1 :G4 :1 :Bb4 :1 :C5 :|
+            :F3 :1 :F4 :1 :F4         :|]
+           1/8 0 [:amp 0.1 :release 0.7 :attack 0.01])
+   :drum2 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit6-Electro]
+             [:k2        :| :k2 :|
+              :k2 :1 :s1 :| :k2 :|]
+             1/4))
+   :motif3 (p/phrase-p
+            plucked
+            [:E4 :4 :E4 :| :2 :E4 :3 :A3 :| :3 :A3 :| :A3 :2 :D4 :| :D4 :4 :D4 :| :B3 :4 :B3 :| :8]
+            1/8 0 [:mistune 0.396850400083647])
+
+   })
+(def cheesy
+  {:drum1 (p/build-map-p
+           [[ (get-in drum-kits [:KurzweilKit02 :CYCdh_Kurz02-Kick01.wav]) []   ] :2
+            [ (get-in drum-kits [:KurzweilKit02 :CYCdh_Kurz02-Kick01.wav]) []   ] :|
+            [ (get-in drum-kits [:KurzweilKit02 :CYCdh_Kurz02-Snr02.wav]) []   ] :|
+            [ (get-in drum-kits [:KurzweilKit02 :CYCdh_Kurz02-Kick01.wav]) []   ] :2
+            [ (get-in drum-kits [:KurzweilKit02 :CYCdh_Kurz02-Kick01.wav]) []   ] :|
+            [ (get-in drum-kits [:KurzweilKit02 :CYCdh_Kurz02-Snr02.wav]) []   ] [ (get-in drum-kits [:KurzweilKit02 :CYCdh_Kurz02-SdSt.wav]) []   ] :|
+            ] 1/4)
+   :harmony1 (p/phrase-p
+              bass-synth
+              [[:G3 :G2] :| :2 [:G3 :G2] :| :| [:G3 :G2] :| [:F3 :F2] :| :2 [:F2 :F3] :| :2 [:F3 :F2] :| :| [:E3 :E2] :| :2 [:E3 :E2] :| :| [:E3 :E2] :| [:Eb2 :Eb3] :| :2 [:Eb2 :Eb3] :| :| [:Eb2 :Eb3] :| [:C2 :C3] :| :2 [:C3 :C2] :| :| [:C2 :C3] :| [:D2 :D3] :| :2 [:D3 :D2] :| :| :|]
+              1/4 0 [:attack 0.01 :amp 0.3 :release 1.4 :detune 2.8 :bwr 5.1])
+   :motif2 (p/phrase-p
+            bpfsaw
+            [:G5 :1 :Bb5 :| :C6 :1 :G5 :| :Bb5 :1 :C6 :| :G5 :1 :Bb5 :| :F5 :1 :Bb5 :| :C6 :1 :F5 :| :Bb5 :1 :C6 :| :F5 :1 :Bb5 :| :E5 :1 :Bb5 :| :C6 :1 :E5 :| :Bb5 :1 :C6 :| :E5 :1 :Bb5 :| :Eb5 :1 :Bb5 :| :G5 :1 :Eb5 :| :Bb5 :1 :G5 :| :Eb5 :2 :G5 [:atk 0.01 :dur 3 :rq 0.3] :| :| :| :| :| :| :| :| :|]
+            1/4 0 [:atk 0.01 :dur 1.1811023622047243 :rq 0.4566929201910815])
+   :motif1 (p/phrase-p
+            bass2
+            [:G3 :1 :D4 :| :Eb4 :1 :D4 :| :G3 :1 :D4 :| :Eb4 :1 :D4 :| :F3 :1 :D4 :| :Eb4 :1 :D4 :| :F3 :1 :D4 :| :Eb4 :1 :G4 :|]
+            1/4 0 [:decay 3.3070867455850435 :cutoff2 2204.7244094488187 :cutoff 3779.527559055118])
+
+   })
