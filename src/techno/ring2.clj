@@ -401,9 +401,12 @@
                   [circle slot] (q/state :cursor)]
               (.beginDraw g)
               (q/fill 0 0 0)
-              (q/rect 100 50 300 100)
+              (q/rect 20 20 300 100)
               (q/fill 255 255 255)
-              (q/text (str pos) 100 100)
+              (q/text (str new-pattern " " pos) 20 20)
+              ;; (q/text (techno.sequencer/get-action-str
+              ;;          (p/get-p @player new-pattern (first pos) (second pos))
+              ;;          techno.samples/drum-kits "drum-kits") 20 40)
               (.endDraw g))
             (when (or (= :left key) (= :right key) (= :up key) (= :down key) (= 10 (q/key-code)))
               ;; (when (.isControlDown key-event)

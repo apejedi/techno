@@ -615,10 +615,15 @@
         is-n? #(or (number? %) (and (keyword? %) (not (nil? (re-find #"^[a-zA-z]" (name %))))))
         is-note? (if is-note? is-note? #(or (is-n? %) (and (sequential? %) (not (is-arg? %)) (is-n? (first %)))))
         space (if (and (number? space) (> space 0)) (keyword (str space)) nil)
+        merge-args (fn [a & [b]]
+                     (vec (flatten (into [] (apply hash-map (concat a b))))))
         mk-action (fn [a b]
                     (cond (and (is-note? a) (sequential? a))
                           [(vec (apply concat (phrase-p inst a div 0 args mk-note true is-note?)))]
-                          (is-note? a) [(mk-note a (if (is-arg? b) b args) note-arg)]
+                          (is-note? a) [(mk-note a
+                                                 (merge-args args (if (is-arg? b) b []))
+                                                 ;(if (is-arg? b) b args)
+                                                 note-arg)]
                           (is-arg? a) nil
                           true [a]))
                                         ;x (println pattern (conj (vec (rest pattern)) nil))
