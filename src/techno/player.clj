@@ -16,6 +16,7 @@
 (defonce listeners (atom {}))
 (declare mk-pool)
 (declare play)
+(declare mod-p)
 (declare get-state)
 (declare active?)
 (declare p-size)
@@ -181,8 +182,11 @@
          (let [beat (if (< (:size v) beat) (mod beat (:size v)) beat)
                beat (if (= beat 0) (:size v) beat)
                div (get v :div)
-               step (/ s-div div)]
-           (when (or (= 1 beat) (= 0 (mod (dec beat) step)))
+               step (/ s-div div)
+               queued (and (not (= beat 1)) (get v :add-at-1 false))]
+           (when (= beat 1)
+             (mod-p id k :add-at-1 false))
+           (when (and (not queued) (or (= 1 beat) (= 0 (mod (dec beat) step))))
              (let [bar (inc (int (/ (dec beat) s-div)))
                    note (inc (int (/ (dec (mod beat s-div)) step)))
                    note (if (= 0 note) div note)
@@ -193,7 +197,9 @@
                        args (if (not (nil? (:group p-fx))) (concat [[:head (:group p-fx)]] args) args)]
                    (when (not (nil? a)) (apply a args)))
                  ))
-             ))
+             )
+           )
+
          )
        (doseq [f (vals (get @listeners id))]
          (f beat))
@@ -283,7 +289,7 @@
   ([id pattern key] (add-p id pattern key {}))
   ([id pattern key attrs]
    (techno.sequencer/handle-pattern-fx key attrs false)
-   (swap! patterns assoc-in [id key] (seq-to-p pattern))
+   (swap! patterns assoc-in [id key] (seq-to-p (merge pattern attrs)))
    (update-player id)
    nil)
   )
@@ -513,6 +519,29 @@
     )
   )
 
+(defn shift-p [pattern dir & [start end]]
+  (let [start (if start start 1)
+        end (if end end (p-size pattern))
+        div (:div pattern)
+        size (p-size pattern)
+        pattern (reduce
+                 (fn [p b]
+                   (let [n (if (= dir :left)
+                             (dec b)
+                             (inc b))]
+                     (if (and (> n 0) (<= n size))
+                         (assoc-in p (get-pos n div)
+                                   (get-in pattern (get-pos b div)))
+                         p))
+                   )
+                 pattern
+                 (range start (inc end)))]
+    (if (= dir :left)
+      (assoc-in pattern (get-pos end div) [])
+      (assoc-in pattern (get-pos start div) []))
+    )
+  )
+
 (defn seq-to-p [pattern]
   (if (not (contains? pattern :div))
     (let [step (techno.sequencer/get-step pattern)
@@ -572,7 +601,6 @@
 ;;   )
 
 (defn phrase-p [inst pattern div & [space args mk-note ret-seq is-note?]]
-  (println pattern)
   (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
                          (instance? overtone.sc.synth.Synth inst))
                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
@@ -588,7 +616,6 @@
         is-note? (if is-note? is-note? #(or (is-n? %) (and (sequential? %) (not (is-arg? %)) (is-n? (first %)))))
         space (if (and (number? space) (> space 0)) (keyword (str space)) nil)
         mk-action (fn [a b]
-                    (println "a " a "b " b)
                     (cond (and (is-note? a) (sequential? a))
                           [(vec (apply concat (phrase-p inst a div 0 args mk-note true is-note?)))]
                           (is-note? a) [(mk-note a (if (is-arg? b) b args) note-arg)]
@@ -607,9 +634,9 @@
                                             (not (empty? action)))
                                        (vec (apply concat (phrase-p inst action div nil
                                                              args mk-note true is-note?)))
-                                       true (vec (mk-note action args note-arg))))
+                                       (or (keyword? action) (not (empty? action))) (vec (mk-note action args note-arg))))
                                ]
-                           (if (or (= b (p-size pattern)) (not (empty? action)))
+                           (if (or (= b (p-size pattern)) (not (nil? action)))
                              (assoc-in p pos action)
                              p)
                            )
@@ -629,7 +656,6 @@
                   (build-map-p
                    pattern
                    div))]
-    (println "ret " pattern)
     pattern
     )
   )
@@ -637,7 +663,6 @@
 (defn scale-p [inst n-note type notes div & [space args]]
   (let [pitches (scale (keyword n-note) (keyword type))
         note-fn (fn [p & [s-args note-arg]]
-                  (println "p " p)
                   (let [[s n oct modify]
                         (first (re-seq
                                 #"([1-9])\|?([1-9]+)?([b#]+)*"
@@ -664,8 +689,11 @@
                     (vector inst
                             (vec (concat [note-arg n]
                                          (if s-args s-args args))))))]
-    (phrase-p inst notes div nil args note-fn #(do (println "is-note " % (re-matches #"([1-9])\|?([1-9]+)?([b#]+)*" (name %)))
-                                                   (re-matches #"([1-9])\|?([1-9]+)?([b#]+)*" (name %))))
+    (phrase-p inst notes div nil args note-fn
+              false
+              #(do
+                   (if (keyword? %) (re-matches #"([1-9])\|?([1-9]+)?([b#]+)*" (name %))
+                       false)))
     )
   )
 

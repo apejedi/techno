@@ -690,3 +690,51 @@
             1/4 0 [:decay 3.3070867455850435 :cutoff2 2204.7244094488187 :cutoff 3779.527559055118])
 
    })
+
+(def manic
+  {:drum2 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit14-Acoustic]
+             {:div 8
+              1 {1 [[dirty-kick [:amp 0.6]]] 4 []}
+              }))
+
+   :drum1 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit14-Acoustic]
+             {:div 8
+              1 {1 :sd1 4 :sd2 5 :sd2 7 :sd3}
+              2 {3 :t1 4 :t1 5 :t2 8 []}
+              }
+             ))
+
+   :harmony1 (p/phrase-p
+              bpfsaw
+              [[:F#4 :Eb4] :| :5 [:Ab4 :Eb4] :| :| :3 [:Bb4 :Eb4] :| :| [:F#4 :D4] :| :| :|]
+              1/8 0 [:dur 2 :amp 0.5 :atk 0.3 :rq 0.5])
+   :harmony2 (p/phrase-p
+              bpfsaw2
+              [[:F#5 :D5] :1 :F#5 :D5 :1 :F#5 :D5 :| [:D5 :F#5] :| :1 [:Ab5 :D5] :1 [:Ab5 :D5] :1 [:Ab5 :D5] :1 :D5 :| :| :| :7 [:F#5 :C5] :| :1 [:F#5 :C5] :1 [:F#5 :C5] :| :|]
+              1/8 0 [:lsf 1000])
+   :motif1 (p/phrase-p
+            bass2
+            [:D4 :3 :F#4 :| :Ab4 :1 :Bb4 :1 :Ab4 :Bb4 :| :1 :F#4 :2 :F#4 :1 :F4 :| :|]
+            1/8 0 [:decay 4])
+
+   })

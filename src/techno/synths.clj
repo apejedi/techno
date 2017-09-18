@@ -442,6 +442,7 @@
   )
 
 
+
 (defsynth wobble-drone [freq 100 wobble 2 amp 1 out-bus 0]
   (let [mod-f (/ freq 2)
         idx (* 10 (sin-osc wobble))
@@ -878,9 +879,25 @@
     )
   )
 
-;; (demo 3
-;;       (let [snd (pulse:ar (+ 200 (* (sin-osc:ar 100) 50)) (lin-lin:kr (sin-osc:kr 3) -1 1 0.1 0.9))
+(defsynth overpad2
+  [note 60 amp 0.7 attack 0.001 release 2 out-bus 0]
+  (let [freq  (midicps note)
+        env   (env-gen (perc attack release) :action FREE)
+        f-env (+ freq (* 3 freq (env-gen (perc 0.012 (- release 0.1)))))
+        bfreq (/ freq 2)
+        sig   (apply +
+                     (concat (* 0.7 (sin-osc [bfreq (* 0.99 bfreq)]))
+                             (lpf (saw [freq (* freq 1.01)]) f-env)))
+        audio (* amp env sig)]
+    (out:ar out-bus [audio audio])))
 
-;;             snd (moog-ff:ar snd (x-line:kr 500 1200 3))
-;;             ]
-;;         [snd snd]))
+
+(defsynth t123 [freq 300 dur 1]
+  (let [f-env (+ freq (* 0.5 (lin-lin:ar (sin-osc:ar 100) 10 30)))
+        env (env-gen:kr (envelope [0 0.5 1 0.8 0] [(* dur 0.1) (* dur 0.3) (* dur 0.2) (* dur 0.4)]) :action FREE)
+        snd (bpf:ar (saw:ar f-env) freq (env-gen:kr (envelope [0.5 1 0.8 1.5] [(* dur 0.3) (* dur 0.2) (* dur 0.5)])))
+        snd (* env snd)]
+    (out:ar 0 [snd snd]))
+  )
+
+(t123)

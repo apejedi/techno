@@ -426,6 +426,14 @@
                 (p/mod-p @player pattern (first old-pos) (second old-pos) nil)
                 (draw-state)
                 )
+              (when (and (or (= :left key) (= :right key)) (.isControlDown key-event))
+                (p/add-p @player
+                         (p/shift-p
+                          data
+                          key slot)
+                         new-pattern)
+                (draw-state)
+                )
               (draw-cursor)
               )
             (when (and (= 73 (q/key-code)) (.isControlDown key-event)) ;i

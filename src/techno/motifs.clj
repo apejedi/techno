@@ -251,13 +251,13 @@
                         ctr-map {
                                  3 [piano [:note (:midi-note info)   :dur 2 :amp 0.3]
                                     ]
-                                 2 [bass-synth [:freq (midi->hz (:midi-note info)) :attack 1 :release 2]]
+                                 2 [prophet [:freq (midi->hz (:midi-note info)) :attack 1 :decay 2]]
                                  4 [bpfsaw2 [:freq (midi->hz (:midi-note info)) :lsf 1000]
                                     ]
-                                 1 [klang-test [:freq (midi->hz (:midi-note info)) :atk 0.01]]
-                                 5 [bpfsaw [:note (:midi-note info) :dur 1.3 :amp 1 :atk 0.01 :rq 0.5]]
+                                 1 [ks1 [:note (:midi-note info) :coef 0.001 :dur 2]]
+                                 5 [bpfsaw [:note (:midi-note info) :dur 2.3 :amp 1 :atk 0.3 :rq 0.5]]
                                  6 [bass2 [:freq (midi->hz (:midi-note info)) :decay 4]]
-                                 7 [p-saw [:freq (midi->hz (:midi-note info))]]
+                                 7 [rise-fall-pad2 [:freq (midi->hz (:midi-note info))]]
                                  }]
                     (doseq [[inst args] (partition 2 (get ctr-map chan))]
                       (rec/record-action [inst args])

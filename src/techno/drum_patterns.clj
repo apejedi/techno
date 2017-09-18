@@ -78,7 +78,9 @@
   (let [mk-action (fn [n & [n-args]]
                     (if (keyword? n)
                       (vector (drum-s kits n)  (if n-args n-args []))
-                      [n (if n-args n-args [])]))]
+                      [n (if n-args n-args [])]))
+        is-drum? #(if (keyword? %) (re-matches #"[a-zA-Z]+[0-9]*" (name %))
+                     false)]
       (if (map? pattern)
         (reduce
          (fn [p b]
@@ -87,7 +89,7 @@
                  action
                  (cond (and (sequential? action) (not (empty? action)))
                    (vec (apply concat (p/phrase-p nil action (:div pattern) nil
-                                                  [] mk-action true)))
+                                                  [] mk-action true is-drum?)))
                    (keyword? action) [(drum-s kits action) []])
                  ]
              (if (or (= b (p/p-size pattern)) (not (empty? action)))
