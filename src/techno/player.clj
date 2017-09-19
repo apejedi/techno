@@ -668,9 +668,9 @@
 (defn scale-p [inst n-note type notes div & [space args]]
   (let [pitches (scale (keyword n-note) (keyword type))
         note-fn (fn [p & [s-args note-arg]]
-                  (let [[s n oct modify]
+                  (let [[s n modify oct]
                         (first (re-seq
-                                #"([1-9])\|?([1-9]+)?([b#]+)*"
+                                #"([1-9])([b#><]+)*\|?([1-9]+)?"
                                 (str p)))
                         n (nth pitches
                                (dec
@@ -685,6 +685,8 @@
                             (reduce (fn [n m]
                                       (cond (= \b m) (dec n)
                                             (= \# m) (inc n)
+                                            (= \> m) (+ 12 n)
+                                            (= \< m) (- n 12)
                                             true n
                                             ))
                                     n modify)
@@ -697,7 +699,7 @@
     (phrase-p inst notes div nil args note-fn
               false
               #(do
-                   (if (keyword? %) (re-matches #"([1-9])\|?([1-9]+)?([b#]+)*" (name %))
+                   (if (keyword? %) (re-matches #"([1-9])([b#><]+)*\|?([1-9]+)?" (name %))
                        false)))
     )
   )

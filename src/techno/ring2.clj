@@ -401,7 +401,7 @@
                   [circle slot] (q/state :cursor)]
               (.beginDraw g)
               (q/fill 0 0 0)
-              (q/rect 20 20 300 100)
+              (q/rect 0 0 300 100)
               (q/fill 255 255 255)
               (q/text (str new-pattern " " pos) 20 20)
               ;; (q/text (techno.sequencer/get-action-str
