@@ -617,12 +617,13 @@
         space (if (and (number? space) (> space 0)) (keyword (str space)) nil)
         merge-args (fn [a & [b]]
                      (vec (flatten (into [] (apply hash-map (concat a b))))))
+        args (if (and (sequential? pattern) (map? (last pattern))) (merge-args args (flatten (into [] (last pattern)))) args)
+        pattern (if (and (sequential? pattern) (map? (last pattern))) (vec (butlast pattern)) pattern)
         mk-action (fn [a b]
                     (cond (and (is-note? a) (sequential? a))
                           [(vec (apply concat (phrase-p inst a div 0 args mk-note true is-note?)))]
                           (is-note? a) [(mk-note a
                                                  (merge-args args (if (is-arg? b) b []))
-                                                 ;(if (is-arg? b) b args)
                                                  note-arg)]
                           (is-arg? a) nil
                           true [a]))
@@ -666,15 +667,20 @@
   )
 
 (defn scale-p [inst n-note type notes div & [space args]]
-  (let [pitches (scale (keyword n-note) (keyword type))
+  (let [scale (scale (keyword n-note) (keyword type))
+        scale (if (= 0 (mod (last scale) (first scale)))
+                (butlast scale) scale)
+        pitches (cycle scale)
         note-fn (fn [p & [s-args note-arg]]
-                  (let [[s n modify oct]
+                  (let [[s no modify oct]
                         (first (re-seq
-                                #"([1-9])([b#><]+)*\|?([1-9]+)?"
+                                #"([0-9]+)([b#><]+)*\|?([1-9]+)?"
                                 (str p)))
+                        no (Integer/parseInt no)
                         n (nth pitches
                                (dec
-                                (Integer/parseInt n)))
+                                no))
+                        n (+ n (* 12 (int (/ no (count scale)))))
                         n (if (not (nil? oct))
                             (note
                              (keyword (str
@@ -699,7 +705,7 @@
     (phrase-p inst notes div nil args note-fn
               false
               #(do
-                   (if (keyword? %) (re-matches #"([1-9])([b#><]+)*\|?([1-9]+)?" (name %))
+                   (if (keyword? %) (re-matches #"([0-9]+)([b#><]+)*\|?([1-9]+)?" (name %))
                        false)))
     )
   )
