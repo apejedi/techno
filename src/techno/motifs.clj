@@ -255,7 +255,7 @@
                                  4 [bpfsaw2 [:freq (midi->hz (:midi-note info)) :lsf 1000]
                                     ]
                                  1 [ks1 [:note (:midi-note info) :coef 0.001 :dur 2]]
-                                 5 [bpfsaw [:note (:midi-note info) :dur 2.3 :amp 1 :atk 0.3 :rq 0.5]]
+                                 5 [bpfsaw [:note (:midi-note info) :dur 1 :amp 1 :atk 0.1 :rq 0.5]]
                                  6 [bass2 [:freq (midi->hz (:midi-note info)) :decay 4]]
                                  7 [rise-fall-pad2 [:freq (midi->hz (:midi-note info))]]
                                  }]

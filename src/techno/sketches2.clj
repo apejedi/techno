@@ -151,43 +151,43 @@
    :motif1 (p/phrase-p
             bpfsaw
             []
-            0.25 0 [])
+            1/8 0 [])
    :motif2 (p/phrase-p
             overpad
             []
-            0.25 0 [])
+            1/8 0 [])
    :motif3 (p/phrase-p
             bass2
             []
-            0.25 0 [])
+            1/8 0 [])
    :motif4 (p/phrase-p
             plk-bass
             []
-            0.25 0 [])
+            1/8 0 [])
    :motif5 (p/phrase-p
             bpfsaw
             []
-            0.25 0 [])
+            1/8 0 [])
    :harmony1 (p/phrase-p
             bpfsaw
             []
-            0.25 0 [])
+            1/8 0 [])
    :harmony2 (p/phrase-p
             overpad
             []
-            0.25 0 [])
+            1/8 0 [])
    :harmony3 (p/phrase-p
             bass2
             []
-            0.25 0 [])
+            1/8 0 [])
    :harmony4 (p/phrase-p
             plk-bass
             []
-            0.25 0 [])
+            1/8 0 [])
    :harmony5 (p/phrase-p
             bpfsaw
             []
-            0.25 0 [])
+            1/8 0 [])
    :metronome (p/phrase-p
                bing
                [:C4 :|]
@@ -737,5 +737,90 @@
             bass2
             [:D4 :3 :F#4 :| :Ab4 :1 :Bb4 :1 :Ab4 :Bb4 :| :1 :F#4 :2 :F#4 :1 :F4 :| :|]
             1/8 0 [:decay 4])
+
+   })
+
+(def bassy
+  {:drum1 (let [c1 [(drum-s [:Kit7-Electro] :c1) []]
+                c2 [(drum-s [:Kit7-Electro] :c2) []]]
+            (drum-p2
+             [:Kit6-Electro]
+             [:k2       :|
+              :k2 :3 c1 :|]
+             1/8))
+
+   :drum2 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit3-Acoustic]
+             [ :| :1 :sd6 :1 :sd7 :|]
+             1/4))
+
+   :drum3 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit3-Acoustic]
+             [:cr4 :1 :cr1 :|
+              :cr6 :cr1    :|]
+             1/4))
+
+   :motif1 (p/phrase-p
+            reverb-test
+            [[:B4 :A5] :| :1 :D5 :| :2 [:E5 :C5] :| :|]
+            1/8 0 [:decay 5.9 :amp 0.5])
+   :harmony2 (p/phrase-p
+              bpfsaw2
+              [[:E4 :E3] :| :| :| [:A3 :A4] :| :| :| [:D4 :D3] :| :|]
+              1/8 0 [:t 3])
+
+   :harmony1 (p/phrase-p
+              bass-synth
+              [[:D4 :G3] :| :4 [:F3 :C4] :| :| :1 :E4 :A3 :| :7 [:E3 :B3] :| :| :3 [:G3 :D4] :| :|]
+              1/8 0 [:release 2 :detune 0 :attack 1 :bwr 0.1 :amp 0.1])
+   })
+
+(def cs
+  {:motif2 (p/phrase-p
+            prophet
+            [:F4 :5 :C4 :| :4 :F#3 :| :2 :F3 :| :C4  :| :| :| :| :| :| :|
+             :F4 :5 :C4 :| :4 :F#3 :| :2 :F3 :| :C4  :| :| :| :| :| :| :|]
+            1/8 0 [:attack 0.01 :decay 4 :cutoff 1535])
+   :motif1 (p/phrase-p
+            plk-bass
+            [:Ab2 :1 :F#2 :3 :Ab2 :| :F#2 :3 :Ab2 :1 :F#2 :| :| :F#2 :5 :F2 :| :8]
+            1/8 0 [])
+   :harmony1 (p/phrase-p
+              cs80
+              [[:F5 :Bb5] :| :| :6 [:F5 :Ab5] :| :| :| :5 [:Eb5 :C5] :| :| :| :4 [:C5 :F5] :| :| :| :|
+               [:F5 :Bb5] :| :| :6 [:F5 :Ab5 {:dur 2}]
+               :|  :| :5 [:Eb5 :C5 {:dur 2}] :|  :| [:C5 :F5 {:dur 2}] :|  :|]
+              1/8 0 [:amp 0.4 :dur 3])
+   :drum3 (let []
+            (drum-p2
+             [:Kit6-Electro]
+             {1 {1 :o 8 []}
+              }
+             1/8))
+   :drum1 (let []
+            (drum-p2
+             [:Kit6-Electro]
+             {1 {1 :s1 5 :o}
+              2 {1 :k1 3 :t2 5 :o 7 :t3 8 []}
+              }
+             1/8))
 
    })

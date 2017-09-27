@@ -899,3 +899,35 @@
         snd (* env snd)]
     (out:ar 0 [snd snd]))
   )
+
+(defsynth cs80
+  [freq 880
+   amp 0.5
+   dur 3
+   fatt 0.75
+   fdecay 0.5
+   fsus 0.8
+   frel 1.0
+   cutoff 200
+   dtune 0.002
+   vibrate 4
+   vibdepth 0.015
+   gate 1
+   ratio 1
+   cbus 1
+   freq-lag 0.1
+   out-bus 0]
+  (let [freq (lag freq freq-lag)
+        att (* dur 0.3)
+        decay (* dur 0.2)
+        sus (* dur 0.2)
+        rel (* dur 0.3)
+        cuttoff (in:kr cbus)
+        env     (env-gen (adsr-ng att decay sus rel) gate :action FREE)
+        fenv    (env-gen (adsr fatt fdecay fsus frel 2) gate)
+
+        vib     (+ 1 (lin-lin:kr (sin-osc:kr vibrate) -1 1 (- vibdepth) vibdepth))
+
+        freq    (* freq vib)
+        sig     (mix (* env amp (saw [freq (* freq (+ dtune 1))])))]
+    (out:ar out-bus [sig sig])))

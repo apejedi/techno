@@ -462,6 +462,38 @@
     )
   )
 
+(defn build-phrase-map [pattern note-fn]
+  (let [r #(/ (Math/round (* % (Math/pow 10 2))) (Math/pow 10 2))
+        mk-args (fn [inst args]
+                  (let [names (map #(keyword (:name %)) (:params inst))
+                        pos (first (keep-indexed #(if (keyword? %2) %1) args))
+                        pos (if (nil? pos) 0 pos)
+                        [vals re] (split-at pos args)]
+                    (vec (concat (mapcat #(vector %1 %2) names vals) re))
+                    ))
+        collect-args (fn [args actions]
+                       (reduce
+                        (fn [m [i a]]
+                          (if (and (sequential? a) (> (count a) 0))
+                            (reduce
+                             #(assoc-in
+                               %1 [(:name i)  (first %2) (r (second %2))]
+                               (inc (get-in m [(:name i)  (first %2) (r (second %2))] 0)))
+                             m
+                             (partition 2 (mk-args i a)))
+                            m))
+                        args
+                        (partition 2 actions)))
+        args (reduce
+              (fn [m o]
+                (collect-args m (get-in pattern (get-pos o (:div pattern))))
+                )
+              {}
+              (range 1 (inc (p-size pattern))))]
+    args
+    )
+  )
+
 (defn stretch-p [pattern size]
   (let [o-size (p-size pattern)
         size (if (sequential? size)
