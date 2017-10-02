@@ -302,31 +302,49 @@
              bass2
              (flatten (concat (repeat 6 a) (repeat 6 b) ))
              0.25 0 [:decay 2.4 :amp 2.4 :cutoff 6362 :cutoff2 3362]))
+   :tempo 100
    })
 (def chill
-  {:drum1 (p/build-map-p
-           [[o-kick []] :1 [o-hat []] :2 [o-hat []] :2]
-           1/4 0)
-   :drum2 (p/build-map-p
-           [[(drum-s [:KurzweilKit03] :c1) []] :3]
-           1/4 0)
-   :drum3 (p/build-map-p
-           [:5 [o-clap []
-                (drum-s [:Kit15-Electro] :cl1) [:amp 2]
-                ]]
-           1/4 0)
-   :harmony1 (p/phrase-p
-              bpfsaw
-              [(chord :B3 :m7) :6 (chord :A3 :m7) :8]
-              1/4 0 [:rq 0.6 :dur 1.6 :amp 0.2 :atk 0.7])
-   :motif1 (p/phrase-p
+  {:tempo 97
+   :beat2 (drum-p2
+           [:Kit4-Electro]
+           [:s1 :5 :s1 :|
+            :k1 :1 :k2 ;:1 :o1
+            :|
+            ]
+           1/8)
+
+   :lead  (p/phrase-p
+             bass2
+             [:D4 :1 :G4 :2 :C4 :2 :A4 :3]
+             1/4 0 [:dur 0.3 :decay 3 :amp 1.5])
+   :bass (p/phrase-p
             acid-bass
             [:F1 :1 :B1 :2 :G1 :2 :A1 :3]
             1/4 0 [:dur 0.3])
-   :motif2 (p/phrase-p
-            bass2
-            [:D4 :1 :G4 :2 :C4 :2 :A4 :3]
-            1/4 0 [:dur 0.3 :decay 3 :amp 1.5])
+   :mainsaw  (p/phrase-p
+               bpfsaw
+               [(chord :A3 :m7) :8 (chord :B3 :m7) :6]
+               1/4 0 [:rq 0.6 :dur 1.6 :amp 0.08 :atk 0.7])
+   :claps  (p/build-map-p
+            [:5 [o-clap []
+                 (drum-s [:Kit15-Electro] :cl1) [:amp 2]
+                 ]]
+            1/4 0)
+   :hat  (p/build-map-p
+            [[(drum-s [:KurzweilKit03] :c1) []] :3]
+            1/4 0)
+   :kicks  (p/build-map-p
+            [[o-kick []] :1 [o-hat []] :2 [o-hat []] :2]
+            1/4 0)
+   :bass2 (let [a (repeat 8 :A1)
+                a2 (repeat 8 :G2)
+                d (repeat 8 :D2)
+                b (repeat 8 :B2)]
+            (p/phrase-p
+             bass2
+             (concat a a2 d a b a2)
+             1/4 0 [:cutoff 1574.8 :cutoff2 700 :decay 1]))
    })
 
 (def wavy
@@ -476,7 +494,8 @@
    })
 
 (def house3
-  {:kick (p/build-map-p
+  {:tempo 120
+   :kick (p/build-map-p
           [[(drum-s [:Kit18-Acoustic] :k1) [:amp 0.4]] :3]
           )
    :hat (drum-p2 [:Kit1-Acousticclose :Kit5-Electro]
@@ -669,7 +688,8 @@
 
    })
 (def cheesy
-  {:drum1 (p/build-map-p
+  {:tempo 120
+   :drum1 (p/build-map-p
            [[ (get-in drum-kits [:KurzweilKit02 :CYCdh_Kurz02-Kick01.wav]) []   ] :2
             [ (get-in drum-kits [:KurzweilKit02 :CYCdh_Kurz02-Kick01.wav]) []   ] :|
             [ (get-in drum-kits [:KurzweilKit02 :CYCdh_Kurz02-Snr02.wav]) []   ] :|
@@ -741,57 +761,64 @@
    })
 
 (def bassy
-  {:drum1 (let [c1 [(drum-s [:Kit7-Electro] :c1) []]
-                c2 [(drum-s [:Kit7-Electro] :c2) []]]
-            (drum-p2
-             [:Kit6-Electro]
-             [:k2       :|
-              :k2 :3 c1 :|]
-             1/8))
+  {:tempo 83
+   :beat2 (drum-p2
+           [:Kit6-Electro]
+           [:k1 :1 :k2                           :|
+            [o-kick []]
+            :5 [(drum-s [:Kit7-Electro] :k1) []] :|]
+           1/8)
 
-   :drum2 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:Kit3-Acoustic]
-             [ :| :1 :sd6 :1 :sd7 :|]
-             1/4))
+   :cl (drum-p2
+        [:Kit8-Vinyl]
+        [:c1 :1]
+        1/4)
 
-   :drum3 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:Kit3-Acoustic]
-             [:cr4 :1 :cr1 :|
-              :cr6 :cr1    :|]
-             1/4))
-
-   :motif1 (p/phrase-p
-            reverb-test
-            [[:B4 :A5] :| :1 :D5 :| :2 [:E5 :C5] :| :|]
-            1/8 0 [:decay 5.9 :amp 0.5])
-   :harmony2 (p/phrase-p
+   :saw (p/phrase-p
               bpfsaw2
               [[:E4 :E3] :| :| :| [:A3 :A4] :| :| :| [:D4 :D3] :| :|]
-              1/8 0 [:t 3])
+              1/8 0 [:t 3 :detune 0])
+   :kicks  (let [c1 [(drum-s [:Kit7-Electro] :c1) []]
+                 c2 [(drum-s [:Kit7-Electro] :c2) []]]
+             (drum-p2
+              [:Kit6-Electro]
+              [:k2       :|
+               :k2 :3 c1 :|]
+              1/8))
+   :sd  (let [o o-kick
+                 s o-snr
+                 b b-kick
+                 bs b-snr
+                 c o-clap
+                 h o-hat
+                 d dirty-kick
+                 g g-kick
+                 r r-kick]
+             (drum-p2
+              [:Kit3-Acoustic]
+              [ :| :1 :sd6 :1 :sd7 :|]
+              1/4))
+   :crash  (let [o o-kick
+                 s o-snr
+                 b b-kick
+                 bs b-snr
+                 c o-clap
+                 h o-hat
+                 d dirty-kick
+                 g g-kick
+                 r r-kick]
+             (drum-p2
+              [:Kit3-Acoustic]
+              [:cr4 :1 :cr1 :|
+               :cr6 :cr1    :|]
+              1/4))
+   :bass  (p/phrase-p
+               bass-synth
+               [[:D4 :G3] :| :4 [:F3 :C4] :| :| :1 :E4 :A3 :| :7 [:E3 :B3] :| :| :3 [:G3 :D4] :| :|]
+               1/8 0 [:release 2 :detune 0 :attack 1 :bwr 0.1 :amp 0.1])
 
-   :harmony1 (p/phrase-p
-              bass-synth
-              [[:D4 :G3] :| :4 [:F3 :C4] :| :| :1 :E4 :A3 :| :7 [:E3 :B3] :| :| :3 [:G3 :D4] :| :|]
-              1/8 0 [:release 2 :detune 0 :attack 1 :bwr 0.1 :amp 0.1])
    })
+
 
 (def cs
   {:motif2 (p/phrase-p

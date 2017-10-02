@@ -215,8 +215,8 @@
                                   (or (not sketch) (nil? sketch) (= b sketch)))
                              (reduce
                               (fn [m [k v]]
-                                ;; (println (str k) (get-val (str v) start end))
-                                (assoc m (str k) (get-val (str v) start end)))
+                                (assoc m (str k) (get-val (str v) start end))
+                                )
                               patterns
                               g)
                              (= "swap!" a)

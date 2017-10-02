@@ -195,7 +195,7 @@
 (defsynth bpfsaw2 [freq 500 atk 2 sus 0 rel 3 c1 1 c2 -1
 		 detune 0.2 pan 0 cfhzmin 0.1 cfhzmax 0.3
 		cfmin 500 cfmax 2000 rqmin 0.1 rqmax 0.2
-                   lsf 200 ldb 0 amp 1 out-bus 0]
+                   lsf 200 ldb 0 amp 1 rs 0.5 out-bus 0]
   (let [env (env-gen:kr (envelope [0 1 1 0] [atk sus rel] [c1 0 c2]) :action 2)
         f (* freq (midiratio (* (lf-noise0:kr 0.5) detune)))
         sig (saw [f f])
@@ -204,7 +204,7 @@
                 (lin-exp (lf-noise1:kr 4) -1 1 cfhzmin cfhzmax))
                -1 1 cfmin cfmax)
         sig (bpf sig noise (lin-exp (lf-noise1:kr 0.1) -1 1 rqmin rqmax))
-        sig (b-low-shelf sig lsf 0.5 ldb)
+        sig (b-low-shelf sig lsf rs ldb)
         sig (balance2 (first sig) (second sig))
         sig (* sig env amp)]
     (out out-bus sig)
@@ -931,3 +931,10 @@
         freq    (* freq vib)
         sig     (mix (* env amp (saw [freq (* freq (+ dtune 1))])))]
     (out:ar out-bus [sig sig])))
+
+(defsynth p-lpf [audio-bus 10 out-bus 0 freq 12000]
+  (let [source (in:ar audio-bus 2)
+        source (lpf:ar source)]
+    (out:ar out-bus source)
+    )
+  )
