@@ -693,16 +693,19 @@
   )
 (defn handle-pattern-fx [key attrs kill-group]
   (when (and (contains? @pattern-groups key) kill-group)
-         ;; (kill (get-in @pattern-groups [pattern :id]))
-         (when (not (nil? (get-in @pattern-fx [key :mixer])))
-           (ctl (get-in @pattern-fx [key :mixer]) :start-release 1)
-           )
-         (when (not (nil? (get-in @pattern-fx [key :bus])))
-           (return-bus (get-in @pattern-fx [key :bus]))
-           )
-         (swap! pattern-groups
-              dissoc key)
-         )
+    ;; (kill (get-in @pattern-groups [pattern :id]))
+    (when (not (nil? (get-in @pattern-fx [key :mixer])))
+      (try
+        (ctl (get-in @pattern-fx [key :mixer]) :start-release 1)
+        (catch Exception e
+          (kill (get-in @pattern-groups [key :id]))))
+      )
+    (when (not (nil? (get-in @pattern-fx [key :bus])))
+      (return-bus (get-in @pattern-fx [key :bus]))
+      )
+    (swap! pattern-groups
+           dissoc key)
+    )
   (when  (and (not kill-group)
               (not (contains? @pattern-groups key))
               (not (contains? attrs :no-group)))
@@ -717,6 +720,7 @@
         (swap! pattern-fx assoc-in [key :group] p-group))
       )
     )
+
   )
 
 
