@@ -116,6 +116,8 @@
      ))
   )
 
+
+
 (defn add-listener [player key f]
   (swap! listeners assoc-in [player key] f)
   )
@@ -160,7 +162,7 @@
                                         ;(println div (:div @state))
           (when (or (not (= 0 (mod div (:div @state)))) (> div (:div @state)))
             (stop-s id true false)
-            (get-s bpm {:id id :div div :size size}))
+            (get-s bpm (merge @state {:id id :div div :size size})))
           (set-size id size)
           ))
     (catch Exception e
@@ -178,34 +180,35 @@
            size (:size @state)
            s-div (:div @state)]
        ;; (println "beat " beat)
-       (doseq [[k v] (get @patterns id)]
-         (let [beat (if (< (:size v) beat) (mod beat (:size v)) beat)
-               beat (if (= beat 0) (:size v) beat)
-               div (get v :div)
-               step (/ s-div div)
-               queued (and (not (= beat 1)) (get v :add-at-1 false))]
-           (when (= beat 1)
-             (mod-p id k :add-at-1 false))
-           (when (and (not queued) (or (= 1 beat) (= 0 (mod (dec beat) step))))
-             (let [bar (inc (int (/ (dec beat) s-div)))
-                   note (inc (int (/ (dec (mod beat s-div)) step)))
-                   note (if (= 0 note) div note)
-                   p-fx (techno.sequencer/get-pattern-fx k)]
-               ;; (println "k " k "bar " bar "note " note)
-               (doseq [[a args] (partition 2 (get-in v [bar note]))]
-                 (let [args (if (not (nil? (:bus p-fx))) (concat args [:out-bus (:bus p-fx)]) args)
-                       args (if (not (nil? (:group p-fx))) (concat [[:head (:group p-fx)]] args) args)]
-                   (when (not (nil? a)) (apply a args)))
-                 ))
-             )
-           )
+       (when (not (get @state :queued false))
+           (doseq [[k v] (get @patterns id)]
+             (let [beat (if (< (:size v) beat) (mod beat (:size v)) beat)
+                   beat (if (= beat 0) (:size v) beat)
+                   div (get v :div)
+                   step (/ s-div div)
+                   queued (and (not (= beat 1)) (get v :add-at-1 false))]
+               (when (= beat 1)
+                 (mod-p id k :add-at-1 false))
+               (when (and (not queued) (or (= 1 beat) (= 0 (mod (dec beat) step))))
+                 (let [bar (inc (int (/ (dec beat) s-div)))
+                       note (inc (int (/ (dec (mod beat s-div)) step)))
+                       note (if (= 0 note) div note)
+                       p-fx (techno.sequencer/get-pattern-fx k)]
+                   ;; (println "k " k "bar " bar "note " note)
+                   (doseq [[a args] (partition 2 (get-in v [bar note]))]
+                     (let [args (if (not (nil? (:bus p-fx))) (concat args [:out-bus (:bus p-fx)]) args)
+                           args (if (not (nil? (:group p-fx))) (concat [[:head (:group p-fx)]] args) args)]
+                       (when (not (nil? a)) (apply a args)))
+                     ))
+                 )
+               )
 
-         )
-       (doseq [f (vals (get @listeners id))]
-         (f beat))
-       (if (>= beat size)
-         (ref-set counter 1)
-         (commute counter inc))
+             )
+         (doseq [f (vals (get @listeners id))]
+           (f beat))
+         (if (>= beat size)
+           (ref-set counter 1)
+           (commute counter inc)))
        ))
     (catch Exception e (println (.getMessage e))
            (.printStackTrace e)))
@@ -302,6 +305,20 @@
   (update-player id)
   )
 
+(defn play-p [& args]
+  (let [tempo (if (number? (last args)) (last args) 80)
+        patterns (take-while #(map? %) args)
+        x (stop-s 0)
+        player (get-s tempo {:id 0 :queued true})]
+    (doseq [p patterns]
+      (add-p player p (keyword (gensym "pattern"))))
+    (let [state (:state (get @(:jobs-ref @pool) player))]
+      (add-listener 0 :one-shot
+                    (fn [b] (when (= b (:size @state))
+                              (stop-s 0))))
+      (swap! state dissoc :queued))
+    )
+  )
 (defn mod-p [& args]
   (let [val (last args)
         path (butlast args)]
@@ -958,7 +975,7 @@
      (doseq [[k v] (get @patterns id)]
        (rm-p id k))
      (swap! listeners dissoc id)
-     ;(swap! patterns dissoc id)
+     (swap! patterns dissoc id)
      )
    (cancel-job-id id pool immediate))
   )

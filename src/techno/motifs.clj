@@ -259,10 +259,11 @@
                                  6 [bass2 [:freq (midi->hz (:midi-note info)) :decay 4]]
                                  7 [rise-fall-pad2 [:freq (midi->hz (:midi-note info))]]
                                  }]
-                    (doseq [[inst args] (partition 2 (get ctr-map chan))]
-                      (rec/record-action [inst args])
-                      (apply inst args)
-                      )
+                    ;; (doseq [[inst args] (partition 2 (get ctr-map chan))]
+                    ;;   (rec/record-action [inst args])
+                    ;;   (apply inst args)
+                    ;;   )
+                    (node "fmTest"  {:freq (midi->hz (:midi-note info))} {:position :tail :target 7})
                     ;; (if (= (rand-int 4) 0)
                     ;;     (osc-send @techno.controller/client
                     ;;               (str "/fundamental")

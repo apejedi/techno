@@ -107,6 +107,10 @@
             (/ 80 60))))))
   )
 
+(defn player-active? []
+  (p/active? player)
+  )
+
 (defn get-pattern-str [pattern & [type sequencer]]
   (let [type (if type type "rest")
         pattern (if (keyword? pattern) (if (node? player)

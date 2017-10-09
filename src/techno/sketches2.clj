@@ -306,45 +306,40 @@
    })
 (def chill
   {:tempo 97
-   :beat2 (drum-p2
-           [:Kit4-Electro]
-           [:s1 :5 :s1 :|
-            :k1 :1 :k2 ;:1 :o1
-            :|
-            ]
-           1/8)
-
-   :lead  (p/phrase-p
-             bass2
-             [:D4 :1 :G4 :2 :C4 :2 :A4 :3]
-             1/4 0 [:dur 0.3 :decay 3 :amp 1.5])
-   :bass (p/phrase-p
-            acid-bass
-            [:F1 :1 :B1 :2 :G1 :2 :A1 :3]
-            1/4 0 [:dur 0.3])
-   :mainsaw  (p/phrase-p
+   :mainsaw   (p/phrase-p
                bpfsaw
                [(chord :A3 :m7) :8 (chord :B3 :m7) :6]
                1/4 0 [:rq 0.6 :dur 1.6 :amp 0.08 :atk 0.7])
-   :claps  (p/build-map-p
-            [:5 [o-clap []
-                 (drum-s [:Kit15-Electro] :cl1) [:amp 2]
-                 ]]
-            1/4 0)
-   :hat  (p/build-map-p
-            [[(drum-s [:KurzweilKit03] :c1) []] :3]
-            1/4 0)
-   :kicks  (p/build-map-p
-            [[o-kick []] :1 [o-hat []] :2 [o-hat []] :2]
-            1/4 0)
-   :bass2 (let [a (repeat 8 :A1)
-                a2 (repeat 8 :G2)
-                d (repeat 8 :D2)
-                b (repeat 8 :B2)]
-            (p/phrase-p
-             bass2
-             (concat a a2 d a b a2)
-             1/4 0 [:cutoff 1574.8 :cutoff2 700 :decay 1]))
+   :lead   (p/phrase-p
+            bass2
+            [:D4 :1 :G4 :2 :C4 :2 :A4 :3]
+            1/4 0 [:dur 0.3 :decay 3 :amp 1.5])
+   :kicks   (p/build-map-p
+             [[o-kick []] :1 [o-hat []] :2 [o-hat []] :2]
+             1/4 0)
+   :hat (p/build-map-p
+         [[(drum-s [:KurzweilKit03] :c1) []] :|]
+         1/8 0)
+   :claps   (p/build-map-p
+             [:5 [o-clap []
+                  (drum-s [:Kit15-Electro] :cl1) [:amp 2]
+                  ]]
+             1/4 0)
+   :beat2 (drum-p2
+           [:Kit6-Electro]
+           [[o-kick []] :1 :c1 :1 :c1 :1 :c2 :|]
+           1/8)
+   :bass2 (p/phrase-p
+           acid-bass
+           [:C2 :3 :C2 :| :3 :C2 :4 :D2
+            :| :|]
+           1/8 0 [:dur 0.23622047244094488])
+
+   :bass  (p/phrase-p
+           acid-bass
+           [:F1 :1 :B1 :2 :G1 :2 :A1 :3]
+           1/4 0 [:dur 0.3])
+
    })
 
 (def wavy

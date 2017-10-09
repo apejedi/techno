@@ -112,6 +112,16 @@
             :doc "Coupling string factor."}]
     :rates #{:ar}
     :summary "DWG Plucked"
+    }
+   {:name "FM7"
+    :args [{:name "ctlMatrix"
+            :doc "specifies the three parameters frequency (can be modulated at control rate), phase (set at initialization only) and amplitude.(control rate):"
+            :mode :append-sequence}
+           {:name "modMatrix"
+            :doc "The modulation matrix specifies the amount of modulation each oscillator output has on another oscillator's phase. Row i in the matrix refer to oscillator i's phase input and the columns denote the amount of phase modulation in radians.
+The UGen outputs the six individual oscillator signals."
+            :mode :append-sequence}]
+    :rates #{:ar}
     }])
 
 (doseq [spec specs]

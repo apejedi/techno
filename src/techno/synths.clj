@@ -3,7 +3,7 @@
         [overtone.inst.synth]
         [techno.sequencer :only [adsr-ng]])
   (:require [techno.sequencer :as s]
-            [techno.ugens :refer [dwg-bowed-tor:ar dwg-sound-board:ar dwg-plucked2:ar]]))
+            [techno.ugens :refer [dwg-bowed-tor:ar dwg-sound-board:ar dwg-plucked2:ar fm7]]))
 
 (defsynth sweet [note 60 dur 1 amp 1 vib 0.02 out-bus 0]
   (let [freq (midicps note)
@@ -63,9 +63,9 @@
     )
   )
 
-(defsynth acid-bass [note 50 amp 1 atk 1 dur 1 attack 0.001 out-bus 0]
+(defsynth acid-bass [note 50 amp 1 lg 1 dur 1 attack 0.001 out-bus 0]
   (let [[a s r] (map #(* dur %) [attack 1 0.04])
-        note (lag:kr note (* 0.12 (- 1 (line:kr atk atk 0.001))))
+        note (lag:kr note (* 0.12 (- 1 (line:kr lg lg 0.001))))
         env1 (env-gen
               (perc a s)
               ;(envelope [0 1 0 0] [a s 5] [0 -4 -4])
@@ -204,7 +204,7 @@
                 (lin-exp (lf-noise1:kr 4) -1 1 cfhzmin cfhzmax))
                -1 1 cfmin cfmax)
         sig (bpf sig noise (lin-exp (lf-noise1:kr 0.1) -1 1 rqmin rqmax))
-        sig (b-low-shelf sig lsf rs ldb)
+        sig (b-low-shelf:ar sig lsf rs ldb)
         sig (balance2 (first sig) (second sig))
         sig (* sig env amp)]
     (out out-bus sig)
@@ -932,9 +932,9 @@
         sig     (mix (* env amp (saw [freq (* freq (+ dtune 1))])))]
     (out:ar out-bus [sig sig])))
 
-(defsynth p-lpf [audio-bus 10 out-bus 0 freq 12000]
+(defsynth p-hi-shelf [audio-bus 10 out-bus 0 freq 12000 rs 0.5 db 0]
   (let [source (in:ar audio-bus 2)
-        source (lpf:ar source)]
+        source (b-hi-shelf:ar source freq rs db)]
     (out:ar out-bus source)
     )
   )
