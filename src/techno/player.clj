@@ -122,15 +122,18 @@
   (swap! listeners assoc-in [player key] f)
   )
 
-(defn p-size [p & [s-div]]
+(defn p-size [p & [s-div ret-pos]]
   (let [b (apply max (filter number? (keys p)))
         step (if (not (nil? s-div)) (/ s-div (get p :div)) 1)
+        div (if s-div s-div (:div p))
         s (* (get p :div) (dec b) step)
         note (if (not (empty? (get p b)))
                (apply max (keys (get p b)))
                1)
         s (+ s (* step note))]
-    s
+    (if ret-pos
+      (get-pos s div)
+        s)
     )
   )
 
@@ -311,7 +314,7 @@
         x (stop-s 0)
         player (get-s tempo {:id 0 :queued true})]
     (doseq [p patterns]
-      (add-p player p (keyword (gensym "pattern"))))
+      (add-p player p (keyword (gensym "pattern")) {:no-group true}))
     (let [state (:state (get @(:jobs-ref @pool) player))]
       (add-listener 0 :one-shot
                     (fn [b] (when (= b (:size @state))

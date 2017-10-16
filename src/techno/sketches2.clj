@@ -848,3 +848,78 @@
              1/8))
 
    })
+
+(def cs2
+  {:cs (p/phrase-p
+              cs80
+              [[:G4 :D5] :2 [:D5 :G4] :| :1 :G4 :| :7 [:Eb5 :Ab4] :| :3 [:Ab4 :Eb5] :2 [:Eb5 :Ab4] :| :1 :Ab4 :Eb5 :2 :Eb5 :| :| :2 :Ab4 :2 :Ab4 :| :1 [:D5 :Ab4] :2 [:D5 :Ab4] :| :| :7 [:Ab4 :Ab5] :| :2 :Ab4 :3 :Ab4 :| :1 :Ab4 :1 [:Ab5 :Ab4] :2 :Ab4 :Ab5 :| :| :6 :G5 :| :1 :G5 :2 :G5 :2 :G5 :| :| :4 [:G4 :B5] :2 :G4 :| :2 :G4 :| :3 [:G4 :B5] :| [:G4 :B5] :| [:G4 :B5] :| :| :| :|]
+              1/8 0 [:amp 0.4])
+   :prophet (let [a [:Ab3 :B3]
+                   b [:G3 :B3]
+                   c [:G3 :E3]
+                   d [:B3 :D3]]
+               (p/phrase-p
+                prophet
+                [a a :5 a a a :5 b b :5 b b b :5 c c :5 c c c :5 d d :5 d d d :|
+                 a a :5 a a a :5 b b :5 b b b :5 c c :5 c c c :5 d d :5 d d d :|]
+                1/8 3 [:decay 1.5 :attack 0.01 :cutoff 1500 :amp 0.6]))
+
+   :saw (p/phrase-p
+              bpfsaw2
+              [[:G5 :D5] :1 :G5 :D5 :2 [:G5 :D5] :| :1 [:G5 :D5] :2 :G5 :2 :G5 :| :D5 :1 :G5 :D5 :2 :G5 :| :7 [:D5 :G5] :| :2 [:G5 :D5] :| :6 :Eb5 :| :3 :Eb5 :1 :Ab5 :Eb5 :| [:Ab5 :Eb5] :2 [:Eb5 :Ab5] :2 [:Eb5 :Ab5] :| :2 [:Eb5 :Ab5] :2 [:Ab5 :Eb5] :| :1 [:Ab5 :Eb5] :1 :Eb5 :Ab5 :| :| :| :1 :G5 :Eb5 :2 [:Eb5 :G5] :| [:Eb5 :G5] :2 [:Eb5 :G5] :2 [:Eb5 :G5] :| :1 [:Eb5 :G5] :2 [:G5 :Eb5] :2 [:Eb5 :G5] :| :3 [:G5 :Eb5] :2 [:Eb5 :G5] :| :| :| [:B5 :B4] :2 [:B5 :B4] :2 :B5 :B4 :| :1 :B5 :B4 :2 [:B5 :B4] :| [:B5 :B4] :2 [:B5 :B4] :2 :B5 :B4 :| :| :1 [:B5 :B4 :G4] :3 [:B5 :G4 :B4] :| :B5 [:B4 :G4] :2 [:B5 :G4 :B4] :2 [:B5 :B4 :G4] :|]
+              1/8 0 [])
+   :beat2 (let []
+            (drum-p2
+             [:Kit15-Electro]
+             [:k1 :1 :c1 :c1 :|
+              :k1 :c1 :c1        :|]
+             1/4))
+
+   :beat1 (let []
+            (drum-p2
+             [:Kit11-Vinyl]
+             [:k2  :3 :k1 :1 :k2    :|
+              :k2 :3 :k1 :k1 :2 :s5 :|]
+             1/8))
+   :tempo 87
+   })
+
+(def baz
+  {:motif1 (p/scale-p
+            bass2
+            :A3 :phrygian
+            {1 {1 [:1 [:decay 2]] 5 :3 6 :2 7 :6}
+             2 {1 :4> 3 [:5 :7< {:decay 2}] 8 []}
+             }
+            1/8 0 [:atk 0.01 :decay 1])
+
+   :harmony2 (p/phrase-p
+              bass-synth
+              [[:Bb2 :D3] :| :| :| :2 [:D3 :Bb2] :| [:D3 :Bb2] :| :| :4 [:Bb2 :D3] :| :2 [:Bb2 :D3] :| :3 [:E3 :A2] :| :| :| :| :3 :A3 :| :2 :E3 :| :2 :D3 :| :|]
+              1/8 0 [:attack 0.2 :release 4.3 :bwr 0.78])
+   :harmony1 (p/scale-p
+              prophet
+              :A4 :phrygian
+              {1 {1 :1 3 :2 5 [:6 [:decay 0.3]]}
+               2 {1 :4> 3 :7 5 :1> 7 :5}
+                                        ;3 {3 [:2 :5 {:decay 1}] 7 [:1 :3 {:decay 2}]}
+               4 { 8 []}
+               }
+              1/8 0 [:attack 0.01 :decay 0.2])
+
+   :drum1 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit4-Electro]
+             [:k1 :1 :c1 :c1 :1 :c3 :|
+              :o1 :1 :s1 :1 :s3 :s3 :|]
+             1/8))
+
+   })

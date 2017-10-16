@@ -19,7 +19,7 @@
 
 (def drum-kit (atom {}))
 
-;(event-debug-off)
+;(event-debug-on)
 
 
 (on-event
