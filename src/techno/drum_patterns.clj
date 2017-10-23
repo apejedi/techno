@@ -83,7 +83,7 @@
                       false)
         div (if div (if (sequential? pattern) div (int (/ 1 div))) (:div pattern))
         pattern (if (map? pattern) (assoc pattern :div div) pattern)]
-      (if (map? pattern)
+    (if (map? pattern)
         (reduce
          (fn [p b]
            (let [pos (p/get-pos b div (p/p-size pattern))

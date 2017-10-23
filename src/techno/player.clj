@@ -150,13 +150,11 @@
                              (let [b (apply max (filter number? (keys p)))
                                    s (* div (dec b))
                                    step (/ div (get p :div))
-                                   ;; x (println k " bar-size " s " note-size " (* step
-                                   ;;           (if (not (empty? (get p b)))
-                                   ;;             (apply max (keys (get p b)))
-                                   ;;             1)))
+                                   bar (if (fn? (get p b)) ((get p b))
+                                           (get p b))
                                    s (+ s (* step
-                                             (if (not (empty? (get p b)))
-                                               (apply max (keys (get p b)))
+                                             (if (not (empty? bar))
+                                               (apply max (keys bar))
                                                1)))]
                                (swap! patterns assoc-in [id k :size] s)
                                s
@@ -196,9 +194,12 @@
                  (let [bar (inc (int (/ (dec beat) s-div)))
                        note (inc (int (/ (dec (mod beat s-div)) step)))
                        note (if (= 0 note) div note)
-                       p-fx (techno.sequencer/get-pattern-fx k)]
-                   ;; (println "k " k "bar " bar "note " note)
-                   (doseq [[a args] (partition 2 (get-in v [bar note]))]
+                       p-fx (techno.sequencer/get-pattern-fx k)
+                       actions (cond (fn? (:fn v)) ((:fn v) bar note)
+                                     (fn? (get v bar)) (get ((get v bar)) note)
+                                     (fn? (get-in v [bar note])) ((get-in v [bar note]))
+                                     true (get-in v [bar note]))]
+                   (doseq [[a args] (partition 2 actions)]
                      (let [args (if (not (nil? (:bus p-fx))) (concat args [:out-bus (:bus p-fx)]) args)
                            args (if (not (nil? (:group p-fx))) (concat [[:head (:group p-fx)]] args) args)]
                        (when (not (nil? a)) (apply a args)))
@@ -684,8 +685,8 @@
                   (let [pattern (assoc pattern :div (int (/ 1 div)))]
                       (reduce
                        (fn [p b]
-                         (let [pos (get-pos b (int (/ 1 div)) (p-size pattern))
-                               action (get-in pattern pos [])
+                         (let [[bar note] (get-pos b (int (/ 1 div)) (p-size pattern))
+                               action (get-in pattern [bar note] [])
                                action
                                (do
                                  (cond (and (sequential? action)
@@ -695,15 +696,14 @@
                                        (or (keyword? action) (not (empty? action))) (vec (mk-note action args note-arg))))
                                ]
                            (if (or (= b (p-size pattern)) (not (nil? action)))
-                             (assoc-in p pos action)
+                             (assoc-in p [bar note] action)
                              p)
                            )
                          )
                        pattern
                        (range 1 (inc (p-size pattern)))))
                   (mapcat (fn [a b]
-                            (let [;x (println a b  (and (is-note? a) (is-note? b)))
-                                  res (mk-action a b)
+                            (let [res (mk-action a b)
                                   res (if (and (is-note? a) (is-note? b) space) (conj res space) res)]
                               res
                               ))
