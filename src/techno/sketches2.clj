@@ -221,7 +221,8 @@
    })
 
 (def bells
-  {:klang (p/phrase-p
+  {:tempo 100
+   :klang (p/phrase-p
             klang-test
             [:G3  :F#4  :F#4  :G3  :F#4  :F#4  :G3  :F#4  :A3  :G4  :G4  :A3  :G4  :G4  :A3  :G4  :B3  :B4  :B4  :B3  :B4  :B4  :B3  :B4  :C#4  :A4  :A4  :C#4  :A4  :A4
              :C#4  :A4 :1]

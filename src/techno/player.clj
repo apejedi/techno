@@ -85,11 +85,12 @@
   (get @(:jobs-ref @pool) id)
   )
 
-(defn get-state
-  ([id] @(:state (get @(:jobs-ref @pool) id)))
-  ([id key]
-   (get @(:state (get @(:jobs-ref @pool) id)) key)
-   )
+(defn get-state [id & [key]]
+  (let [state (:state (get @(:jobs-ref @pool) id))]
+    (if (not (nil? state))
+      (if key
+        (get @state key)
+        @state)))
   )
 
 (defn- to-str [inst]
@@ -140,10 +141,10 @@
 (defn- update-player [id]
   (try
     (when (not (empty? (get @patterns id)))
-        (let [state (:state (get @(:jobs-ref @pool) id))
-              divs (conj (map #(get % :div) (vals (get @patterns id))) (:div @state))
+        (let [state (get-state id)
+              divs (conj (map #(get % :div) (vals (get @patterns id))) (:div state))
               div (apply lcmv divs)
-              bpm (:bpm @state)
+              bpm (:bpm state)
               size (apply max
                           (map
                            (fn [[k p]]
@@ -160,10 +161,10 @@
                                s
                                ))
                            (get @patterns id)))]
-                                        ;(println div (:div @state))
-          (when (or (not (= 0 (mod div (:div @state)))) (> div (:div @state)))
+                                        ;(println div (:div state))
+          (when (or (not (= 0 (mod div (:div state)))) (> div (:div state)))
             (stop-s id true false)
-            (get-s bpm (merge @state {:id id :div div :size size})))
+            (get-s bpm (merge state {:id id :div div :size size})))
           (set-size id size)
           ))
     (catch Exception e
@@ -174,46 +175,46 @@
 
 (defn play [id]
   (try
-    (dosync
-     (let [state (:state (get @(:jobs-ref @pool) id))
-           counter (:counter (get @(:jobs-ref @pool) id))
-           beat @counter
-           size (:size @state)
-           s-div (:div @state)]
-       ;; (println "beat " beat)
-       (when (not (get @state :queued false))
-           (doseq [[k v] (get @patterns id)]
-             (let [beat (if (< (:size v) beat) (mod beat (:size v)) beat)
-                   beat (if (= beat 0) (:size v) beat)
-                   div (get v :div)
-                   step (/ s-div div)
-                   queued (and (not (= beat 1)) (get v :add-at-1 false))]
-               (when (= beat 1)
-                 (mod-p id k :add-at-1 false))
-               (when (and (not queued) (or (= 1 beat) (= 0 (mod (dec beat) step))))
-                 (let [bar (inc (int (/ (dec beat) s-div)))
-                       note (inc (int (/ (dec (mod beat s-div)) step)))
-                       note (if (= 0 note) div note)
-                       p-fx (techno.sequencer/get-pattern-fx k)
-                       actions (cond (fn? (:fn v)) ((:fn v) bar note)
-                                     (fn? (get v bar)) (get ((get v bar)) note)
-                                     (fn? (get-in v [bar note])) ((get-in v [bar note]))
-                                     true (get-in v [bar note]))]
-                   (doseq [[a args] (partition 2 actions)]
-                     (let [args (if (not (nil? (:bus p-fx))) (concat args [:out-bus (:bus p-fx)]) args)
-                           args (if (not (nil? (:group p-fx))) (concat [[:head (:group p-fx)]] args) args)]
-                       (when (not (nil? a)) (apply a args)))
-                     ))
-                 )
-               )
-
-             )
-         (doseq [f (vals (get @listeners id))]
-           (f beat))
-         (if (>= beat size)
-           (ref-set counter 1)
-           (commute counter inc)))
-       ))
+    (when (not (nil? (get-state id)))
+        (let [state (get-state id)
+              counter (:counter (get @(:jobs-ref @pool) id))
+              beat @counter
+              size (:size state)
+              s-div (:div state)]
+          ;; (println "beat " beat)
+          (when (not (get state :queued false))
+            (doseq [[k v] (get @patterns id)]
+              (let [beat (if (< (:size v) beat) (mod beat (:size v)) beat)
+                    beat (if (= beat 0) (:size v) beat)
+                    div (get v :div)
+                    step (/ s-div div)
+                    queued (and (not (= beat 1)) (get v :add-at-1 false))]
+                (when (= beat 1)
+                  (mod-p id k :add-at-1 false))
+                (when (and (not queued) (or (= 1 beat) (= 0 (mod (dec beat) step))))
+                  (let [bar (inc (int (/ (dec beat) s-div)))
+                        note (inc (int (/ (dec (mod beat s-div)) step)))
+                        note (if (= 0 note) div note)
+                        p-fx (techno.sequencer/get-pattern-fx k)
+                        actions (cond (fn? (:fn v)) ((:fn v) bar note)
+                                      (fn? (get v bar)) ((get v bar) note)
+                                      (fn? (get-in v [bar note])) ((get-in v [bar note]))
+                                      true (get-in v [bar note]))]
+                    (doseq [[a args] (partition 2 actions)]
+                      (let [args (if (not (nil? (:bus p-fx))) (concat args [:out-bus (:bus p-fx)]) args)
+                            args (if (not (nil? (:group p-fx))) (concat [[:head (:group p-fx)]] args) args)]
+                        (when (not (nil? a)) (apply a args)))
+                      ))
+                  )
+                )
+              )
+            (doseq [f (vals (get @listeners id))]
+              (f beat))
+            (dosync
+             (if (>= beat size)
+               (ref-set counter 1)
+               (commute counter inc))))
+          ))
     (catch Exception e (println (.getMessage e))
            (.printStackTrace e)))
   )
@@ -295,9 +296,17 @@
 (defn add-p
   ([id pattern key] (add-p id pattern key {}))
   ([id pattern key attrs]
-   (techno.sequencer/handle-pattern-fx key attrs false)
-   (swap! patterns assoc-in [id key] (seq-to-p (merge pattern attrs)))
-   (update-player id)
+   (if (:add-at-1 attrs)
+     (add-listener
+      id key (fn [b]
+               (when (= b (get-state id :size))
+                 (swap! listeners (fn [l] (update-in l [id] dissoc key)))
+                 (add-p id pattern key (dissoc attrs :add-at-1)))
+               ))
+     (do
+       (techno.sequencer/handle-pattern-fx key attrs false)
+       (swap! patterns assoc-in [id key] (seq-to-p (merge pattern attrs)))
+       (update-player id)))
    nil)
   )
 
@@ -686,18 +695,22 @@
                       (reduce
                        (fn [p b]
                          (let [[bar note] (get-pos b (int (/ 1 div)) (p-size pattern))
-                               action (get-in pattern [bar note] [])
-                               action
-                               (do
+                               action-fn
+                               (fn [action]
                                  (cond (and (sequential? action)
                                             (not (empty? action)))
                                        (vec (apply concat (phrase-p inst action div nil
-                                                             args mk-note true is-note?)))
+                                                                    args mk-note true is-note?)))
                                        (or (keyword? action) (not (empty? action))) (vec (mk-note action args note-arg))))
-                               ]
-                           (if (or (= b (p-size pattern)) (not (nil? action)))
-                             (assoc-in p [bar note] action)
-                             p)
+                               p (cond (fn? (get pattern bar))
+                                       (assoc p bar (fn [b] (action-fn ((get pattern bar) b))))
+                                       (fn? (get-in pattern [bar note]))
+                                       (assoc-in p [bar note] (fn [b] (action-fn ((get-in pattern [bar note])))))
+                                       true (if (or (= b (p-size pattern)) (not (nil? (get-in pattern [bar note] []))))
+                                              (assoc-in p [bar note] (action-fn (get-in pattern [bar note] [])))
+                                              p)
+                                        )]
+                           p
                            )
                          )
                        pattern
