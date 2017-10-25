@@ -124,13 +124,16 @@
   )
 
 (defn p-size [p & [s-div ret-pos]]
-  (let [b (apply max (filter number? (keys p)))
+  (let [b (if (contains? p :p-size) (first (:p-size p))
+              (apply max (filter number? (keys p))))
+        note (if (contains? p :p-size)
+               (second (:p-size p))
+               (if (not (empty? (get p b)))
+                 (apply max (keys (get p b)))
+                 1))
         step (if (not (nil? s-div)) (/ s-div (get p :div)) 1)
         div (if s-div s-div (:div p))
         s (* (get p :div) (dec b) step)
-        note (if (not (empty? (get p b)))
-               (apply max (keys (get p b)))
-               1)
         s (+ s (* step note))]
     (if ret-pos
       (get-pos s div)
@@ -148,15 +151,16 @@
               size (apply max
                           (map
                            (fn [[k p]]
-                             (let [b (apply max (filter number? (keys p)))
-                                   s (* div (dec b))
-                                   step (/ div (get p :div))
-                                   bar (if (fn? (get p b)) ((get p b))
-                                           (get p b))
-                                   s (+ s (* step
-                                             (if (not (empty? bar))
-                                               (apply max (keys bar))
-                                               1)))]
+                             (let [s (p-size p div)
+                                   ;; b (apply max (filter number? (keys p)))
+                                   ;; s (* div (dec b))
+                                   ;; step (/ div (get p :div))
+                                   ;; bar (get p b)
+                                   ;; s (+ s (* step
+                                   ;;           (if (not (empty? bar))
+                                   ;;             (apply max (keys bar))
+                                   ;;             1)))
+                                   ]
                                (swap! patterns assoc-in [id k :size] s)
                                s
                                ))
@@ -705,7 +709,7 @@
                                p (cond (fn? (get pattern bar))
                                        (assoc p bar (fn [b] (action-fn ((get pattern bar) b))))
                                        (fn? (get-in pattern [bar note]))
-                                       (assoc-in p [bar note] (fn [b] (action-fn ((get-in pattern [bar note])))))
+                                       (assoc-in p [bar note] (fn [] (action-fn ((get-in pattern [bar note])))))
                                        true (if (or (= b (p-size pattern)) (not (nil? (get-in pattern [bar note] []))))
                                               (assoc-in p [bar note] (action-fn (get-in pattern [bar note] [])))
                                               p)
@@ -717,7 +721,8 @@
                        (range 1 (inc (p-size pattern)))))
                   (mapcat (fn [a b]
                             (let [res (mk-action a b)
-                                  res (if (and (is-note? a) (is-note? b) space) (conj res space) res)]
+                                  res (if (and (is-note? a) (is-note? b) space)
+                                        (conj res space) res)]
                               res
                               ))
                           pattern

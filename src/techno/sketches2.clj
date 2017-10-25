@@ -722,7 +722,7 @@
                 r r-kick]
             (drum-p2
              [:Kit14-Acoustic]
-             {:div 8
+             {:div 1/8
               1 {1 [[dirty-kick [:amp 0.6]]] 4 []}
               }))
 
@@ -737,11 +737,11 @@
                 r r-kick]
             (drum-p2
              [:Kit14-Acoustic]
-             {:div 8
+             {
               1 {1 :sd1 4 :sd2 5 :sd2 7 :sd3}
               2 {3 :t1 4 :t1 5 :t2 8 []}
               }
-             ))
+             1/8))
 
    :harmony1 (p/phrase-p
               bpfsaw
