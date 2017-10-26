@@ -151,16 +151,7 @@
               size (apply max
                           (map
                            (fn [[k p]]
-                             (let [s (p-size p div)
-                                   ;; b (apply max (filter number? (keys p)))
-                                   ;; s (* div (dec b))
-                                   ;; step (/ div (get p :div))
-                                   ;; bar (get p b)
-                                   ;; s (+ s (* step
-                                   ;;           (if (not (empty? bar))
-                                   ;;             (apply max (keys bar))
-                                   ;;             1)))
-                                   ]
+                             (let [s (p-size p div)]
                                (swap! patterns assoc-in [id k :size] s)
                                s
                                ))
@@ -200,9 +191,9 @@
                         note (inc (int (/ (dec (mod beat s-div)) step)))
                         note (if (= 0 note) div note)
                         p-fx (techno.sequencer/get-pattern-fx k)
-                        actions (cond (fn? (:fn v)) ((:fn v) bar note)
-                                      (fn? (get v bar)) ((get v bar) note)
-                                      (fn? (get-in v [bar note])) ((get-in v [bar note]))
+                        actions (cond (fn? (:fn v)) ((:fn v) patterns [id k] bar note)
+                                      (fn? (get v bar)) ((get v bar) patterns [id k] note)
+                                      (fn? (get-in v [bar note])) ((get-in v [bar note]) patterns [id k])
                                       true (get-in v [bar note]))]
                     (doseq [[a args] (partition 2 actions)]
                       (let [args (if (not (nil? (:bus p-fx))) (concat args [:out-bus (:bus p-fx)]) args)
@@ -283,19 +274,6 @@
     (clojure.pprint/print-table (range 0 (inc (:div pattern))) notes)
     )
   )
-;; (def p (get-s 120))
-;; (add-p p
-;;        (phrase-p
-;;         bpfsaw [:Eb4 :C4 :6 :G4 :2 :Bb4 :Ab4 :1 :F3] 1/8 0 [:dur 0.9 :atk 0.01 :rq 0.5]) :test)
-;; (add-p p
-;;        (phrase-p
-;;         bass-synth [:Eb4 :C4 :6 :G4 :2 :Bb4 :Ab4 :1 :F3] 1/4 0 [:attack 0.01 :release 0.4 :bwr 2]) :test2)
-;; (add-p p
-;;        (build-map-p [[o-kick []] :3] 1/4) :kick)
-;; (let [h [o-hat []]]
-;;     (add-p p
-;;            (build-map-p [h h h :2 h h h :4 h h h :1] 1/3) :hat))
-;; (stop-s p)
 
 (defn add-p
   ([id pattern key] (add-p id pattern key {}))
@@ -366,35 +344,6 @@
       (contains? (scheduled-jobs) id))
   )
 
-;; (defn build-rest-p [pattern & [div]]
-;;   (let [div (if div (int (/ 1 div)) (:div pattern))
-;;         div (if div div 4)
-;;         size (p-size (assoc pattern :div div))]
-;;     (loop [p [] beat 1 space 0 start? true prev 0]
-;;       (let [end? (>= beat size)
-;;             action (get-in pattern (get-pos beat div) [])
-;;             is-action (and (sequential? action) (not (nil? (first action))))
-;;             [x y] (map #(- %1 %2)
-;;                        (get-pos beat div)
-;;                        (get-pos (if start? beat prev) div))
-;;             start? (and start? (not is-action))
-;;             ;n (if (or start? end?) space (dec space))
-;;             sep (if (or (> x 0) (> y 1))
-;;                   (vec (concat (repeat x :|) (if (> y 1) [(keyword (str y))] []))) [])
-;;             p (if (or is-action end?)
-;;                 (vec (concat p sep
-;;                              ;(if (> n 0) [(keyword (str n))] [])
-;;                              [action]
-;;                              ))
-;;                 p)
-;;             space (if is-action 0 (inc space))
-;;             prev (if is-action beat prev)]
-;;         (if end?
-;;           p
-;;           (recur p (inc beat) space start? prev)
-;;           )))
-;;     )
-;;   )
 
 (defn build-rest-p [pattern & [div]]
   (let [div (if div (int (/ 1 div)) (:div pattern))
@@ -626,45 +575,6 @@
     pattern)
   )
 
-;; (defn phrase-p [inst pattern div & [space args mk-note]]
-;;   (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
-;;                          (instance? overtone.sc.synth.Synth inst))
-;;                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
-;;                          (some #(= (:name %) "note") (:params inst)) :note
-;;                          true false))
-;;         note-p #(do ;%
-;;                   (if (= note-arg :freq) (midi->hz (note %)) (note %))
-;;                   )
-;;         mk-note (if mk-note mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args))))))
-;;         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
-;;         is-n? #(and (keyword? %) (re-find #"^\w" (name %)))
-;;         is-note? #(or is-n? (and (sequential? %) (is-n? (first %))))
-;;         is-arg? #(and (sequential? %) (or (number? (first %)) (number? (second %)) (empty? %)))
-;;         space (if (and (number? space) (> space 0)) space nil)]
-;;     (build-map-p (mapcat (fn [a b]
-;;                            (let [a (cond (is-arg? a) nil
-;;                                          (sequential? a)
-;;                                          (vec (mapcat #(cond (is-arg? (second %)) (mk-note (first %) (second %))
-;;                                                              (is-note? (second %)) (vec (concat (mk-note (first %)) (mk-note (second %))))
-;;                                                              true (mk-note (first %)))
-;;                                                       (partition 2 2 [args] a)))
-;;                                          (is-space? a) a
-;;                                          (is-note? a) (mk-note a (if (is-arg? b) b))
-;;                                          true a)
-;;                                  a (if (nil? a) [] [a])
-;;                                  a (if (do (println b)
-;;                                            (and (not (is-space? (first a)))
-;;                                                 (not (is-space? b))
-;;                                                 space))
-;;                                      (conj a (keyword (str space)))
-;;                                      a)
-;;                                  ]
-;;                              a)
-;;                            )
-;;                          pattern
-;;                          (conj (vec (rest pattern)) :end)
-;;                          ) div))
-;;   )
 
 (defn phrase-p [inst pattern div & [space args mk-note ret-seq is-note?]]
   (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
@@ -685,6 +595,12 @@
                      (vec (flatten (into [] (apply hash-map (concat a b))))))
         args (if (and (sequential? pattern) (map? (last pattern))) (merge-args args (flatten (into [] (last pattern)))) args)
         pattern (if (and (sequential? pattern) (map? (last pattern))) (vec (butlast pattern)) pattern)
+        action-fn (fn [action]
+                    (cond (and (sequential? action)
+                               (not (empty? action)))
+                          (vec (apply concat (phrase-p inst action div nil
+                                                       args mk-note true is-note?)))
+                          (or (keyword? action) (number? action) (not (empty? action))) (vec (mk-note action args note-arg))))
         mk-action (fn [a b]
                     (cond (and (is-note? a) (sequential? a))
                           [(vec (apply concat (phrase-p inst a div 0 args mk-note true is-note?)))]
@@ -699,17 +615,14 @@
                       (reduce
                        (fn [p b]
                          (let [[bar note] (get-pos b (int (/ 1 div)) (p-size pattern))
-                               action-fn
-                               (fn [action]
-                                 (cond (and (sequential? action)
-                                            (not (empty? action)))
-                                       (vec (apply concat (phrase-p inst action div nil
-                                                                    args mk-note true is-note?)))
-                                       (or (keyword? action) (not (empty? action))) (vec (mk-note action args note-arg))))
                                p (cond (fn? (get pattern bar))
-                                       (assoc p bar (fn [b] (action-fn ((get pattern bar) b))))
+                                       (assoc p bar (fn [p key b] (let [a ((get pattern bar) (get-in @p (conj key :data)) b)]
+                                                                   (swap! p assoc-in (conj key :data bar b) a) (action-fn a))))
                                        (fn? (get-in pattern [bar note]))
-                                       (assoc-in p [bar note] (fn [] (action-fn ((get-in pattern [bar note])))))
+                                       (assoc-in p [bar note] (fn [p key]
+                                                                (let [a ((get-in pattern [bar note]) (get-in @p (conj key :data)))]
+                                                                  (swap! p assoc-in (conj key :data bar note) a)
+                                                                  (action-fn a))))
                                        true (if (or (= b (p-size pattern)) (not (nil? (get-in pattern [bar note] []))))
                                               (assoc-in p [bar note] (action-fn (get-in pattern [bar note] [])))
                                               p)
