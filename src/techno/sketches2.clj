@@ -307,39 +307,58 @@
    })
 (def chill
   {:tempo 97
-   :mainsaw   (p/phrase-p
-               bpfsaw
-               [(chord :A3 :m7) :8 (chord :B3 :m7) :6]
-               1/4 0 [:rq 0.6 :dur 1.6 :amp 0.08 :atk 0.7])
-   :lead   (p/phrase-p
-            bass2
-            [:D4 :1 :G4 :2 :C4 :2 :A4 :3]
-            1/4 0 [:dur 0.3 :decay 3 :amp 1.5])
-   :kicks   (p/build-map-p
-             [[o-kick []] :1 [o-hat []] :2 [o-hat []] :2]
-             1/4 0)
-   :hat (p/build-map-p
-         [[(drum-s [:KurzweilKit03] :c1) []] :|]
-         1/8 0)
-   :claps   (p/build-map-p
-             [:5 [o-clap []
-                  (drum-s [:Kit15-Electro] :cl1) [:amp 2]
-                  ]]
-             1/4 0)
-   :beat2 (drum-p2
-           [:Kit6-Electro]
-           [[o-kick []] :1 :c1 :1 :c1 :1 :c2 :|]
-           1/8)
-   :bass2 (p/phrase-p
+   :mainsaw    (p/phrase-p
+                bpfsaw
+                [(chord :A3 :m7) :8 (chord :B3 :m7) :6]
+                1/4 0 [:rq 0.6 :dur 1.6 :amp 0.08 :atk 0.7])
+   :lead    (p/phrase-p
+             bass2
+             [:D4 :1 :G4 :2 :C4 :2 :A4 :3]
+             1/4 0 [:dur 0.3 :decay 3 :amp 1.5])
+   :kicks    (p/build-map-p
+              [[o-kick []] :1 [o-hat []] :2 [o-hat []] :2]
+              1/4 0)
+   :hat  (p/build-map-p
+          [[(drum-s [:KurzweilKit03] :c1) []] :|]
+          1/8 0)
+   :claps    (p/build-map-p
+
+              [:5 [o-clap []
+                   (drum-s [:Kit15-Electro] :cl1) [:amp 2]
+                   ]]
+              1/4 0)
+   :beat2 (let []
+            (drum-p2
+             [:Kit6-Electro]
+             {1 {1 [[o-kick []]] 3 :c1 5 :c1 7 :c2 8 []}
+              2 (fn [d n]
+                  (get
+                   (p/w-choose {{1 [[o-kick []]] 3 :c1 5 :c1 7 :c2 8 []} 0.5
+                                {1 (p/w-choose {[[o-snr []]] 0.7 [[o-kick []]] 0.3})
+                                 3 (p/w-choose {:c1 0.3 :cl1 0.3 :o1 0.2 (get-in d [2 1]) 0.2})
+                                 5 (get-in d (choose [[2 1] [2 3]]))
+                                 6 (get-in d [2 3])
+                                 7 :c2
+                                 8 []} 0.5})
+                   n))
+              :p-size [2 8]
+              }
+             1/8))
+   :bass2 (p/scale-p
            acid-bass
-           [:C2 :3 :C2 :| :3 :C2 :4 :D2
-            :| :|]
+           :C2 :major
+           {1 {1 :2 3 :2 7 :4 8 []}
+            2 {1 :6<
+               3 (fn [d] (p/w-choose {[:2 :5] 0.2 nil 0.8}))
+               5 (fn [d] (p/w-choose {[:7< :3< {:dur 0.5}] 0.3 nil 0.7}))
+               8 []}
+            }
            1/8 0 [:dur 0.23622047244094488])
 
-   :bass  (p/phrase-p
-           acid-bass
-           [:F1 :1 :B1 :2 :G1 :2 :A1 :3]
-           1/4 0 [:dur 0.3])
+   :bass   (p/phrase-p
+            acid-bass
+            [:F1 :1 :B1 :2 :G1 :2 :A1 :3]
+            1/4 0 [:dur 0.3])
 
    })
 
@@ -390,48 +409,35 @@
    })
 
 (def drumaa
-  {:drum2 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:KurzweilKit07]
-             [:k1    :| :c1 :1 :c2 :|
-              :2 :k2 :| :c1 :1 :s1 :|]
-             1/4))
-   :drum3 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:KurzweilKit05]
-             [:sd :| ;:3 :sd :1 :sd :1 :sd :|
-              ]
-             1/8))
-   :drum4 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:KurzweilKit07]
-             [:s1 :| :s2 :|]
-             1/4))
-
+  {:random (drum-p2
+            [:Kit5-Electro]
+            {1 {1 :k2 5 :k2  9 :s1 11 :c1 12 :c1 13 :c1 15 :s1 16 []}
+             2 {1 :k2
+                2 (fn [d] (choose [:c1 :c2 nil]))
+                3 (fn [d] (choose [:k2 nil]))
+                5 (fn [d] (choose [:cl1 :c1]))
+                7 :k2
+                9 (fn [d] (choose [:k1 :s1 :s2 nil :k2]))
+                13 :s2
+                }
+             :p-size [2 16]
+             }
+            1/16)
+   :crash (let [o o-kick
+                 s o-snr
+                 b b-kick
+                 bs b-snr
+                 c o-clap
+                 h o-hat
+                 d dirty-kick
+                 g g-kick
+                 r r-kick]
+             (drum-p2
+              [:Kit3-Acoustic]
+              [:cr4 :1 :cr1 :|
+               :cr6 :cr1    :|]
+              1/4))
+   :tempo 60
    })
 
 (def rando
@@ -872,8 +878,10 @@
    :beat2 (let []
             (drum-p2
              [:Kit15-Electro]
-             [:k1 :1 :c1 :c1 :|
-              :k1 :c1 :c1        :|]
+             {1 {1 :k1 3 :c1 4 :c1}
+              2 {1 :k1 2 :c1 3 :c1}
+              3 {1 :k1 3 :c1 4 []}
+              }
              1/4))
 
    :beat1 (let []

@@ -588,7 +588,7 @@
         mk-note (if mk-note mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args))))))
         is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
         is-arg? #(and (sequential? %)  (or (empty? %) (and (or (number? (first %)) (number? (second %))) (or (keyword? (first %)) (keyword? (second %))))))
-        is-n? #(or (number? %) (and (keyword? %) (not (nil? (re-find #"^[a-zA-z]" (name %))))))
+        is-n? #(or (number? %) (and (keyword? %) (not (nil? (re-find #"^[a-zA-z]" (name %))))) (fn? %))
         is-note? (if is-note? is-note? #(or (is-n? %) (and (sequential? %) (not (is-arg? %)) (is-n? (first %)))))
         space (if (and (number? space) (> space 0)) (keyword (str space)) nil)
         merge-args (fn [a & [b]]
@@ -957,3 +957,43 @@
   "Return the current time in ms"
   []
   (System/currentTimeMillis))
+
+(defn w-choose [actions]
+  (let [probs (vals actions)
+        actions (keys actions)
+        indices (range 0 (count probs))
+        total-prob (apply + probs)
+        r (* (rand) total-prob)]
+    (loop [r (- r (first probs)) probs (rest probs) i 0]
+      (if (or (<= r 0) (empty? probs))
+        (nth actions i)
+        (recur (- r (first probs))
+               (rest probs)
+               (inc i)))
+      )
+    )
+  )
+;; (defn w-choose
+;;   [val-prob-map]
+;;   (let [actions (keys val-prob-map)
+;;         probabilities (vals val-prob-map)
+;;         vals (range 0 (count actions))
+;;         paired (map vector probabilities vals)
+;;         sorted (sort #(< (first %1) (first %2)) paired)
+;;         summed (loop [todo sorted
+;;                       done []
+;;                       cumulative 0]
+;;                  (if (empty? todo)
+;;                    done
+;;                    (let [f-prob (ffirst todo)
+;;                          f-val  (second (first todo))
+;;                          cumulative (+ cumulative f-prob)]
+;;                      (recur (rest todo)
+;;                             (conj done [cumulative f-val])
+;;                             cumulative))))
+;;         rand-num (rand)]
+;;     (loop [summed summed]
+;;       (if
+;;           (< rand-num (ffirst summed))
+;;         (nth actions (second (first summed)))
+;;         (recur (rest summed))))))

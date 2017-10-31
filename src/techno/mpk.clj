@@ -97,19 +97,28 @@
                                    (contains? params "freq") [:freq (midi->hz (:data1 m))]
                                    ;(contains? params "freq1") [:freq1 (midi->hz (:data1 m))]
                                     true [])
-                        args (vec (concat args (flatten (mapcat (fn [[k v]] [(keyword k) v]) (get @synth-params (:name @cur-synth) [])))))]
+                        args #(vec (concat args (flatten (mapcat (fn [[k v]] [(keyword k) v]) (get @synth-params (:name %) [])))))
+                        play (fn [synth args]
+                               (techno.recorder/record-action [synth args])
+                               (apply synth args)
+                               ;; (when (= @program :drum)
+                               ;;       (let [d (get @drum-kit (:data1 m))]
+                               ;;         (when (not (nil? d))
+                               ;;           (techno.recorder/record-action [d []])
+                               ;;           (apply d [])))
+                               ;;       )
+                               ;; (when (not (= @program :drum))
+                               ;;   (techno.recorder/record-action [@cur-synth args])
+                               ;;   (apply @cur-synth args)
+                               ;;   )
+                               )]
                                         ;(println (partition 2 (get ctr-map chan)))
                     (when (not (nil? @cur-synth))
-                      (when (= @program :drum)
-                        (let [d (get @drum-kit (:data1 m))]
-                          (when (not (nil? d))
-                            (techno.recorder/record-action [d []])
-                            (apply d [])))
-                          )
-                      (when (not (= @program :drum))
-                        (techno.recorder/record-action [@cur-synth args])
-                        (apply @cur-synth args)
-                        ))
+                      (if (sequential? @cur-synth)
+                        (doseq [s @cur-synth]
+                          (play s (args s)))
+                        (play @cur-synth (args @cur-synth)))
+                      )
 
                     ))
                 ::prophet-midi)

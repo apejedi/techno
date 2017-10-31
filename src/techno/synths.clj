@@ -102,6 +102,7 @@
     )
   )
 
+
 (defsynth organ
         [note 60 dur 2 amp 1 out-bus 0]
         (let [freq  (midicps note)
@@ -681,7 +682,7 @@
     (out:ar out-bus [snd snd])
     )
   )
-(defsynth o-kick [out-bus 0 amp 1]
+(defsynth o-kick [out-bus 0 amp 0.5]
   (let [env0 (env-gen (envelope [0.5 1 0.5 0] [0.005 0.06 0.26] [-4 -2 -4]) :action FREE)
         env1 (env-gen (envelope [110 59 29] [0.005 0.29] [-4 -5]))
         env1m (midicps env1)

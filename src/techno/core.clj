@@ -260,6 +260,14 @@
     )
   )
 
+(defn get-synths []
+  (let [synths (map var-get (vals (ns-publics 'techno.synths)))
+        data (map #(list (:name %)
+                           (map (fn [p] (list (:name p) (:default p))) (:params %)))
+                  synths)]
+    data
+      )
+  )
 ;; (defn get-pattern-fx [pattern]
 ;;   (let [pattern (if (string? pattern) (keyword (subs pattern 1)) pattern)
 ;;         fx (map
