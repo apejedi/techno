@@ -262,11 +262,19 @@
 
 (defn get-synths []
   (let [synths (map var-get (vals (ns-publics 'techno.synths)))
-        data (map #(list (:name %)
-                           (map (fn [p] (list (:name p) (:default p))) (:params %)))
-                  synths)]
-    data
-      )
+        data (vec (map #(list (:name %)
+                                (map (fn [p] (list (:name p) (:default p))) (:params %)))
+                       synths))
+        c (count data)
+        remaining (seq (subvec data (- c (mod c 50))))
+        data  (partition 50 data)
+        c (inc (int (/ (inc c) 50)))
+        data (zipmap (range 1 (inc c)) (conj data remaining))]
+    (reduce
+     #(conj %1 (seq %2))
+     '()
+     data)
+    )
   )
 ;; (defn get-pattern-fx [pattern]
 ;;   (let [pattern (if (string? pattern) (keyword (subs pattern 1)) pattern)
