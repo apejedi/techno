@@ -261,7 +261,7 @@
   )
 
 (defn get-synths []
-  (let [synths (map var-get (vals (ns-publics 'techno.synths)))
+  (let [synths (filter #(map? %) (map var-get (vals (ns-publics 'techno.synths))))
         data (vec (map #(list (:name %)
                                 (map (fn [p] (list (:name p) (:default p))) (:params %)))
                        synths))
