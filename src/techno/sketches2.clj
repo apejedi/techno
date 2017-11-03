@@ -932,3 +932,54 @@
              1/8))
 
    })
+(def house2
+  {:harmony (p/phrase-p
+             rise-fall-pad
+             [(map midi->hz (chord :C3 :M7)) (map midi->hz (chord :F3 :M7)) :34]
+             1/4 32 [:t 5])
+   :motif (p/phrase-p
+           bass-synth
+           [[:E3 :B3] [:A3 :F3] :34]
+           1/4 32 [:release 6 :amp 0.4 :detune 4])
+   :bass {:div 4
+          :p-size [17 4]
+          :fn (fn [p k b no]
+                (cond
+                  ;; (or (and (= no 4) (odd? b))
+                  ;;     (= no 1))
+                  ;; nil
+                  true (let [n (note (cond (< (p/get-beat b no 4) 34) :E3
+                                           (< (p/get-beat b no 4) 52) :D3
+                                           true :F3))
+                             action (vector plk-bass [:note (note n) :amp 0.6]
+                                            wire-bass [:amp 0.4 :dur 2 :coef 0.01 :decay 0.8])]
+                         action)))}
+   :clap (drum-p2
+          [:Kit15-Electro]
+          [:4 [:cl1 [o-clap []]] :3]
+          1/4)
+   :motif2 (p/phrase-p
+           bass-synth
+           [[:E4 :B3] [:A4 [:amp 0.3] :F4 [:amp 0.3]] :34]
+           1/4 32 [:release 6 :amp 0.4 :detune 4])
+   :motif3 (p/phrase-p
+            reverb-test
+            [:A4 :B4 :D4 :C4 :B4]
+            1/4 2)
+   :kick (drum-p2
+          [:Kit4-Electro :Kit3-Acoustic]
+          [:k1 :1 :o1 [:amp 0.3] :1]
+          1/4)
+   :cl  (drum-p2
+           [:Kit16-Electro]
+           [:c1 :c1 :c2 :2 :c1 :2]
+           1/4)
+   :snr (drum-p2
+         [:Kit3-Acoustic :Kit16-Electro :Kit4-Electro]
+         [:2 :s3 :1]
+         1/4)
+   :t (drum-p2
+       [:Kit5-Electro]
+       [:cl1 :2]
+       1/4)
+   })
