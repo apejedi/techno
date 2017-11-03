@@ -261,7 +261,9 @@
   )
 
 (defn get-synths []
-  (let [synths (filter #(map? %) (map var-get (vals (ns-publics 'techno.synths))))
+  (let [synths  (filter #(or (= (type %) overtone.studio.inst.Inst)
+                             (= (type %) overtone.sc.synth.Synth)
+                             (= overtone.sc.sample.PlayableSample (type %))) (map var-get (vals (ns-publics 'techno.synths))))
         data (vec (map #(list (:name %)
                                 (map (fn [p] (list (:name p) (:default p))) (:params %)))
                        synths))
@@ -269,7 +271,7 @@
         remaining (seq (subvec data (- c (mod c 50))))
         data  (partition 50 data)
         c (inc (int (/ (inc c) 50)))
-        data (zipmap (range 1 (inc c)) (conj data remaining))]
+        data (zipmap (range 1 (inc c)) (if (empty? remaining) data (conj data remaining)))]
     (reduce
      #(conj %1 (seq %2))
      '()

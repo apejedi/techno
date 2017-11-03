@@ -939,3 +939,10 @@
     (out:ar out-bus source)
     )
   )
+
+(defsynth p-hi-shelf2 [audio-bus 10 out-bus 0 freq 12000 rs 0.5 db 0]
+  (let [source (in:ar audio-bus 2)
+        source (b-hi-shelf:ar source freq rs db)]
+    (out:ar out-bus source)
+    )
+  )
