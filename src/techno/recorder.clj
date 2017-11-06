@@ -240,7 +240,6 @@
 (defn mk-map-p
   ([] (mk-map-p (p/get-state core/player :bpm) (p/get-state core/player :div)))
   ([bpm div]
-   (println bpm div)
    (let [quant (float (/ 60 bpm div)) ;;duration of step
          begin (first (first @time-pattern))
          pat (reduce (fn [pat [o a]]

@@ -271,7 +271,8 @@
         remaining (seq (subvec data (- c (mod c 50))))
         data  (partition 50 data)
         c (inc (int (/ (inc c) 50)))
-        data (zipmap (range 1 (inc c)) (if (empty? remaining) data (conj data remaining)))]
+        data (zipmap (range 1 (inc c)) (if (empty? remaining) data (conj data remaining)))
+        data (assoc data "samples" (map #(list (name %) (map (fn [n] (list (name n))) (keys (get drum-kits %)))) (keys drum-kits)))]
     (reduce
      #(conj %1 (seq %2))
      '()

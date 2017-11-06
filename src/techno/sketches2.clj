@@ -40,7 +40,6 @@
       (p/add-p player p k)
       )
     )
-
   )
 
 (def template
@@ -196,11 +195,21 @@
   )
 
 (def sketch
-  {:tabla  (let []
-             (drum-p2
-              [:tabla]
-              [:dhin  :ge :| :ge :1 :te :tin :|])
-             )
+  {:tabla  (drum-p2
+            [:tabla :claves]
+            {1 {1 :dhin  2 :ge}
+             2 {1 :ge 3 :te 4 :tin}
+             3 (fn [d n]
+                 (get
+                  (p/w-choose
+                   {{1 :ta 2 :ta 3 (choose [:ta :tu])} 0.3
+                    {1 (p/w-choose {:dhin 0.2 :dha 0.2 :hit6 0.6})
+                     2 (choose [:ta :tin :tu :decres])} 0.3
+                    {1 :ge 3 (choose [:te :hit1 :hit3]) 4 :tin} 0.4})
+                  n) )
+             :p-size [3 4]
+             }
+            1/4)
    :rise   (p/phrase-p
             rise-pad
             [[:G4 :F3 :D4] :12 [:E4 :B4 :G3] :12 [:C4 :A3 :G4 :D3] :| :| :| :| :| :|]
@@ -934,8 +943,8 @@
    })
 (def house2
   {:harmony (p/phrase-p
-             rise-fall-pad
-             [(map midi->hz (chord :C3 :M7)) (map midi->hz (chord :F3 :M7)) :34]
+             rise-fall-pad2
+             [[:C3 :G3 :E3 :B3] [:F3 :C4 :A3 :E4] :34]
              1/4 32 [:t 5])
    :motif (p/phrase-p
            bass-synth
@@ -982,4 +991,51 @@
        [:Kit5-Electro]
        [:cl1 :2]
        1/4)
+   })
+
+(def drone
+  {:harmony1 (p/phrase-p
+              bpfsaw
+              [[:A4 :D4] :| :| [:B4 :E4] :| :3 [:D4 :D5] :| :2 :B4 :| :2 [:G3 :E4 {:dur 3}] :| :| :|]
+              1/4 0 [:dur 2 :atk 0.6 :detune 0 :rq 0.15 :amp 0.4 :pan 0.0])
+   :harmony2 (p/phrase-p
+              bass-synth
+              [[:F3 :B3] :| :| [:E3 :A3] :| :2 [:C4 :D3 {:release 5}]
+               :| :| :| :| :|]
+              1/4 0 [:attack 0.1 :amp 1.0 :release 3 :detune 3.0 :bwr 0.7])
+   :drum2 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            (drum-p2
+             [:Kit14-Acoustic]
+             {1 {1 :sd1 5 :sd1 7 :rim1}
+              ;; 2 (fn [d n]
+              ;;     (if (odd? n)
+;          (p/w-choose {[:s1 [:amp 0.5]] 0.3 [:s2 [:amp 0.5]] 0.2 nil 0.3 :sd3 0.2}))
+              ;;     )
+              :p-size [2 8]
+              }
+             1/8))
+   :drum1 (let [o o-kick
+                s o-snr
+                b b-kick
+                bs b-snr
+                c o-clap
+                h o-hat
+                d dirty-kick
+                g g-kick
+                r r-kick]
+            {:div 8
+             :fn (fn [p key b n]
+                   (cond (= n 1) [(drum-s [:Kit14-Acoustic] :k1) []]
+                         )
+                   )
+             :p-size [7 8]
+             })
    })

@@ -231,8 +231,8 @@
     )
   )
 
-(defsynth sin-inst [note 60 dur 2 amp 1 out-bus 0]
-  (let [env (env-gen (envelope [0.1 1 0] [(* 0.01 dur) (* 1 dur)] :welch) :action 2)
+(defsynth sin-inst [note 60 dur 2 amp 1 out-bus 0 atk 0.01]
+  (let [env (env-gen (envelope [0.1 1 0] [(* atk dur) (* (- 1 atk) dur)] :welch) :action 2)
         sig (* env
                      (+
                       (* (sin-osc (midicps note)))
