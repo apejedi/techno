@@ -691,7 +691,7 @@
 (defn get-pattern-fx [key]
   (get @pattern-fx key)
   )
-(defn handle-pattern-fx [key attrs kill-group]
+(defn handle-pattern-fx [key attrs kill-group & [fx]]
   (when (and (contains? @pattern-groups key) kill-group)
     ;; (kill (get-in @pattern-groups [pattern :id]))
     (when (not (nil? (get-in @pattern-fx [key :mixer])))
@@ -704,6 +704,8 @@
       (return-bus (get-in @pattern-fx [key :bus]))
       )
     (swap! pattern-groups
+           dissoc key)
+    (swap! pattern-fx
            dissoc key)
     )
   (when  (and (not kill-group)
@@ -720,7 +722,20 @@
         (swap! pattern-fx assoc-in [key :group] p-group))
       )
     )
-
+  (doseq [[f x] (get @pattern-fx key)]
+    (if (and (not (= f :mixer)) (not (= f :group))
+             (node-active? x))
+      (kill x)))
+  (when (and (map? fx) (contains? @pattern-groups key))
+    (let [p-group (get @pattern-groups key)
+          p-bus (get-in @pattern-fx [key :bus])]
+        (doseq [[k v] fx]
+          (swap! pattern-fx assoc-in [key k]
+                 (apply (first v)
+                        (concat
+                         [[:head p-group] :audio-bus p-bus :out-bus p-bus]
+                         (rest v))))))
+    )
   )
 
 

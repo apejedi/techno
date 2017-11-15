@@ -122,6 +122,10 @@
 The UGen outputs the six individual oscillator signals."
             :mode :append-sequence}]
     :rates #{:ar}
+    ;; :init (fn [rate args spec]
+    ;;         (let [[ ctl mod] args]
+    ;;           (println (concat ctl mod))
+    ;;           (concat ctl mod)))
     }])
 
 (doseq [spec specs]

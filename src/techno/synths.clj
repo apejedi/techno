@@ -23,10 +23,11 @@
   )
 
 (defsynth harmonic
-  [amp 0.5 freq 100 out-bus 0]
+  [amp 0.5 freq 100 out-bus 0 dur 2]
   (let [partials 20
         z-init   0
         offset   (line:kr 0 -0.02 60)
+        env (env-gen:kr (envelope [0.1 0.6 1 0] [(* dur 0.3) (* dur 0.1) (* dur 0.6)]) :action FREE)
         snd (loop [z z-init
                    i 0]
               (if (= partials i)
@@ -37,8 +38,10 @@
                                    0.2 offset))
                       src  (f-sin-osc (* freq (inc i)))
                       newz (mul-add src f z)]
-                  (recur newz (inc i)))))]
+                  (recur newz (inc i)))))
+        snd (* snd env)]
     (out out-bus (pan2 (* amp snd)))))
+
 
 (defsynth tb303-2 [freq 300 ac 1 cutoff 6000 et 1 out-bus 0]
   (let [wv 0.1
@@ -185,7 +188,7 @@
     (out:ar out-bus [sig sig])))
 
 (defsynth zap [freq1 5000 freq2 100 dur 0.2 amp 1 out-bus 0]
-  (let [freq (x-line freq1 freq2 dur)
+  (let [freq (x-line freq1 (/ freq1 2) dur)
         env (env-gen:kr (perc (* 0.1 dur) (* 0.9 dur) amp) :action 2)
         sig (* (lf-tri freq) env)]
     (out:ar out-bus [sig sig])
@@ -432,16 +435,16 @@
 ;;   )
 
 
-(defsynth drone-noise [freq 440 amp 1 out-bus 0]
+(defsynth drone-noise [freq 440 amp 1 dur 2 out-bus 0]
   (let [freqs (map #(* freq %) [2 4 1])
         sig (klank [freqs (repeat (count freqs) (/ 1 (count freqs)))] (pink-noise))
         sig (bpf (tanh sig) freq)
+        sig (* (env-gen:kr (perc (* 0.3 dur) (* 0.7 dur)) :action FREE) sig)
         sig (* sig 0.5 amp)
         ]
     (out:ar out-bus [sig sig])
     )
   )
-
 
 
 (defsynth wobble-drone [freq 100 wobble 2 amp 1 out-bus 0]
@@ -471,7 +474,7 @@
 ;;     )
 ;;   )
 (defsynth rise-fall-pad2
-  [freq 440 t 4 amt 0.3 amp 0.8 out-bus 0]
+  [freq 440 t 4 amt 0.3 amp 0.8 delay 0.3 decay 0.5 damp 0.5 out-bus 0]
   (let [f-env      (env-gen (perc t t) 1 1 0 1 FREE)
         src        (saw [freq (* freq 1.01)])
         signal     (rlpf (* 0.3 src)
@@ -480,9 +483,9 @@
         distort    (/ (* (+ 1 k) signal) (+ 1 (* k (abs signal))))
         gate       (pulse (* 2 (+ 1 (sin-osc:kr 0.05))))
         compressor (compander distort gate 0.01 1 0.5 0.01 0.01)
-        dampener   (+ 1 (* 0.5 (sin-osc:kr 0.5)))
+        dampener   (+ 1 (* 0.5 (sin-osc:kr damp)))
         reverb     (free-verb compressor 0.5 0.5 dampener)
-        echo       (comb-n reverb 0.4 0.3 0.5)
+        echo       (comb-n reverb delay delay decay)
         sig (* amp echo)]
     (out:ar out-bus [sig sig])))
 
@@ -602,10 +605,11 @@
   )
 
 
-(defsynth bass2 [atk 0.001 decay 0.6 amp 1 freq 80 cutoff 2000 cutoff2 2000 out-bus 0]
+(defsynth bass2 [atk 0.001 f-dur 0.001
+                 decay 0.6 amp 1 freq 80 cutoff 2000 cutoff2 2000 out-bus 0]
   (let [sig (* (decay2:ar (impulse:ar (/ atk 2)) atk decay)
                (mix (pulse:ar [freq (+ freq 1)] 0.3)) amp)
-        sig (moog-ff sig (x-line:kr cutoff cutoff2 atk) 3)
+        sig (moog-ff sig (x-line:kr cutoff cutoff2 f-dur) 3)
         sig (* sig (env-gen (perc atk decay) :action 2))]
     (out:ar out-bus [sig sig])
     )
@@ -937,5 +941,25 @@
   (let [source (in:ar audio-bus 2)
         source (b-hi-shelf:ar source freq rs db)]
     (out:ar out-bus source)
+    )
+  )
+
+(defsynth p-reverb [audio-bus 10 out-bus 0
+                    roomsize 10 revtime 3
+                    damping 0.5 inputbw 0.5
+                    spread 15 drylevel 1
+                    earlyreflevel 0.7 taillevel 0.5]
+  (let [source (in:ar audio-bus 1)
+        reverb (* 0.3 (g-verb:ar
+                  source
+                  roomsize
+                  revtime
+                  damping
+                  inputbw
+                  spread
+                  drylevel
+                  earlyreflevel
+                  taillevel))]
+    (out:ar out-bus (+ reverb source))
     )
   )

@@ -286,7 +286,7 @@
                  (add-p id pattern key (dissoc attrs :add-at-1)))
                ))
      (do
-       (techno.sequencer/handle-pattern-fx key attrs false)
+       (techno.sequencer/handle-pattern-fx key attrs false (if (map? pattern) (:fx pattern)))
        (swap! patterns assoc-in [id key] (seq-to-p (merge pattern attrs)))
        (update-player id)))
    nil)

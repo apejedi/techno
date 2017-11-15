@@ -342,15 +342,15 @@
              {1 {1 [[o-kick []]] 3 :c1 5 :c1 7 :c2 8 []}
               2 (fn [d n]
                   (get
-                   (p/w-choose {{1 [[o-kick []]] 3 :c1 5 :c1 7 :c2 8 []} 0.5
-                                {1 (p/w-choose {[[o-snr []]] 0.7 [[o-kick []]] 0.3})
-                                 3 (p/w-choose {:c1 0.3 :cl1 0.3 :o1 0.2 (get-in d [2 1]) 0.2})
-                                 5 (get-in d (choose [[2 1] [2 3]]))
-                                 6 (get-in d [2 3])
-                                 7 :c2
-                                 8 []} 0.5})
+                   (p/w-choose
+                    {{1 [[o-kick []]] 3 :c1 5 :c1 7 :c2 8 []} 0.1
+                     {1 (p/w-choose {[[o-snr []]] 0.7 [[o-kick []]] 0.3})
+                      3 (p/w-choose {:c1 0.3 :cl1 0.3 :o1 0.2 (get-in d [2 1]) 0.2})
+                      5 (get-in d (p/w-choose {[2 1] 0.7 [2 3] 0.3}))
+                      7 (get-in d (p/w-choose {[2 5] 0.7 [2 1] 0.3}))
+                      8 []} 0.9})
                    n))
-              :p-size [2 8]
+              :p-size [1 8]
               }
              1/8))
    :bass2 (p/scale-p
@@ -368,6 +368,26 @@
             acid-bass
             [:F1 :1 :B1 :2 :G1 :2 :A1 :3]
             1/4 0 [:dur 0.3])
+   :lead2 (p/phrase-p
+           bass2
+           [:A3 :1 :A3 :3 :A3 :| :2 :F4 :1 :C5 :1 :D5 :| :4 :A3 :| :E3 :3 :A3 :|]
+           1/8 0 [:atk 0.001 :f-dur 0.1 :decay 2 :amp 2.0 :cutoff 2000.0 :cutoff2 4000])
+   :zap (assoc
+         (p/build-map-p
+          [[ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 698.4564628660078 :amp 0.3] ] :5
+           [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 987.7666025122483 :amp 0.3]  ]   :|
+           :4
+           [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 1046.5022612023945 :amp 0.3]  ]  :|
+           :4
+           [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 1174.6590716696303 :amp 0.3]   ] :1
+           [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 783.9908719634985 :amp 0.3]    ] :|
+           [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 1046.5022612023945 :amp 0.3]  ]  :|
+           ] 1/8)
+         :fx {:reverb [p-reverb
+                       :roomsize 50
+                       :revtime 1
+                       :damping 0.8
+                       :inputbw 0.4 :drylevel 2 :earlylevel 1 :taillevel 4]})
 
    })
 
@@ -1015,10 +1035,10 @@
             (drum-p2
              [:Kit14-Acoustic]
              {1 {1 :sd1 5 :sd1 7 :rim1}
-              ;; 2 (fn [d n]
-              ;;     (if (odd? n)
-;          (p/w-choose {[:s1 [:amp 0.5]] 0.3 [:s2 [:amp 0.5]] 0.2 nil 0.3 :sd3 0.2}))
-              ;;     )
+              2 (fn [d n]
+                  ;; (if (odd? n)
+                  ;;   (p/w-choose {[:s1 [:amp 0.5]] 0.3 [:s2 [:amp 0.5]] 0.2 nil 0.3 :sd3 0.2}))
+                  )
               :p-size [2 8]
               }
              1/8))
