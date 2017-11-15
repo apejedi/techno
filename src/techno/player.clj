@@ -409,10 +409,11 @@
 
 
 
-(defn build-map-p [pattern & [div]]
+(defn build-map-p [pattern & [div is-space?]]
+  (println pattern)
   (let [div (if div (int (/ 1 div)) 4)
         n-div #(int (* (Math/ceil (/ % div)) div))
-        is-space? #(and (keyword? %) (re-find #"^\d" (name %)))]
+        is-space? (if is-space? is-space? #(and (keyword? %) (re-find #"^\d" (name %))))]
     (loop [p {:div div} pattern pattern beat 1 start true]
       (let [a (first pattern)
             pos (get-pos beat div)
@@ -576,7 +577,7 @@
   )
 
 
-(defn phrase-p [inst pattern div & [space args mk-note ret-seq is-note?]]
+(defn phrase-p [inst pattern div & [space args mk-note ret-seq is-note? is-space?]]
   (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
                          (instance? overtone.sc.synth.Synth inst))
                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
@@ -586,9 +587,9 @@
                   (if (= note-arg :freq) (midi->hz (note %)) (note %))
                   )
         mk-note (if mk-note mk-note (fn [n & [n-args]] (vector inst (vec (concat [note-arg (note-p n)] (if n-args n-args args))))))
-        is-space? #(and (keyword? %) (re-find #"^\d" (name %)))
+        is-space? (if is-space? is-space? #(and (keyword? %) (re-find #"^\d" (name %))))
         is-arg? #(and (sequential? %)  (or (empty? %) (and (or (number? (first %)) (number? (second %))) (or (keyword? (first %)) (keyword? (second %))))))
-        is-n? #(or (number? %) (and (keyword? %) (not (nil? (re-find #"^[a-zA-z]" (name %))))) (fn? %))
+        is-n? #(or (number? %) (and (keyword? %) (not (nil? (re-find #"^[a-zA-z]" (name %))))))
         is-note? (if is-note? is-note? #(or (is-n? %) (and (sequential? %) (not (is-arg? %)) (is-n? (first %)))))
         space (if (and (number? space) (> space 0)) (keyword (str space)) nil)
         merge-args (fn [a & [b]]
@@ -644,7 +645,7 @@
                   pattern
                   (build-map-p
                    pattern
-                   div))]
+                   div is-space?))]
     pattern
     )
   )
@@ -687,9 +688,10 @@
                                          (if s-args s-args args))))))]
     (phrase-p inst notes div nil args note-fn
               false
-              #(do
-                   (if (keyword? %) (re-matches #"([0-9]+)([b#><]+)*\|?([1-9]+)?" (name %))
-                       false)))
+              #(let [r (fn [n] (re-matches #"([1-9]+)([b#><]+)*\|?([1-9]+)?" n))]
+                   (or (and (keyword? %) (r (name %)))
+                       (and (sequential? %) (keyword? (first %)) (r (name (first %))))))
+              #(and (keyword? %) (= \0 (first (name %)))))
     )
   )
 

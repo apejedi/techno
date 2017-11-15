@@ -326,16 +326,16 @@
              1/4 0 [:dur 0.3 :decay 3 :amp 1.5])
    :kicks    (p/build-map-p
               [[o-kick []] :1 [o-hat []] :2 [o-hat []] :2]
-              1/4 0)
+              1/4)
    :hat  (p/build-map-p
           [[(drum-s [:KurzweilKit03] :c1) []] :|]
-          1/8 0)
+          1/8)
    :claps    (p/build-map-p
 
               [:5 [o-clap []
                    (drum-s [:Kit15-Electro] :cl1) [:amp 2]
                    ]]
-              1/4 0)
+              1/4)
    :beat2 (let []
             (drum-p2
              [:Kit6-Electro]
