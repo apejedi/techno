@@ -188,7 +188,7 @@
     (out:ar out-bus [sig sig])))
 
 (defsynth zap [freq1 5000 freq2 100 dur 0.2 amp 1 out-bus 0]
-  (let [freq (x-line freq1 (/ freq1 2) dur)
+  (let [freq (x-line freq1 freq2 dur)
         env (env-gen:kr (perc (* 0.1 dur) (* 0.9 dur) amp) :action 2)
         sig (* (lf-tri freq) env)]
     (out:ar out-bus [sig sig])
