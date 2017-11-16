@@ -409,8 +409,7 @@
 
 
 
-(defn build-map-p [pattern & [div is-space?]]
-  (println pattern)
+(defn build-map-p [pattern & [div is-space? bar-fn bar-note-fn]]
   (let [div (if div (int (/ 1 div)) 4)
         n-div #(int (* (Math/ceil (/ % div)) div))
         is-space? (if is-space? is-space? #(and (keyword? %) (re-find #"^\d" (name %))))]
@@ -432,12 +431,22 @@
                         (keyword? a) (if (or start end?) (-> a name Integer/parseInt)
                                          (inc (-> a name Integer/parseInt)))
                         true 1)))
-            p (cond  (sequential? a) (assoc-in p pos a)
-                     (and end? (or (and (is-space? a)
-                                        (> (-> a name Integer/parseInt) 0))
-                                   (and (not (= 0 (mod prev-b div))) (= :| a)) ))
-                     (assoc-in p (get-pos beat div) [])
-                     true p)]
+            p (cond
+                (fn? a) (cond (and (= 1 (second pos)) (= :| (first pattern)))
+                              (assoc p (first pos)
+                                     (if bar-fn (bar-fn a (first pos)) a))
+                              true
+                              (assoc-in p pos
+                                        (if bar-note-fn (bar-note-fn a (first pos) (second pos))
+                                            a)))
+                (sequential? a) (assoc-in p pos a)
+                (and end? (or (and (is-space? a)
+                                   (> (-> a name Integer/parseInt) 0))
+                              (and (not (= 0 (mod prev-b div))) (= :| a)) ))
+                (if (fn? (get p (first (get-pos beat div))))
+                  (assoc p :p-size (get-pos beat div))
+                  (assoc-in p (get-pos beat div) []))
+                true p)]
         (if end?
           p
           (recur p pattern beat false))
@@ -602,12 +611,22 @@
                           (vec (apply concat (phrase-p inst action div nil
                                                        args mk-note true is-note?)))
                           (or (keyword? action) (number? action) (not (empty? action))) (vec (mk-note action args note-arg))))
+        bar-fn (fn [f bar]
+                 (fn [p key b]
+                   (let [a (f (get-in @p (conj key :data)) b)]
+                     (swap! p assoc-in (conj key :data bar b) a) (action-fn a))))
+        bar-note-fn (fn [f bar note]
+                      (fn [p key]
+                        (let [a (f (get-in @p (conj key :data)))]
+                          (swap! p assoc-in (conj key :data bar note) a)
+                          (action-fn a))))
         mk-action (fn [a b]
-                    (cond (and (is-note? a) (sequential? a))
-                          [(vec (apply concat (phrase-p inst a div 0 args mk-note true is-note?)))]
-                          (is-note? a) [(mk-note a
-                                                 (merge-args args (if (is-arg? b) b []))
-                                                 note-arg)]
+                    (cond
+                      (and (is-note? a) (sequential? a))
+                      [(vec (apply concat (phrase-p inst a div 0 args mk-note true is-note?)))]
+                      (is-note? a) [(mk-note a
+                                             (merge-args args (if (is-arg? b) b []))
+                                             note-arg)]
                           (is-arg? a) nil
                           true [a]))
                                         ;x (println pattern (conj (vec (rest pattern)) nil))
@@ -617,13 +636,9 @@
                        (fn [p b]
                          (let [[bar note] (get-pos b (int (/ 1 div)) (p-size pattern))
                                p (cond (fn? (get pattern bar))
-                                       (assoc p bar (fn [p key b] (let [a ((get pattern bar) (get-in @p (conj key :data)) b)]
-                                                                   (swap! p assoc-in (conj key :data bar b) a) (action-fn a))))
+                                       (assoc p bar (bar-fn (get pattern bar) bar))
                                        (fn? (get-in pattern [bar note]))
-                                       (assoc-in p [bar note] (fn [p key]
-                                                                (let [a ((get-in pattern [bar note]) (get-in @p (conj key :data)))]
-                                                                  (swap! p assoc-in (conj key :data bar note) a)
-                                                                  (action-fn a))))
+                                       (assoc-in p [bar note] (bar-note-fn (get-in pattern [bar note]) bar note))
                                        true (if (or (= b (p-size pattern)) (not (nil? (get-in pattern [bar note] []))))
                                               (assoc-in p [bar note] (action-fn (get-in pattern [bar note] [])))
                                               p)
@@ -645,7 +660,7 @@
                   pattern
                   (build-map-p
                    pattern
-                   div is-space?))]
+                   div is-space? bar-fn bar-note-fn))]
     pattern
     )
   )
