@@ -349,7 +349,9 @@
   (let [div (if div (int (/ 1 div)) (:div pattern))
         div (if div div 4)
         size (p-size (assoc pattern :div div))
-        is-action? #(and (sequential? %) (not (nil? (first %))))]
+                                        ;is-action? #(and (sequential? %) (not (nil? (first %))))
+        is-action? #(and (not (= [] %)) (not (nil? %)))
+        ]
     (loop [p [] cur 1 prev 1]
       (let [action (get-in pattern (get-pos cur div))
             is-action (is-action? action)

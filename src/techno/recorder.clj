@@ -16,6 +16,7 @@
 (defonce insts (atom (cycle [dance-kick noise-snare tone-snare])))
 (defonce time-patterns (atom {}))
 (defonce time-pattern (atom {}))
+(defonce note-pattern (atom {}))
 (defonce quantized-pattern (atom {}))
 (def last-recorded (atom {}))
 (defonce recording (atom false))
@@ -184,6 +185,7 @@
                                         ;(start-record-pattern)
 (defn start-record-pattern []
   (reset! time-pattern (java.util.LinkedList.))
+  (reset! note-pattern (java.util.LinkedList.))
   (reset! recording true)
   )
 
@@ -195,6 +197,13 @@
   (let [t (System/nanoTime)]
     (when @recording
         (.add @time-pattern [t action]))
+    )
+  )
+
+(defn record-note [n]
+  (let [t (System/nanoTime)]
+    (when @recording
+        (.add @note-pattern [t n]))
     )
   )
 
@@ -241,7 +250,7 @@
   ([] (mk-map-p (p/get-state core/player :bpm) (p/get-state core/player :div)))
   ([bpm div]
    (let [quant (float (/ 60 bpm div)) ;;duration of step
-         begin (first (first @time-pattern))
+         begin (first (first @note-pattern))
          pat (reduce (fn [pat [o a]]
                        (let [o (inc (int (Math/floor (/ (- o begin) quant 1000000000))))
                              pos (p/get-pos o div)
@@ -250,7 +259,7 @@
                          (assoc-in pat pos a)
                          ))
                      {:div div}
-                     @time-pattern)]
+                     @note-pattern)]
      pat
      ))
   )
