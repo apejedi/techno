@@ -193,10 +193,11 @@
   (reset! recording false)
   )
 
-(defn record-action [action]
+(defn record-action [[inst args n]]
   (let [t (System/nanoTime)]
     (when @recording
-        (.add @time-pattern [t action]))
+      (.add @time-pattern [t [inst args]])
+      (.add @note-pattern [t n]))
     )
   )
 
@@ -254,8 +255,10 @@
          pat (reduce (fn [pat [o a]]
                        (let [o (inc (int (Math/floor (/ (- o begin) quant 1000000000))))
                              pos (p/get-pos o div)
-                             c (get-in pat pos [])
-                             a (vec (concat c a))]
+                             c (get-in pat pos)
+                             a (cond (number? c) (vector c a)
+                                     (sequential? c) (vec (conj c a))
+                                     true a)]
                          (assoc-in pat pos a)
                          ))
                      {:div div}
@@ -263,6 +266,46 @@
      pat
      ))
   )
+
+(defn degree-fn [scale n]
+  (let [notes (map find-pitch-class-name scale)
+        f-notes (map #(note-info (find-note-name %)) scale)
+        info (note-info (find-note-name n))
+        degree (.indexOf notes (:pitch-class info))
+        [degree m] (if (= -1 degree)
+                     (let [pitches [:A :Bb :B :C :C# :D :Eb :E :F :F# :G :Ab]
+                           pos (.indexOf pitches (:pitch-class info))]
+                       (loop [p1 (inc pos) p2 (dec pos)]
+                         (if (and (<= p1 11) (not (= -1 (.indexOf notes (nth pitches p1)))))
+                           [(.indexOf notes (nth pitches p1)) (apply str (repeat (- p1 pos) "b"))]
+                           (if (and (>= p2 0) (not (= -1 (.indexOf notes (nth pitches p2)))))
+                             [(.indexOf notes (nth pitches p2)) (apply str (repeat (- pos p2) "#"))]
+                             (recur (inc p1) (dec p2))))
+                         ))
+                     [degree ""])
+        f-oct (:octave (nth f-notes degree))
+        oct (cond (> (:octave info) f-oct) (apply str (repeat (- (:octave info) f-oct) ">"))
+                  (< (:octave info) f-oct) (apply str (repeat (- f-oct (:octave info)) "<"))
+                  true "")]
+    (keyword (str (inc degree) m oct))
+    )
+  )
+
+(defn get-seq-p
+  ([] (get-seq-p (p/get-state core/player :bpm) (p/get-state core/player :div)))
+  ([bpm div & [f r]]
+   (let [f (if f f find-note-name)
+         r (if r r #(do %))
+         rest-p (p/build-rest-p (mk-map-p bpm div))]
+     (vec (map #(cond (number? %) (f %)
+                      (keyword? %) (r %)
+                      (sequential? %) (vec (map f %))
+                      true %)
+               rest-p))
+     )
+   )
+  )
+
 
 (defn get-tempo [step]
   (let [start (first (first @time-pattern))
