@@ -358,8 +358,8 @@
            :C2 :major
            {1 {1 :2 3 :2 7 :4 8 []}
             2 {1 :6<
-               3 (fn [d] (p/w-choose {[:2 :5] 0.2 nil 0.8}))
-               5 (fn [d] (p/w-choose {[:7< :3< {:dur 0.5}] 0.3 nil 0.7}))
+               ;; 3 (fn [d] (p/w-choose {[:2 :5] 0.2 nil 0.8}))
+               ;; 5 (fn [d] (p/w-choose {[:7< :3< {:dur 0.5}] 0.3 nil 0.7}))
                8 []}
             }
            1/8 0 [:dur 0.23622047244094488])
@@ -383,7 +383,7 @@
            [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 783.9908719634985 :amp 0.3]    ] :|
            [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 1046.5022612023945 :amp 0.3]  ]  :|
            ] 1/8)
-         :fx {:reverb [p-reverb
+         :fx {:reverb [p/p-reverb
                        :roomsize 50
                        :revtime 1
                        :damping 0.8
@@ -900,9 +900,9 @@
                         :freq2 (midi->hz (choose (scale :C5 :major)))]]
                  )}
           }
-         :fx {:delay [p-delay :max-delay 2 :delay 0.2 :decay 3]
-              :delay2 [p-delay :max-delay 2 :delay 0.4 :decay 4]
-              :reverb [p-reverb
+         :fx {:delay [p/p-delay :max-delay 2 :delay 0.2 :decay 3]
+              :delay2 [p/p-delay :max-delay 2 :delay 0.4 :decay 4]
+              :reverb [p/p-reverb
                        :roomsize 3
                        :revtime 1
                        :damping 0.8
@@ -1117,4 +1117,49 @@
                    )
              :p-size [7 8]
              })
+   })
+
+(def plk
+  {:motif1 (p/scale-p
+            plk-bass
+            :D4 :major
+            [:1< :05 :1< :|
+             :|
+             :7<<        :|
+             :|
+             :3< :05 :3< :|
+             :|
+             :2<        :| :|
+             ]
+            1/8 0 [:dur 0.5 :amp 1.0 :plk 2.0 ])
+
+   :drum2 (let []
+            (drum-p2
+             [:Kit3-Acoustic]
+             [:c4 :1 :c3 :c4                       :|
+              :2 (fn [d] (choose [:cr1 :cr2 nil]))  :|
+              :c4 :1 :c3 :c4                       :|
+              :2 (fn [d] (choose [:sd1 :s1 nil]))
+              (fn [d] (choose [:sd3 :s1 :sd4 nil])) :|]
+             1/4))
+
+   :drum1 (drum-p2
+           [:Kit13-Acoustic]
+           [ :s2 :| :| :s2 :| :|
+            :s2  :| :|]
+           1/8)
+
+   :harmony1 (p/scale-p
+              bpfsaw
+              :D3 :major
+              [:7 :03 [:1> [:amp 0.05]] :|
+               :|
+               :03 :6>                  :|
+               :|
+               :04 :5>                  :|
+               :|
+               :06 [:2> :3]             :| :|]
+              1/8 0 [:amp 0.2 :atk 0.3 :dur 3 :attack 1.6 :release 4 :detune 0 :rq 0.9])
+
+
    })
