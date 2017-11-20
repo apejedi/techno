@@ -388,7 +388,26 @@
                        :revtime 1
                        :damping 0.8
                        :inputbw 0.4 :drylevel 2 :earlylevel 1 :taillevel 4]})
-
+   :brsh (assoc
+          (drum-p2
+           [:KurzweilKit05]
+           [(fn [d n]
+              (if (odd? n)
+                (p/w-choose
+                 {[:brsh2 :brsh1 [:amp 0.3]] 0.9
+                  [:brsh3 [:amp 0.3]] 0.1
+                  }))
+              ) :|]
+           1/4)
+          :p-size [1 3])
+   :beat3 (drum-p2
+           [:Kit1-Acousticclose]
+           [(fn [d n]
+              (p/w-choose
+               {(keyword (str (choose ["rim" "s"]) (choose (range 3 8)))) (if (odd? n) 0.9 0.5)
+                nil (if (odd? n) 0.1 0.5)})
+              ) :|]
+           1/4)
    })
 
 (def wavy
@@ -452,20 +471,21 @@
              :p-size [2 16]
              }
             1/16)
-   :crash (let [o o-kick
-                 s o-snr
-                 b b-kick
-                 bs b-snr
-                 c o-clap
-                 h o-hat
-                 d dirty-kick
-                 g g-kick
-                 r r-kick]
-             (drum-p2
-              [:Kit3-Acoustic]
-              [:cr4 :1 :cr1 :|
-               :cr6 :cr1    :|]
-              1/4))
+   :sixt (let []
+            (drum-p2
+             [:Kit3-Acoustic]
+             {1 (fn [d n]
+                  (cond (= n 1) (keyword (str "k" (choose (range 1 4))))
+                        (< n 5) (keyword (str "c" (choose (range 1 4))))
+                        (= n 5) (keyword (str "snr" (choose (range 1 4))))
+                        (< n 9) (keyword (str (choose ["c" "sd"]) (choose (range 1 4))))
+                        (= n 9) (keyword (str (choose ["k" "snr" "t"]) (choose (range 1 4))))
+                        (< n 13) (keyword (str (choose ["c" "sd"]) (choose (range 1 4))))
+                        (= n 13) (keyword (str "snr" (choose (range 1 4))))
+                        true (keyword (str (choose ["cr" "sd" "t"]) (choose (range 1 4))))))
+              :p-size [1 16]
+              }
+             1/16))
    :tempo 60
    })
 
@@ -619,7 +639,7 @@
    })
 
 (def exp2
-  {:tempo 100
+  {:tempo 103
    :hat (drum-p2
          [:Kit16-Electro]
          [:c1 :2 :c1 :2 :c1 :2 :c1 :2 :c1 :1 :c1 :c2]
@@ -851,23 +871,43 @@
                1/8 0 [:release 2 :detune 0 :attack 1 :bwr 0.1 :amp 0.1])
    :drone (p/scale-p
            drone-noise
-           :C4 :major
-           [:7 :02 :7 :02 :1>   :|
-            :01 :1> :01 :1>     :|
-            :2> :01 :2> :01 :2> :|
-            :3> :01 :3> :01 :3> :|
-            :05 :2>             :|
-            :04 :1> :01 :1>     :|
-            :04 :7              :|
+           :C5 :major
+           [:5< :04 :5< :04 :5< :02 :5<                                 :|
+            :03 :5< :04 :1 :03 :1                                       :|
+            :1 :04 :1 :03 :1 :04 :2                                     :|
+            :02 :2 :04 :2 :03 :2 :03 :2                                 :|
+            :04 :3 :03 :3 :03 :3                                        :|
+            :01 :3 :03 :3 :03 :3 :05 :2                                 :|
+            :03 :2 :03 :2 :03 :2                                        :|
+            :2 :06 :6< :04 :6< :02 :6<                                  :|
+            :03 :6<                                                     :|
             :|
-            :6 :02 :6           :|
+            (fn [d] [(p/w-choose {:6> 0.4 :4> 0.2 :1> 0.2 nil 0.2}) [:dur 6]]) :03
+            (fn [d] [(p/w-choose {:6> 0.4 :4> 0.2 :1> 0.2 nil 0.2}) [:dur 6]]) :07
+            (fn [d] [(p/w-choose {:6> 0.4 :4> 0.2 :1> 0.2 nil 0.2}) [:dur 8]])
+            (fn [d] [(p/w-choose {:6> 0.4 :4> 0.2 :1> 0.2 nil 0.2}) [:dur 8]])
             :|
-            (fn [d n]
-              (if
-                  (odd? n)
-                (p/w-choose {[:6>] 0.4 [:4>] 0.2 [:3>] 0.2 [:1>] 0.2}))) :|
-            :|]
-           1/8 0 [:amp 0.2 :dur 6 ])
+            :|
+            :| :| :| :|]
+           1/16 0 [:amp 0.3 :dur 4 ])
+   :zap (assoc
+         {:div 4
+          :p-size [4 4]
+          1 {1 (fn [p key]
+                 [zap2 [:freq1 (midi->hz (choose (scale :C4 :major)))
+                        :dur 0.4
+                                        ;:dur (max 0.3 (rand 1.5))
+                        :freq2 (midi->hz (choose (scale :C5 :major)))]]
+                 )}
+          }
+         :fx {:delay [p-delay :max-delay 2 :delay 0.2 :decay 3]
+              :delay2 [p-delay :max-delay 2 :delay 0.4 :decay 4]
+              :reverb [p-reverb
+                       :roomsize 3
+                       :revtime 1
+                       :damping 0.8
+                       :inputbw 0.01 :drylevel 3 :earlylevel 1 :taillevel 1]
+              })
 
    })
 

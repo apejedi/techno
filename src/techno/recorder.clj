@@ -182,6 +182,7 @@
     )
   )
 
+
                                         ;(start-record-pattern)
 (defn start-record-pattern []
   (reset! time-pattern (java.util.LinkedList.))

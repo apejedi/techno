@@ -14,6 +14,7 @@
 (defonce pool (atom nil))
 (defonce patterns (atom {}))
 (defonce listeners (atom {}))
+(defonce buffers (atom {}))
 (declare mk-pool)
 (declare play)
 (declare mod-p)
@@ -211,6 +212,7 @@
                (commute counter inc))))
           ))
     (catch Exception e (println (.getMessage e))
+           (if (= id 0) (stop-s 0))
            (.printStackTrace e)))
   )
 
@@ -593,6 +595,7 @@
                          (instance? overtone.sc.synth.Synth inst))
                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
                          (some #(= (:name %) "note") (:params inst)) :note
+                         (some #(= (:name %) "freq1") (:params inst)) :freq1
                          true false))
         note-p #(do ;%
                   (if (= note-arg :freq) (midi->hz (note %)) (note %))
@@ -992,27 +995,67 @@
       )
     )
   )
-;; (defn w-choose
-;;   [val-prob-map]
-;;   (let [actions (keys val-prob-map)
-;;         probabilities (vals val-prob-map)
-;;         vals (range 0 (count actions))
-;;         paired (map vector probabilities vals)
-;;         sorted (sort #(< (first %1) (first %2)) paired)
-;;         summed (loop [todo sorted
-;;                       done []
-;;                       cumulative 0]
-;;                  (if (empty? todo)
-;;                    done
-;;                    (let [f-prob (ffirst todo)
-;;                          f-val  (second (first todo))
-;;                          cumulative (+ cumulative f-prob)]
-;;                      (recur (rest todo)
-;;                             (conj done [cumulative f-val])
-;;                             cumulative))))
-;;         rand-num (rand)]
-;;     (loop [summed summed]
-;;       (if
-;;           (< rand-num (ffirst summed))
-;;         (nth actions (second (first summed)))
-;;         (recur (rest summed))))))
+
+(defsynth record-p [bus 10 buf 0 run 0]
+  (record-buf (in:ar bus 2) buf :action 2 :loop 0 :run run)
+  )
+
+
+(defn record-buf-p [player pattern]
+  (let [size (p-size (get-p player pattern))
+        div (:div (get-p player pattern))
+        dur (+ 1 (* size (/ 60 (get-state player :bpm) div)))
+        fx (techno.sequencer/get-pattern-fx pattern)
+        buf (buffer (* 44100 dur) 2)
+        key (keyword "record-" (name pattern))
+        recorder (record-p [:tail (:group fx)] (:bus fx) buf)]
+    (if (and (contains? @buffers pattern) (buffer? (get @buffers pattern)))
+      (buffer-free (get @buffers pattern)))
+    (swap! buffers assoc pattern buf)
+    (add-listener
+     player key (fn [b]
+                  (when (= b 1)
+                    (ctl recorder :run 1)
+                    (swap! listeners (fn [l] (update-in l [player] dissoc key)))
+                    ))
+     )
+    )
+  )
+;(record-buf-p techno.core/player :drum1)
+
+
+(defsynth p-hi-shelf [audio-bus 10 out-bus 0 freq 12000 rs 0.5 db 0]
+  (let [source (in:ar audio-bus 2)
+        source (b-hi-shelf:ar source freq rs db)]
+    (out:ar out-bus source)
+    )
+  )
+
+(defsynth p-reverb [audio-bus 10 out-bus 0
+                    roomsize 10 revtime 3
+                    damping 0.5 inputbw 0.5
+                    spread 15 drylevel 1
+                    earlyreflevel 0.7 taillevel 0.5]
+  (let [source (in:ar audio-bus 1)
+        reverb (* 0.3 (g-verb:ar
+                  source
+                  roomsize
+                  revtime
+                  damping
+                  inputbw
+                  spread
+                  drylevel
+                  earlyreflevel
+                  taillevel))]
+    (out:ar out-bus reverb
+            ;(+ reverb source)
+            )
+    )
+  )
+
+(defsynth p-delay [audio-bus 10 out-bus 0 max-delay 0.2 delay 0.2 decay 1]
+  (let [source (in:ar audio-bus 1)
+        snd (comb-c:ar source max-delay delay decay)]
+    (out:ar out-bus [snd snd])
+    )
+  )

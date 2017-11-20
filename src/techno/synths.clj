@@ -195,6 +195,15 @@
     )
   )
 
+(defsynth zap2 [freq1 5000 freq2 100 dur 0.2 amp 1 out-bus 0]
+  (let [freq (x-line freq1 freq2 dur)
+        env (env-gen:kr (perc (* 0.1 dur) (* 0.9 dur) amp) :action 2)
+        sig (pulse:ar freq (lf-noise1:kr (/ dur 2)))
+        sig (lpf:ar sig (* freq (x-line:kr 1 4 (* dur 0.7))))
+        sig (* sig env)]
+    (out:ar out-bus [sig sig])
+    )
+  )
 
 (defsynth bpfsaw2 [freq 500 atk 2 sus 0 rel 3 c1 1 c2 -1
 		 detune 0.2 pan 0 cfhzmin 0.1 cfhzmax 0.3
@@ -459,7 +468,7 @@
   )
 ;; (def w (wobble-drone :amp 0.4 :wobble 10))
 ;; (ctl w :wobble 0.6)
-;; (ctl w :amp 0.3)
+;; (ctl w :amp 0.1)
 ;; (kill wobble-drone)
 
 ;; (defsynth sistres [note 60 dur 6 amp 1]
@@ -937,29 +946,23 @@
         sig     (mix (* env amp (saw [freq (* freq (+ dtune 1))])))]
     (out:ar out-bus [sig sig])))
 
-(defsynth p-hi-shelf [audio-bus 10 out-bus 0 freq 12000 rs 0.5 db 0]
-  (let [source (in:ar audio-bus 2)
-        source (b-hi-shelf:ar source freq rs db)]
-    (out:ar out-bus source)
-    )
-  )
-
-(defsynth p-reverb [audio-bus 10 out-bus 0
-                    roomsize 10 revtime 3
-                    damping 0.5 inputbw 0.5
-                    spread 15 drylevel 1
-                    earlyreflevel 0.7 taillevel 0.5]
-  (let [source (in:ar audio-bus 1)
-        reverb (* 0.3 (g-verb:ar
-                  source
-                  roomsize
-                  revtime
-                  damping
-                  inputbw
-                  spread
-                  drylevel
-                  earlyreflevel
-                  taillevel))]
-    (out:ar out-bus (+ reverb source))
-    )
-  )
+(defsynth ks2
+  [note  60
+   amp   0.8
+   dur   2
+   decay 30
+   coef  0.3
+   out-bus 0]
+  (let [freq (midicps note)
+        noize (* 0.8 (white-noise))
+        dly (/ 1.0 freq)
+        plk   (pluck noize 1 (/ 1.0 freq) dly
+                     decay
+                     coef)
+        dist (distort plk)
+        filt (rlpf dist (* 12 freq) 0.6)
+        clp (clip2 filt 0.8)
+        reverb (free-verb clp 0.4 0.8 0.2)
+        sig (* amp (env-gen (perc 0.0001 dur) :action FREE) reverb)]
+    (out:ar out-bus [sig sig])
+    ))
