@@ -187,16 +187,16 @@
         sig (* amp eq)]
     (out:ar out-bus [sig sig])))
 
-(defsynth zap [freq1 5000 freq2 100 dur 0.2 amp 1 out-bus 0]
-  (let [freq (x-line freq1 freq2 dur)
+(defsynth zap [freq1 5000 freq2 10 dur 0.2 amp 1 sig2 0 mul 0.5 out-bus 0]
+  (let [freq (x-line freq1 (select:kr sig2 [freq2 (* freq1 mul)]) dur)
         env (env-gen:kr (perc (* 0.1 dur) (* 0.9 dur) amp) :action 2)
         sig (* (lf-tri freq) env)]
     (out:ar out-bus [sig sig])
     )
   )
 
-(defsynth zap2 [freq1 5000 freq2 100 dur 0.2 amp 1 out-bus 0]
-  (let [freq (x-line freq1 freq2 dur)
+(defsynth zap2 [freq1 5000 freq2 100 dur 0.2 amp 1 sig2 0 mul 0.5 out-bus 0]
+  (let [freq (x-line freq1 (select:kr sig2 [freq2 (* freq1 mul)]) dur)
         env (env-gen:kr (perc (* 0.1 dur) (* 0.9 dur) amp) :action 2)
         sig (pulse:ar freq (lf-noise1:kr (/ dur 2)))
         sig (lpf:ar sig (* freq (x-line:kr 1 4 (* dur 0.7))))

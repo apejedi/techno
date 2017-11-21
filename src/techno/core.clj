@@ -15,7 +15,7 @@
             [techno.core :as core]))
 (defonce s-player (atom nil))
 (declare player)
-
+(declare synth-grp)
 
 (comment
   (if (or (nil? player) (not (node-active? player)))
