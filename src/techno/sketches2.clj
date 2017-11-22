@@ -872,24 +872,16 @@
    :drone (p/scale-p
            drone-noise
            :C5 :major
-           [:5< :04 :5< :04 :5< :02 :5<                                 :|
-            :03 :5< :04 :1 :03 :1                                       :|
-            :1 :04 :1 :03 :1 :04 :2                                     :|
-            :02 :2 :04 :2 :03 :2 :03 :2                                 :|
-            :04 :3 :03 :3 :03 :3                                        :|
-            :01 :3 :03 :3 :03 :3 :05 :2                                 :|
-            :03 :2 :03 :2 :03 :2                                        :|
-            :2 :06 :6< :04 :6< :02 :6<                                  :|
-            :03 :6<                                                     :|
-            :|
-            (fn [d] [(p/w-choose {:6> 0.4 :4> 0.2 :1> 0.2 nil 0.2}) [:dur 6]]) :03
-            (fn [d] [(p/w-choose {:6> 0.4 :4> 0.2 :1> 0.2 nil 0.2}) [:dur 6]]) :07
-            (fn [d] [(p/w-choose {:6> 0.4 :4> 0.2 :1> 0.2 nil 0.2}) [:dur 8]])
-            (fn [d] [(p/w-choose {:6> 0.4 :4> 0.2 :1> 0.2 nil 0.2}) [:dur 8]])
-            :|
-            :|
-            :| :| :| :|]
-           1/16 0 [:amp 0.3 :dur 4 ])
+           {1 (fn [d n]
+                (if (odd? n)
+                  [(keyword
+                    (str (choose (range 1 8))
+                         (p/w-choose {">" 0.1 "" 0.6 "<" 0.3})))
+                   [:dur (max 4 (rand-int 6))]]
+                  ))
+            4 {8 []}
+            }
+           1/8 0 [:amp 0.3 :dur 4 ])
    :zap (assoc
          {:div 4
           :p-size [4 4]
@@ -908,6 +900,32 @@
                        :damping 0.8
                        :inputbw 0.01 :drylevel 3 :earlylevel 1 :taillevel 1]
               })
+   :bpfsaw (assoc
+            (p/scale-p
+             bpfsaw
+             :C4 :major
+             [:6> :06 :2>                   :|
+              :|
+              :|
+              :|
+              :01 :6                        :|
+              :02 (fn [d] (choose [:3> :4])) :|
+              :|
+              :|
+              :02 :2>                       :|
+              :02 (fn [d] (choose [:1> :6])) :|
+              :|
+              :|
+              :| :| :| :|]
+             1/8 0 [:dur 1.0 :atk 0.01 :detune 0.0 :rq 0.5 :amp 0.2 :pan 0.0 ])
+            :fx {:delay [p/p-delay :max-delay 2 :delay 0.2 :decay 3]
+                 :delay2 [p/p-delay :max-delay 2 :delay 0.4 :decay 6]
+                 :reverb [p/p-reverb
+                          :roomsize 3
+                          :revtime 1
+                          :damping 0.8
+                          :inputbw 0.01 :drylevel 3 :earlylevel 1 :taillevel 1]
+                 })
 
    })
 
