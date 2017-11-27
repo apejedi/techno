@@ -456,16 +456,16 @@
   )
 
 
-(defsynth wobble-drone [freq 100 wobble 2 amp 1 out-bus 0]
-  (let [mod-f (/ freq 2)
-        idx (* 10 (sin-osc wobble))
-        sig (pm-osc freq mod-f idx)
-                                        ;sig2 (var-saw freq :width (lin-lin (lf-noise0 3) -1 1 0 1))
-        sig2 (lf-tri freq)
-        sig (+ (* amp sig ) (* 0.4 sig2))]
-    (out:ar out-bus [sig sig])
-    )
-  )
+;; (defsynth wobble-drone [freq 100 wobble 2 amp 1 out-bus 0]
+;;   (let [mod-f (/ freq 2)
+;;         idx (* 10 (sin-osc wobble))
+;;         sig (pm-osc freq mod-f idx)
+;;                                         ;sig2 (var-saw freq :width (lin-lin (lf-noise0 3) -1 1 0 1))
+;;         sig2 (lf-tri freq)
+;;         sig (+ (* amp sig ) (* 0.4 sig2))]
+;;     (out:ar out-bus [sig sig])
+;;     )
+;;   )
 ;; (def w (wobble-drone :amp 0.4 :wobble 10))
 ;; (ctl w :wobble 0.6)
 ;; (ctl w :amp 0.1)
@@ -614,9 +614,9 @@
   )
 
 
-(defsynth bass2 [atk 0.001 f-dur 0.001
+(defsynth bass2 [atk 0.001 f-dur 0.001 echo 1
                  decay 0.6 amp 1 freq 80 cutoff 2000 cutoff2 2000 out-bus 0]
-  (let [sig (* (decay2:ar (impulse:ar (/ atk 2)) atk decay)
+  (let [sig (* (select:ar echo [(dc:ar 1) (decay2:ar (impulse:ar (/ atk 2)) atk decay)])
                (mix (pulse:ar [freq (+ freq 1)] 0.3)) amp)
         sig (moog-ff sig (x-line:kr cutoff cutoff2 f-dur) 3)
         sig (* sig (env-gen (perc atk decay) :action 2))]
@@ -860,13 +860,13 @@
     )
   )
 
-(defsynth pm [freq 400 dur 4 out-bus 0]
-  (let [o (pm-osc freq :pm-index (line:kr 0 4 dur) :mod-freq (line:kr freq (* freq 4) dur))
-        env (env-gen:kr (envelope [0 1 0.7 0] [(* dur 0.4) (* dur 0.2) (* dur 0.4)]) :action FREE)
-        o (* o env)]
-    (out:ar out-bus [o o])
-    )
-  )
+;; (defsynth pm [freq 400 dur 4 out-bus 0]
+;;   (let [o (pm-osc freq :pm-index (line:kr 0 4 dur) :mod-freq (line:kr freq (* freq 4) dur))
+;;         env (env-gen:kr (envelope [0 1 0.7 0] [(* dur 0.4) (* dur 0.2) (* dur 0.4)]) :action FREE)
+;;         o (* o env)]
+;;     (out:ar out-bus [o o])
+;;     )
+;;   )
 
 (defsynth bowed [freq 440 out-bus 0 atk 0.2 amp-b 0.5 start 0.1 end 0.7 force 1 dur 2 c1 0.25 c3 31 amp 1]
   (let [vib (+ 1 (* 0.003 (gendy1:kr 1 1 1 1 0.1 4)))
@@ -918,32 +918,26 @@
   [freq 880
    amp 0.5
    dur 3
-   fatt 0.75
-   fdecay 0.5
-   fsus 0.8
-   frel 1.0
-   cutoff 200
+   atk 0.3
+   rq 0.5
+   cutoff 10000
    dtune 0.002
    vibrate 4
    vibdepth 0.015
-   gate 1
-   ratio 1
-   cbus 1
    freq-lag 0.1
    out-bus 0]
   (let [freq (lag freq freq-lag)
-        att (* dur 0.3)
-        decay (* dur 0.2)
-        sus (* dur 0.2)
-        rel (* dur 0.3)
-        cuttoff (in:kr cbus)
-        env     (env-gen (adsr-ng att decay sus rel) gate :action FREE)
-        fenv    (env-gen (adsr fatt fdecay fsus frel 2) gate)
-
+        att (* dur atk)
+        decay (* (- dur att) 0.2)
+        sus (* (- dur att) 0.5)
+        rel (* (- dur att) 0.3)
+        env     (env-gen (adsr-ng att decay sus rel) :action FREE)
         vib     (+ 1 (lin-lin:kr (sin-osc:kr vibrate) -1 1 (- vibdepth) vibdepth))
 
         freq    (* freq vib)
-        sig     (mix (* env amp (saw [freq (* freq (+ dtune 1))])))]
+        sig     (mix (* env amp (saw [freq (* freq (+ dtune 1))])))
+        sig (rlpf:ar sig cutoff rq)
+        ]
     (out:ar out-bus [sig sig])))
 
 (defsynth ks2

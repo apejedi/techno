@@ -368,9 +368,13 @@
             acid-bass
             [:F1 :1 :B1 :2 :G1 :2 :A1 :3]
             1/4 0 [:dur 0.3])
-   :lead2 (p/phrase-p
+   :lead2 (p/scale-p
            bass2
-           [:A3 :1 :A3 :3 :A3 :| :2 :F4 :1 :C5 :1 :D5 :| :4 :A3 :| :E3 :3 :A3 :|]
+           :C4 :major
+           [:6< :01 :6< :03 :6<   :|
+            :02 :4 :01 :1> :01 :2> :|
+            :04 :6<                :|
+            :3< :03 :6<            :|]
            1/8 0 [:atk 0.001 :f-dur 0.1 :decay 2 :amp 2.0 :cutoff 2000.0 :cutoff2 4000])
    :zap (assoc
          (p/build-map-p
@@ -408,6 +412,27 @@
                 nil (if (odd? n) 0.1 0.5)})
               ) :|]
            1/4)
+   :cs (assoc
+        (p/scale-p
+         cs80
+         :C3 :minor
+         [[:4b>> [:atk 0.4]]      :|
+          :06 :2>>                :|
+          :|
+          :1>>> [:amp 0.3 :dur 3] :|
+          :|
+          :015 :1>                :|
+          :010 :2>                :|
+          :07 :4b>                :|
+          :|
+          :01 :1b                 :|
+          :|
+          :02 :4b                 :|
+          :| :| :| :|]
+         1/16 0 [:amp 0.5 :dur 2 :atk 0.01 :rq 0.5 :cutoff 4000 :dtune 0.002 :vibrate 4.0 :vibdepth 0.015 :freq-lag 0.1 ])
+        :s 1
+                                        ;:fx {:delay [p/p-delay :max-delay 2 :delay 0.1 :decay 4]}
+        )
    })
 
 (def wavy
@@ -1138,7 +1163,8 @@
    })
 
 (def plk
-  {:motif1 (p/scale-p
+  {:tempo 100
+   :motif1 (p/scale-p
             plk-bass
             :D3 :major
             [:1 :05 :1 :|
@@ -1163,8 +1189,7 @@
 
    :drum1 (drum-p2
            [:Kit13-Acoustic]
-           [ :s2 :| :| :s2 :| :|
-            :s2  :| :|]
+           [:| :s2 :|]
            1/8)
 
    :harmony1 (p/scale-p
@@ -1181,6 +1206,147 @@
                :|
                :06 [:2> :3]             :| :| :|]
               1/8 0 [:amp 0.2 :atk 0.3 :dur 3 :rq 0.9])
+
+
+   })
+
+(def gen-kicks
+  {:drum1 (let []
+            (drum-p2
+             [:Kit1-Acousticclose]
+             [(fn [d n] (cond (< n 7)
+                             (p/w-choose {(keyword (str "k" (range 1 5))) (if (odd? n) 0.8 0.3)
+                                          nil (if (odd? n) 0.2 0.7)})
+                             (= n 7) (choose [:k7 :k8]))
+                ) :|]
+             1/8))
+
+   :drum2 (let []
+            (drum-p2
+             [:Kit2-Acousticroom]
+             [(fn [d n] (cond (< n 7)
+                             (p/w-choose {(keyword (str
+                                                    "c"
+                                                    (range 1 5))) (if (odd? n) 0.8 0.3)
+                                          nil (if (odd? n) 0.2 0.7)})
+                             (= n 7) (choose [:c7 :c8 :c9])
+                             (= n 8) (p/w-choose {(choose [:c7 :c8 :c9]) 0.2 nil 0.8}))
+                ) :|]
+             1/8))
+   :drum3 (let []
+            (drum-p2
+             [:Kit17-Electro]
+             [:k1 :1]
+             1/4))
+   :bass (p/scale-p
+          bass-synth
+          :C4 :major
+          [:2<<                    :|
+           :|
+           :6<< :05 :1<            :|
+           :04 :2<                 :|
+           :04 [:3<< [:release 3]] :|
+           :|
+           :| :|]
+          1/8 0 [:attack 1 :amp 1.0 :release 2 :detune 3.0 :bwr 0.4 ])
+
+   })
+
+(def sad
+  {:harmony1 (p/scale-p
+              bowed
+              :D4 :major
+              [:2 :06 :2 :03 :2        :|
+               :03 :1 :04 :1           :|
+               :|
+               :|
+               :02 :1 :03 :1 :03 :1    :|
+               :02 :2 :03 :2           :|
+               :07 :7< :04 :7<         :|
+               :03 :7<                 :|
+               :1 :03 :1 :03 :1        :|
+               :05 :2 :05 :2           :|
+               :|
+               :|
+               :02 :2> :04 :2> :03 :2> :|
+               :010 :1>                :|
+               :1> :05 :1>             :|
+               :|
+               :013 :7                 :|
+               :02 :7 :03 :7 :04 :7    :|
+               :04 :2> :05 :2>         :|
+               :2> :014 :6             :|
+               :04 :6 :04 :6           :|
+               :08 :5 :03 :5           :|
+               :| :|]
+              1/16 0 [:atk 0.2 :amp-b 0.5 :start 0.1 :end 0.7 :force 1.0 :dur 2.0 :c1 0.25 :c3 31.0 :amp 0.1 ])
+
+   :motif1 (p/scale-p
+            bpfsaw
+            :D4 :major
+            [:1 :06 :3b :06 :5     :|
+             :04 :1 :06 :3b        :|
+             :02 :5 :06 :1 :05 :3b :|
+             :06 :5 :05 :1         :|
+             :03 :3b :06 :5        :|
+             :7< :06 :3b :06 :5    :|
+             :05 :7< :06 :3b       :|
+             :03 :6 :05 :7<        :|
+             :3b :07 :5 :06 :7<    :|
+             :06 :3b :07 :5        :| :| :|]
+            1/16 0 [:dur 1 :atk 0.01 :detune 0.0 :rq 0.6 :amp 0.3 :pan 0.0 ])
+   :bass (p/scale-p
+          bass-synth
+          :D3 :major
+          [:1 :01 :1 :02 :1 :01 :1    :|
+           :05 :2                     :|
+           :2 :01 :2                  :|
+           :03 :3b :02 :3b            :|
+           :3b                        :|
+           :05 :7<                    :|
+           :7< :01 [:7< [:release 2]] :| :| :| :| :| :|]
+          1/8 0 [:attack 2 :amp 0.3 :release 1.0 :detune 1.0 :bwr 0.5 ])
+   })
+
+(def techno-exp
+  {:drum2 (drum-p2
+           [:Kit15-Electro]
+           [[dirty-kick [:amp 0.6]] :1]
+           1/4)
+
+   :drum1 (let []
+            (drum-p2
+             [:Kit14-Acoustic]
+             [:sd3
+              (fn [d] (p/w-choose {:c2 0.2 :c3 0.1 nil 0.7}))
+              (fn [d] (p/w-choose {:c2 0.2 :c3 0.1 nil 0.7}))
+              :1 :sd1 (fn [d] (choose [:sd2 :sd1 nil]))
+              (fn [d] (p/w-choose {:sd3 0.3
+                                  :sd1 0.2
+                                  :sd2 0.2
+                                  nil 0.3})) :|]
+             1/8))
+
+   :harmony1 (p/scale-p
+              bass2
+              :D2 :major
+              [:7<     :|
+               :|
+               :01 :2  :|
+               :|
+               :05 :4< :| :| :| :|]
+              1/16 0 [:atk 0.5 :f-dur 0.001 :echo 0 :decay 6 :amp 1.0 :cutoff 2000.0 :cutoff2 2000.0 ])
+
+   :harmony2 (p/scale-p
+              harmonic
+              :D2 :major
+              [:7>       :|
+               :011 :5>> :|
+               :|
+               :013 :1>> :|
+               :|
+               :013 :5>  :| :| :|]
+              1/16 0 [:amp 0.5 :dur 2.4 ])
 
 
    })

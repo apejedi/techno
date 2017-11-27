@@ -86,23 +86,6 @@
     (if (map? pattern)
       (techno.player/phrase-p nil pattern div nil []
                                 mk-action)
-        ;; (reduce
-        ;;  (fn [p b]
-        ;;    (let [pos (p/get-pos b div (p/p-size pattern))
-        ;;          action (get-in pattern pos [])
-        ;;          action
-        ;;          (cond (and (sequential? action) (not (empty? action)))
-        ;;            (vec (apply concat (p/phrase-p nil action div nil
-        ;;                                           [] mk-action true is-drum?)))
-        ;;            (keyword? action) [(drum-s kits action) []])
-        ;;          ]
-        ;;      (if (or (= b (p/p-size pattern)) (not (empty? action)))
-        ;;        (assoc-in p pos action)
-        ;;        p)
-        ;;      )
-        ;;    )
-        ;;  pattern
-        ;;  (range 1 (inc (p/p-size pattern))))
         (techno.player/phrase-p nil pattern div nil []
                                 mk-action)))
   )

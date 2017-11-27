@@ -1027,7 +1027,7 @@
 (defsynth p-hi-shelf [audio-bus 10 out-bus 0 freq 12000 rs 0.5 db 0]
   (let [source (in:ar audio-bus 2)
         source (b-hi-shelf:ar source freq rs db)]
-    (out:ar out-bus source)
+    (replace-out:ar out-bus source)
     )
   )
 
@@ -1047,7 +1047,7 @@
                   drylevel
                   earlyreflevel
                   taillevel))]
-    (out:ar out-bus reverb
+    (replace-out:ar out-bus reverb
             ;(+ reverb source)
             )
     )
@@ -1056,6 +1056,6 @@
 (defsynth p-delay [audio-bus 10 out-bus 0 max-delay 0.2 delay 0.2 decay 1]
   (let [source (in:ar audio-bus 1)
         snd (comb-c:ar source max-delay delay decay)]
-    (out:ar out-bus [snd snd])
+    (replace-out:ar out-bus [snd snd])
     )
   )

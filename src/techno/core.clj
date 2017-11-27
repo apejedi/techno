@@ -264,6 +264,7 @@
   (let [synths  (filter #(or (= (type %) overtone.studio.inst.Inst)
                              (= (type %) overtone.sc.synth.Synth)
                              (= overtone.sc.sample.PlayableSample (type %))) (map var-get (vals (ns-publics 'techno.synths))))
+        synths (sort (fn [a b] (compare (:name a) (:name b))) synths)
         data (vec (map #(list (:name %)
                                 (map (fn [p] (list (:name p) (:default p))) (:params %)))
                        synths))
@@ -275,7 +276,8 @@
         data (assoc data "samples" (map #(list (name %)
                                                (map list (reverse (sort (map name (keys (get drum-kits %))))))
                                                ;(map (fn [n] (list (name n))) (keys (get drum-kits %)))
-                                               ) (keys drum-kits)))]
+                                               ) (keys drum-kits)))
+        data (assoc data "sketches" (mapcat (fn [[k v]] (if (map? (var-get v)) [(list (str k) '())])) (ns-publics 'techno.sketches2)))]
     (reduce
      #(conj %1 (seq %2))
      '()
