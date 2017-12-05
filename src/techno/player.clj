@@ -443,7 +443,7 @@
                               (assoc-in p pos
                                         (if bar-note-fn (bar-note-fn a (first pos) (second pos))
                                             a)))
-                (sequential? a) (assoc-in p pos a)
+                (or (string? a) (sequential? a)) (assoc-in p pos a)
                 (and end? (or (and (is-space? a)
                                    (> (-> a name Integer/parseInt) 0))
                               (and (not (= 0 (mod prev-b div))) (= :| a)) ))
@@ -701,7 +701,7 @@
                                             ))
                                     n modify)
                             n)
-                        n (if (= note-arg :freq) (midi->hz n)
+                        n (if (or (= note-arg :freq) (= note-arg :freq1)) (midi->hz n)
                               n)]
                     (vector inst
                             (vec (concat [note-arg n]
@@ -1027,6 +1027,13 @@
 (defsynth p-hi-shelf [audio-bus 10 out-bus 0 freq 12000 rs 0.5 db 0]
   (let [source (in:ar audio-bus 2)
         source (b-hi-shelf:ar source freq rs db)]
+    (replace-out:ar out-bus source)
+    )
+  )
+
+(defsynth p-low-shelf [audio-bus 10 out-bus 0 freq 12000 rs 0.5 db 0]
+  (let [source (in:ar audio-bus 2)
+        source (b-low-shelf:ar source freq rs db)]
     (replace-out:ar out-bus source)
     )
   )

@@ -735,36 +735,7 @@
            1/4 6 [:t 2])
    })
 
-(def randob
-  {:motif1 (p/phrase-p
-            bass2
-            [:D1 :1 :Bb1 :1 :D1 :1 :Bb1 :| :2 :D1 :1 :Bb1 :| :D1 :1 :Bb1 :1 :Bb1 :1 :G1 :| :Bb1 :7]
-            1/8 0 [:decay 1.2283465055030163 :cutoff2 944])
-   :overp (p/phrase-p
-           overpad
-           [:G3 :1 :G4 :1 :Bb4 :1 :C5 :| :2 :F3 :1 :G4 :| :G3 :1 :G4 :1 :Bb4 :1 :C5 :|
-            :F3 :1 :F4 :1 :F4         :|]
-           1/8 0 [:amp 0.1 :release 0.7 :attack 0.01])
-   :drum2 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:Kit6-Electro]
-             [:k2        :| :k2 :|
-              :k2 :1 :s1 :| :k2 :|]
-             1/4))
-   :motif3 (p/phrase-p
-            plucked
-            [:E4 :4 :E4 :| :2 :E4 :3 :A3 :| :3 :A3 :| :A3 :2 :D4 :| :D4 :4 :D4 :| :B3 :4 :B3 :| :8]
-            1/8 0 [:mistune 0.396850400083647])
 
-   })
 (def cheesy
   {:tempo 120
    :drum1 (p/build-map-p
@@ -908,22 +879,13 @@
             }
            1/8 0 [:amp 0.3 :dur 4 ])
    :zap (assoc
-         {:div 4
-          :p-size [4 4]
-          1 {1 (fn [p key]
-                 [zap2 [:freq1 (midi->hz (choose (scale :C4 :major)))
-                        :dur 0.4
-                                        ;:dur (max 0.3 (rand 1.5))
-                        :freq2 (midi->hz (choose (scale :C5 :major)))]]
-                 )}
-          }
-         :fx {:delay [p/p-delay :max-delay 2 :delay 0.2 :decay 3]
-              :delay2 [p/p-delay :max-delay 2 :delay 0.4 :decay 4]
-              :reverb [p/p-reverb
-                       :roomsize 3
-                       :revtime 1
-                       :damping 0.8
-                       :inputbw 0.01 :drylevel 3 :earlylevel 1 :taillevel 1]
+         (p/scale-p
+          zap2
+          :C4 :major
+          [(fn [d] [(choose [:2> :4> :4 :6 :6> :3 :3> nil])
+                   [:dur (max 0.3 (rand 0.7))]]) :01 :| :| :| :|]
+          1/16 0 [:dur 0.4 :amp 2 :sig2 1 :mul 0.5 ])
+         :fx {:delay [p/p-delay :max-delay 2 :delay 0.2 :decay 6]
               })
    :bpfsaw (assoc
             (p/scale-p
@@ -1311,7 +1273,7 @@
 (def techno-exp
   {:drum2 (drum-p2
            [:Kit15-Electro]
-           [[dirty-kick [:amp 0.6]] :1]
+           [[dirty-kick [:amp 0.6]] :o1]
            1/4)
 
    :drum1 (let []

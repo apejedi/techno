@@ -66,7 +66,7 @@
     )
   )
 
-(defsynth acid-bass [note 50 amp 1 lg 1 dur 1 attack 0.001 out-bus 0]
+(defsynth acid-bass [note 50 amp 1 lg 1 dur 1 attack 0.001 out-bus 0 reverb 1]
   (let [[a s r] (map #(* dur %) [attack 1 0.04])
         note (lag:kr note (* 0.12 (- 1 (line:kr lg lg 0.001))))
         env1 (env-gen
@@ -78,7 +78,7 @@
         sig (rlpf:ar sig (midicps (+ note env2)) 0.3)
         sig1 (* sig env1 amp)
         sig (bpf:ar sig1 3500)
-        sig (free-verb sig 1 0.95 0.15)
+        sig (select:ar reverb [sig (free-verb sig 1 0.95 0.15)])
         sig (+ sig (* sig (env-gen (envelope [0.02 0.3 0.02] [0.4 0.01] [3 -4] 1))))
         sig (hpf:ar (* sig 1.2) 40)
         sig (limiter:ar sig 1 0.02)

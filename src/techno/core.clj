@@ -83,7 +83,7 @@
   (r/draw-line 5)
   (r/gen-coords 500 500 5 4 player)
   (s/dec-amp player :shkr)
-  (let [v 1]
+  (let [v 0.5]
     (ctl 14 :volume v)
     (ctl 15 :volume v))
   (remove-event-handler ::server-audio-clipping-warner-vol)
@@ -235,6 +235,38 @@
           patterns
           (seq (map seq patterns))
           ))
+      )
+    )
+  )
+
+(defn get-annotated-pattern [data]
+  (let [text data
+        data (string/replace
+              (string/replace data " #(" " \\#(")
+              " @" " \\@")
+        ;r (readers/source-logging-push-back-reader data)
+        r (readers/indexing-push-back-reader data)
+        get-val (fn [raw start end]
+                  (find-match
+                   (string/replace
+                    (string/replace
+                     (string/replace raw #"\\# ([^\s]+)" "#$1")
+                     #"\\@ ([^\s]+)" "@$1")
+                    #"," "")
+                   (string/join "\n"
+                    (subvec
+                     (string/split-lines text)
+                     (dec start)
+                     (dec end)))))
+        start (readers/get-line-number r)]
+    (loop [cur (edn/read {:eof false} r) sequence-pos {}
+           start start end (readers/get-line-number r)]
+      (if cur
+        (let []
+          (doseq [c cur]
+              (println c start (readers/get-column-number r)))
+          (recur (edn/read {:eof false} r) sequence-pos end (readers/get-line-number r)))
+        sequence-pos)
       )
     )
   )
