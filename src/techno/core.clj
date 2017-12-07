@@ -305,11 +305,12 @@
         data  (partition 50 data)
         c (inc (int (/ (inc c) 50)))
         data (zipmap (range 1 (inc c)) (if (empty? remaining) data (conj data remaining)))
-        data (assoc data "samples" (map #(list (name %)
-                                               (map list (reverse (sort (map name (keys (get drum-kits %))))))
-                                               ;(map (fn [n] (list (name n))) (keys (get drum-kits %)))
-                                               ) (keys drum-kits)))
-        data (assoc data "sketches" (mapcat (fn [[k v]] (if (map? (var-get v)) [(list (str k) '())])) (ns-publics 'techno.sketches2)))]
+        data (assoc data "samples" (sort #(compare (first %1) (first %2))
+                                         (map #(list (name %)
+                                                     (map list (reverse (sort (map name (keys (get drum-kits %))))))
+                                                     ) (keys drum-kits))))
+        data (assoc data "sketches" (sort #(compare (first %1) (first %2))
+                                     (mapcat (fn [[k v]] (if (map? (var-get v)) [(list (str k) '())])) (ns-publics 'techno.sketches2))))]
     (reduce
      #(conj %1 (seq %2))
      '()
