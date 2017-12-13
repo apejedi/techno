@@ -23,6 +23,7 @@
 (declare p-size)
 (declare scheduled-jobs)
 (declare set-size)
+(declare rm-p)
 (declare seq-to-p)
 (declare stop-s)
 (declare schedule-job)
@@ -108,12 +109,14 @@
          size (get options :size 4)
          period (/ 60000000 bpm div)
          args (if (not (nil? options)) options {})
+         counter (get args :counter (ref 1))
          job (schedule-job @pool
                            play
                            period
                            (merge {:bpm bpm :size size :div div}
                                   args)
-                           (ref 1))]
+                           counter)
+         ]
      (:id job)
      ))
   )
@@ -156,7 +159,8 @@
                                (swap! patterns assoc-in [id k :size] s)
                                s
                                ))
-                           (get @patterns id)))]
+                           (get @patterns id)))
+              counter (:state (get-job id))]
                                         ;(println div (:div state))
           (when (or (not (= 0 (mod div (:div state)))) (> div (:div state)))
             (stop-s id true false)
@@ -195,11 +199,25 @@
                         actions (cond (fn? (:fn v)) ((:fn v) patterns [id k] bar note)
                                       (fn? (get v bar)) ((get v bar) patterns [id k] note)
                                       (fn? (get-in v [bar note])) ((get-in v [bar note]) patterns [id k])
-                                      true (get-in v [bar note]))]
+                                      true (get-in v [bar note]))
+                        gated (:gated v)
+                        synth (:synth v)
+                        synth-inst (:synth-inst v)]
                     (doseq [[a args] (partition 2 actions)]
-                      (let [args (if (not (nil? (:bus p-fx))) (concat args [:out-bus (:bus p-fx)]) args)
-                            args (if (not (nil? (:group p-fx))) (concat [[:head (:group p-fx)]] args) args)]
-                        (when (not (nil? a)) (apply a args)))
+                      (let [has-gate (if gated (not (= -1 (.indexOf args :gate))) false)
+                            args (if (and (not (nil? (:bus p-fx))) (nil? synth-inst))
+                                   (concat args [:out-bus (:bus p-fx)]) args)
+                            args (if (and (not (nil? (:group p-fx))) (nil? synth-inst))
+                                   (concat [[:head (:group p-fx)]] args) args)]
+                        (when (not (nil? a))
+                          (if gated
+                            (if (not (nil? synth-inst))
+                              (apply ctl (concat [synth-inst] (if has-gate [] [:gate 1]) args))
+                              (swap! patterns
+                                     assoc-in [id k :synth-inst]
+                                     (apply synth args)))
+                            (apply a args))
+                          ))
                       ))
                   )
                 )
@@ -280,6 +298,11 @@
 (defn add-p
   ([id pattern key] (add-p id pattern key {}))
   ([id pattern key attrs]
+   (when (:gated pattern)
+     (rm-p id key)
+     (if-let [mixer (get (techno.sequencer/get-pattern-fx key) :mixer)]
+       (ctl mixer :volume 0)
+       ))
    (if (:add-at-1 attrs)
      (add-listener
       id key (fn [b]
@@ -334,9 +357,10 @@
   (swap! (:state (get-job id)) assoc :step step)
   )
 (defn set-sp [id speed]
-  (let [step (:step @(:state (get-job id)))]
+  (let [step (:step @(:state (get-job id)))
+        counter (:counter (get-job id))]
     (stop-s id true false)
-    (get-s speed {:id id})
+    (get-s speed {:id id :counter counter})
     (update-player id)
    )
   )
@@ -597,6 +621,7 @@
                          (some #(= (:name %) "note") (:params inst)) :note
                          (some #(= (:name %) "freq1") (:params inst)) :freq1
                          true false))
+        gated (some #(= (:name %) "gate") (:params inst))
         note-p #(do ;%
                   (if (= note-arg :freq) (midi->hz (note %)) (note %))
                   )
@@ -663,9 +688,13 @@
                           (conj (vec (rest pattern)) nil)))
         pattern (if (or ret-seq (map? pattern))
                   pattern
-                  (build-map-p
-                   pattern
-                   div is-space? bar-fn bar-note-fn))]
+                  (merge
+                   (build-map-p
+                    pattern
+                    div is-space? bar-fn bar-note-fn)
+                   (if gated
+                     {:synth inst :gated true}
+                     {})))]
     pattern
     )
   )
@@ -1063,6 +1092,13 @@
 (defsynth p-delay [audio-bus 10 out-bus 0 max-delay 0.2 delay 0.2 decay 1]
   (let [source (in:ar audio-bus 1)
         snd (comb-c:ar source max-delay delay decay)]
+    (replace-out:ar out-bus [snd snd])
+    )
+  )
+
+(defsynth p-compander [audio-bus 10 out-bus 0 thresh 0.5 below 1 above 1 clamp-time 0.01 relax-time 0.1]
+  (let [source (in:ar audio-bus 1)
+        snd (compander source source thresh  below above clamp-time relax-time)]
     (replace-out:ar out-bus [snd snd])
     )
   )

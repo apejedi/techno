@@ -12,21 +12,21 @@
 
 
 (comment
-  (def player (get-s 80))
+  (def player (get-s 80 {:div 8}))
   (def player 21)
   (stop-s player)
   (p/set-sp player 90)
   (p/rm-p player :hats)
-  (let [patterns {:kick (p/drums
+  (let [patterns {:kick (drum-p2
                          [:Kit4-Electro :Kit10-Vinyl]
                          [:k1 :|]
                          1/8)
-                  :hats (p/drums
+                  :hats (drum-p2
                          [:Kit10-Vinyl]
                          [:o1 :| :c1 :c2 :1 :c1 :|
                           :c2 :c1 :c1 :|]
                          1/4)
-                  :clap (p/drums
+                  :clap (drum-p2
                          [:Kit15-Electro]
                          [:cl1 :| :|]
                          1/4)
@@ -35,10 +35,12 @@
                          [:C2 :3 :A1 :1 :B1 :| :| :|]
                          1/8 0 [:dur 0.4])
                   }]
-    (p/rm-p player :all)
-    (doseq [[k p] patterns]
-      (p/add-p player p k)
-      )
+    ;(p/rm-p player :all)
+    ;(p/add-p player (:hats patterns) :hats)
+    (p/add-p player (:kick patterns) :kick)
+    ;; (doseq [[k p] patterns]
+    ;;   (p/add-p player p k)
+    ;;   )
     )
   )
 
@@ -573,7 +575,7 @@
 (def house3
   {:tempo 120
    :kick (p/build-map-p
-          [[(drum-s [:Kit18-Acoustic] :k1) [:amp 0.4]] :3]
+          [[(drum-s [:Kit4-Electro] :k1) [:amp 0.4]] :3]
           )
    :hat (drum-p2 [:Kit1-Acousticclose :Kit5-Electro]
                 [:2 :c5 :3 [:c5 :cl1] :3 :c5 :3
@@ -1310,5 +1312,47 @@
                :013 :5>  :| :| :|]
               1/16 0 [:amp 0.5 :dur 2.4 ])
 
+
+   })
+
+(def vinyl
+  {:drum1 (let []
+            (drum-p2
+             [:Kit9-Vinyl]
+             [:hf :|]
+             1/4))
+
+   :drum2 (let []
+            (drum-p2
+             [:Kit9-Vinyl]
+             [:k1 :2 :k1 :| :k1 :1 :s1 :| :2 :k1 :| :s1 :|]
+             1/4))
+
+   :drum3 (let []
+            (drum-p2
+             [:Kit9-Vinyl]
+             [(fn [d n]
+                (if (odd? n)
+                  (p/w-choose
+                   {(choose [:ride2 :ride1 :s1 :s2]) 0.3 nil 0.7}))
+                ) :|]
+             1/4))
+
+   :motif1 (p/scale-p
+            prophet
+            :D2 :major
+            [:5 :05 :4             :|
+             :04 :7                :|
+             :02 :5 [:cutoff 2000] :| :|]
+            1/8 0 [:amp 1.0 :cutoff 1700 :rq 0.3 :attack 0.01 :decay 1.6 ])
+
+   :harmony1 (p/scale-p
+              bass2
+              :D3 :major
+              [:5>> :05 :7> :|
+               :04 :4>>     :|
+               :04 :2>>     :|
+               :02 :1>> [:decay 4.4]     :| :| :| :| :|]
+              1/8 0 [:atk 0.5 :f-dur 0.001 :echo 0 :decay 3 :amp 1.0 :cutoff 2000.0 :cutoff2 4000 ])
 
    })

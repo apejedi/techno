@@ -87,23 +87,35 @@
     )
   )
 
-(defsynth sc303 [out-bus 0 freq 440 wave 0 ctf 100 res 0.2 sus 0 dec 1.0 env 1000 gate 0 vol 0.2]
-  (let [v (Math/pow 10 -9)
-        vol-env (env-gen (envelope [v 1 1 v] [0.01 sus dec] :exponential) gate)
-        fil-env (env-gen (envelope [v 1 v] [0.01 dec] :exponential) gate)
-        waves [(saw (* freq vol-env)) (pulse (* freq vol-env) 0.5)]
-        ;; sig (rlpf:ar
-        ;;      (select:ar wave waves)
-        ;;      (* env fil-env)
-        ;;      res)
-        sig (rlpf:ar
-             (select:ar wave waves)
-             (+ ctf (* env fil-env))
-             res)
-        sig (* sig vol)]
-    (out:ar out-bus [sig sig])
-    )
-  )
+(defsynth sc303
+  "A clone of the sound of a Roland TB-303 bass synthesizer."
+  [note     30        ; midi note value input
+   wave     0         ; 0=saw, 1=square
+   cutoff   100       ; bottom rlpf frequency
+   env      1000      ; + cutoff is top of rlpf frequency
+   res      0.2       ; rlpf resonance
+   sus      0         ; sustain level
+   dec      1.0       ; decay
+   amp      1.0       ; output amplitude
+   gate     [1 :tr]      ; on/off control
+   action   NO-ACTION ; keep or FREE the synth when done playing
+   position 0         ; position in stereo field
+   out-bus  0]
+  (let [freq-val   (midicps note)
+        amp-env    (env-gen (envelope [10e-10, 1, 1, 10e-10]
+                                          [0.01, sus, dec]
+                                          :exp)
+                              :gate gate :action action)
+        filter-env (env-gen (envelope [10e-10, 1, 10e-10]
+                                          [0.01, dec]
+                                          :exp)
+                              :gate gate :action action)
+        waves      [(* (saw freq-val) amp-env)
+                    (* (pulse freq-val 0.5) amp-env)]
+        tb303      (rlpf (select wave waves)
+                         (+ cutoff (* filter-env env))
+                         :rq res)]
+    (out out-bus (* amp (pan2 tb303 position)))))
 
 
 (defsynth organ
@@ -960,3 +972,36 @@
         sig (* amp (env-gen (perc 0.0001 dur) :action FREE) reverb)]
     (out:ar out-bus [sig sig])
     ))
+
+;; (demo
+;;  (let [wv 0.1                         ;mix saw/pulse
+;;                                         ;ac (dseq) ;accent
+;;        ac (line:kr 1 1)
+;;                                         ;freq (dseq) ;freq
+;;        freq (line:kr 100 200)
+;;                                         ;et (dseq)       ;trig
+;;        et 1
+;;                                         ;gt (dseq) ;gate
+;;        gt (line:kr 1 1)
+;;        acc-mod 1
+;;        cutoff 3000
+;;        lagfr (lag-ud freq 0.39 0.09)
+;;        lagfr (* lagfr (+ (* 0.0156 (lfd-noise3:kr 0.3)) 1))
+;;        w (* (+ 0.5 (softclip (* 550 (pow wv 4)))) (saw:ar lagfr))
+;;        amp (+ (pow (- wv 1.05) 6) 1)
+;;        w (* w 0.9 amp (+ (* 0.04 (lfd-noise3:ar 0.5)) 1))
+;;        ac-int (lpf:ar (* 12 ac) 1)
+;;        fenv (* (decay2:ar (+ (* 0.16 et) (* ac-int 0.02 acc-mod)) 0.01 0.12) (+ (* (lfd-noise3:ar 0.2) 0.003) 1))
+;;        w (* (rlpfd:ar w
+;;                       cutoff
+;;                       ;(+ cutoff (* fenv (- 15000 cutoff)))
+;;                       ;0
+;;                       (+ 0.6 (* ac-int 1.2 acc-mod))
+;;                       0.5)
+;;             2)
+;;        ;; w (leak-dc:ar w 0.995)
+;;        ;; w (+ w (* 0.04 (softclip (* 10 (hpf:ar w 400)))))
+;;        ;; w (* w (lag:ar gt 0.001))
+;;        ]
+;;    [w w]
+;;    ))
