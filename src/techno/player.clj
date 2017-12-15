@@ -735,7 +735,7 @@
                     (vector inst
                             (vec (concat [note-arg n]
                                          (if s-args s-args args))))))]
-    (phrase-p inst notes div nil args note-fn
+    (phrase-p inst notes div space args note-fn
               false
               #(let [r (fn [n] (re-matches #"([1-9]+)([b#><]+)*\|?([1-9]+)?" n))]
                    (or (and (keyword? %) (r (name %)))

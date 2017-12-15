@@ -239,37 +239,38 @@
     )
   )
 
-(defn get-annotated-pattern [data]
-  (let [text data
-        data (string/replace
-              (string/replace data " #(" " \\#(")
-              " @" " \\@")
-        ;r (readers/source-logging-push-back-reader data)
-        r (readers/indexing-push-back-reader data)
-        get-val (fn [raw start end]
-                  (find-match
-                   (string/replace
-                    (string/replace
-                     (string/replace raw #"\\# ([^\s]+)" "#$1")
-                     #"\\@ ([^\s]+)" "@$1")
-                    #"," "")
-                   (string/join "\n"
-                    (subvec
-                     (string/split-lines text)
-                     (dec start)
-                     (dec end)))))
-        start (readers/get-line-number r)]
-    (loop [cur (edn/read {:eof false} r) sequence-pos {}
-           start start end (readers/get-line-number r)]
-      (if cur
-        (let []
-          (doseq [c cur]
-              (println c start (readers/get-column-number r)))
-          (recur (edn/read {:eof false} r) sequence-pos end (readers/get-line-number r)))
-        sequence-pos)
-      )
-    )
-  )
+
+;; (defn get-annotated-pattern [data]
+;;   (let [text data
+;;         data (string/replace
+;;               (string/replace data " #(" " \\#(")
+;;               " @" " \\@")
+;;         r (readers/source-logging-push-back-reader data)
+;;         source (edn/read {:eof false} r)
+;;         tree (tree-seq sequential? identity source)
+;;         x (let [stream (java.io.StringReader. text)]
+;;             (loop [cur tree pos 0 c (.read stream)]
+;;               (loop [c c]
+;;                 (if (re-matches #"\s" (str (char c)))
+;;                   (recur (.read stream))))
+;;               ))
+;;         ;; p-type (cond (map? source) "map"
+;;         ;;              (.contains text "scale-p") "scale-p"
+;;         ;;              (.contains text "phrase-p") "phrase-p"
+;;         ;;              (.contains text "drum-p") "drum-p")
+;;         ;; pattern (first (filter #(and (sequential? %)
+;;         ;;                              (.contains (str (first %)) p-type))
+;;         ;;                        tree))
+;;         ;; p-data (cond (.equals p-type "scale-p") (nth pattern 4)
+;;         ;;              (.equals p-type "phrase-p") (nth pattern 2)
+;;         ;;              (.equals p-type "drum-p") (nth pattern 2))
+;;         ;; matcher (re-matcher (re-pattern (str "\\([a-z/]*" p-type)) text)
+;;         ;; x (re-find matcher)
+;;         ;; pos (.start matcher)
+;;         ]
+;;     pos
+;;     )
+;;   )
 
 (defn get-pattern-tbl [& patterns]
   (mapcat

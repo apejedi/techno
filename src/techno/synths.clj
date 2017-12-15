@@ -417,7 +417,7 @@
         snd (* 0.2 (g-verb snd 40 10 0.6 0.6 -3 -9 -11))
         snd (moog-ff snd (+ cutoff (* (sin-osc:kr 0.08) (/ cutoff 10))) 3 0)
         ;; snd (delay-c snd 1.5 1)
-        snd (* snd (env-gen:kr (adsr (* 0.1 dur) (* 0.1 dur) (* 0.6 dur) (* 0.2 dur)) :action 2))
+        snd (* snd (env-gen:kr (adsr-ng (* 0.1 dur) (* 0.1 dur) (* 0.6 dur) (* 0.2 dur)) :action FREE))
         snd (* amp (allpass-c snd 0.5 0.05 0.3))
         ]
     (out out-bus [snd snd])
@@ -976,7 +976,7 @@
 ;; (demo
 ;;  (let [wv 0.1                         ;mix saw/pulse
 ;;                                         ;ac (dseq) ;accent
-;;        ac (line:kr 1 1)
+;;        ac (impulse:kr 0.5)
 ;;                                         ;freq (dseq) ;freq
 ;;        freq (line:kr 100 200)
 ;;                                         ;et (dseq)       ;trig
@@ -991,12 +991,15 @@
 ;;        amp (+ (pow (- wv 1.05) 6) 1)
 ;;        w (* w 0.9 amp (+ (* 0.04 (lfd-noise3:ar 0.5)) 1))
 ;;        ac-int (lpf:ar (* 12 ac) 1)
-;;        fenv (* (decay2:ar (+ (* 0.16 et) (* ac-int 0.02 acc-mod)) 0.01 0.12) (+ (* (lfd-noise3:ar 0.2) 0.003) 1))
+;;        fenv (* (decay2:ar (+ (* 0.16 et) (* ac-int 0.02 acc-mod)
+;;                              )
+;;                           0.01 0.12)
+;;                (+ (* (lfd-noise3:ar 0.2) 0.003) 1))
 ;;        w (* (rlpfd:ar w
-;;                       cutoff
-;;                       ;(+ cutoff (* fenv (- 15000 cutoff)))
-;;                       ;0
-;;                       (+ 0.6 (* ac-int 1.2 acc-mod))
+;;                       ;cutoff
+;;                       (+ cutoff (* fenv (- 15000 cutoff)))
+;;                       0
+;;                       ;(+ 0.6 (* ac-int 1.2 acc-mod))
 ;;                       0.5)
 ;;             2)
 ;;        ;; w (leak-dc:ar w 0.995)
