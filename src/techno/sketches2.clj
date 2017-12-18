@@ -16,7 +16,7 @@
   (def player 21)
   (stop-s player)
   (p/set-sp player 90)
-  (p/rm-p player :hats)
+  (p/rm-p player :kick)
   (let [patterns {:kick (drum-p2
                          [:Kit4-Electro :Kit10-Vinyl]
                          [:k1 :|]
