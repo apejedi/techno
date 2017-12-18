@@ -3,7 +3,10 @@
         [techno.synths]
         )
   (:import [java.util.concurrent ScheduledThreadPoolExecutor TimeUnit ThreadPoolExecutor]
-           [java.io Writer]))
+           [java.io Writer]
+           [java.nio.channels AsynchronousSocketChannel]
+           [java.net InetSocketAddress]
+           [java.nio ByteBuffer]))
 
 (defrecord PoolInfo [thread-pool jobs-ref id-count-ref])
 (defrecord MutablePool [pool-atom])
@@ -15,6 +18,10 @@
 (defonce patterns (atom {}))
 (defonce listeners (atom {}))
 (defonce buffers (atom {}))
+(defonce tekno-client (atom nil))
+(defonce tekno-client-connected (atom nil))
+(defonce tekno-buffer (atom (ByteBuffer/allocate 128)))
+(defonce send-offsets (atom true))
 (declare mk-pool)
 (declare play)
 (declare mod-p)
@@ -62,6 +69,19 @@
 
 (defn get-beat [bar note div]
   (+ (* (dec bar) div) note)
+  )
+
+(defn mk-tekno-client []
+  (let [addr (InetSocketAddress. "127.0.0.1" 10000)
+        client (AsynchronousSocketChannel/open)
+        connect (try
+                  (.connect client addr)
+                  (catch Exception e
+                    (println (.getMessage e))))]
+    (reset! tekno-client client)
+    (reset! tekno-client-connected true)
+    client
+    )
   )
 
 (defn find-in [coll x]
@@ -208,7 +228,8 @@
                             args (if (and (not (nil? (:bus p-fx))) (nil? synth-inst))
                                    (concat args [:out-bus (:bus p-fx)]) args)
                             args (if (and (not (nil? (:group p-fx))) (nil? synth-inst))
-                                   (concat [[:head (:group p-fx)]] args) args)]
+                                   (concat [[:head (:group p-fx)]] args) args)
+                            pos (str [bar note])]
                         (when (not (nil? a))
                           (if gated
                             (if (not (nil? synth-inst))
@@ -217,6 +238,12 @@
                                      assoc-in [id k :synth-inst]
                                      (apply synth args)))
                             (apply a args))
+                          (when (= @send-offsets k)
+                            (.clear @tekno-buffer)
+                            (.put @tekno-buffer (.getBytes pos))
+                            (.limit @tekno-buffer (.length pos))
+                            (.rewind @tekno-buffer)
+                            (.write @tekno-client @tekno-buffer))
                           ))
                       ))
                   )
@@ -614,7 +641,7 @@
   )
 
 
-(defn phrase-p [inst pattern div & [space args mk-note ret-seq is-note? is-space?]]
+(defn phrase-p [inst pattern div & [space args mk-note ret-seq is-note? is-space? mk-block]]
   (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
                          (instance? overtone.sc.synth.Synth inst))
                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
@@ -653,7 +680,9 @@
         mk-action (fn [a b]
                     (cond
                       (and (is-note? a) (sequential? a))
-                      [(vec (apply concat (phrase-p inst a div 0 args mk-note true is-note?)))]
+                      (if mk-block
+                        (mk-block inst a div 0 args mk-note true is-note?)
+                        [(vec (apply concat (phrase-p inst a div 0 args mk-note true is-note?)))])
                       (is-note? a) [(mk-note a
                                              (merge-args args (if (is-arg? b) b []))
                                              note-arg)]

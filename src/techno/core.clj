@@ -240,37 +240,109 @@
   )
 
 
-;; (defn get-annotated-pattern [data]
-;;   (let [text data
-;;         data (string/replace
-;;               (string/replace data " #(" " \\#(")
-;;               " @" " \\@")
-;;         r (readers/source-logging-push-back-reader data)
-;;         source (edn/read {:eof false} r)
-;;         tree (tree-seq sequential? identity source)
-;;         x (let [stream (java.io.StringReader. text)]
-;;             (loop [cur tree pos 0 c (.read stream)]
-;;               (loop [c c]
-;;                 (if (re-matches #"\s" (str (char c)))
-;;                   (recur (.read stream))))
-;;               ))
-;;         ;; p-type (cond (map? source) "map"
-;;         ;;              (.contains text "scale-p") "scale-p"
-;;         ;;              (.contains text "phrase-p") "phrase-p"
-;;         ;;              (.contains text "drum-p") "drum-p")
-;;         ;; pattern (first (filter #(and (sequential? %)
-;;         ;;                              (.contains (str (first %)) p-type))
-;;         ;;                        tree))
-;;         ;; p-data (cond (.equals p-type "scale-p") (nth pattern 4)
-;;         ;;              (.equals p-type "phrase-p") (nth pattern 2)
-;;         ;;              (.equals p-type "drum-p") (nth pattern 2))
-;;         ;; matcher (re-matcher (re-pattern (str "\\([a-z/]*" p-type)) text)
-;;         ;; x (re-find matcher)
-;;         ;; pos (.start matcher)
-;;         ]
-;;     pos
-;;     )
-;;   )
+(defn get-annotated-pattern [data]
+  (try
+    (let [text data
+          data (string/replace
+                (string/replace data " #(" " \\#(")
+                " @" " \\@")
+          r (readers/source-logging-push-back-reader data)
+          source (edn/read {:eof false} r)
+          tree (filter #(not (list? %)) (tree-seq list? identity source))
+          tokenize (fn [text source whitespace list-as-token]
+                     (let [stream (java.io.StringReader. text)]
+                       (loop [tokens source pos 0 c (.read stream) type nil offsets {} n 0]
+                         (let [token (first tokens)
+                               [pos c] (loop [c c p pos]
+                                         (if (and (> c 0)
+                                              (re-matches
+                                               (re-pattern (str "[" whitespace "]"))
+                                               (str (char c))))
+                                           (recur (.read stream) (inc p))
+                                           [p c]))
+                               start-pos pos
+                               [pos word c] (loop [c c p pos w "" d 0]
+                                              (if (and (> c 0)
+                                                       (or (> d 0)
+                                                           (re-matches
+                                                            (re-pattern
+                                                             (str "[^" whitespace "]"))
+                                                            (str (char c)))))
+                                                (recur (.read stream)
+                                                       (inc p)
+                                                       (str w (char c))
+                                                       (cond (= (char c) \[) (inc d)
+                                                             (= (char c) \]) (dec d)
+                                                             (and list-as-token (= (char c) \()) (inc d)
+                                                             (and list-as-token (= (char c) \))) (dec d)
+                                                             true d)
+                                                       )
+                                                [p w c]))
+                               type (cond (.contains word "scale-p") :scale-p
+                                          (.contains word "phrase-p") :phrase-p
+                                          (.contains word "drum-p") :drum-p
+                                          true type)
+                               c (.read stream)]
+                           (if (and (> c 0) (> (count tokens) 0))
+                               (recur (rest tokens) (inc pos) c type (assoc offsets n [start-pos pos]) (inc n))
+                             [type offsets])
+                           )
+                         )))
+          [type offset-map] (tokenize text tree "\\s()" false)
+          pattern-idx (+ (first
+                          (keep-indexed
+                           #(if (.contains (str %2) (name type)) %1) tree))
+                         (cond (= type :scale-p) 4
+                               (= type :phrase-p) 2
+                               (= type :drum-p) 2
+                               true 0))
+          pattern (nth tree pattern-idx)
+          pattern-pos (get offset-map pattern-idx)
+          pattern-offsets (second (tokenize (.substring text (inc (first pattern-pos)) (dec (second pattern-pos))) pattern "\\s" true))
+          is-rest? (cond (= type :scale-p) #(and (keyword? %) (= \0 (first (name %))))
+                         (or (= type :drum-p) (= type :phrase-p)) #(and (keyword? %) (re-find #"^\d" (name %))))
+          div (/ 1 (:div (load-string data)))
+          is-note? (cond (= type :scale-p)
+                         #(let [r (fn [n] (re-matches #"([1-9]+)([b#><]+)*\|?([1-9]+)?" n))]
+                            (or (and (keyword? %) (r (name %)))
+                                (and (sequential? %) (keyword? (first %)) (r (name (first %))))))
+                         true false)
+          pattern-map (p/phrase-p nil pattern div nil []
+                                  (fn [n & [n-args]]
+                                    (str n))
+                                  false is-note? is-rest?
+                                  (fn [in a & args]
+                                    [(str a)]))
+          pattern-map (clojure.walk/prewalk #(if (and (list? %) (= (first %) 'fn)) (str %) %) pattern-map)
+          size (p/p-size pattern-map)
+          offset-map (loop [pos 1 offset-map '() pattern pattern n 0]
+                       (let [path (p/get-pos pos (/ 1 div))
+                             action (get-in pattern-map path)
+                             [pattern n] (if (and (not (= action [])) (not (nil? action)))
+                                           (loop [p pattern n n]
+                                             (if (and (not (.equals action (str (first p)))) (> (count p) 0))
+                                               (recur (rest p) (inc n))
+                                               [p n]))
+                                           [pattern n])
+                             offset-map (if (and (not (= action [])) (not (nil? action)))
+                                          (conj offset-map
+                                                (list
+                                                 (str path)
+                                                 (list (+ (first (get pattern-offsets n))
+                                                          (first pattern-pos) 2)
+                                                       (+ (second (get pattern-offsets n))
+                                                          (first pattern-pos) 2))))
+                                          offset-map)]
+                         (if (< pos size)
+                           (recur (inc pos) offset-map pattern n)
+                           offset-map)))]
+      offset-map
+      )
+    (catch Exception e
+      (println (.getMessage e))
+      ;(spit "log" (with-out-str (clojure.stacktrace/print-stack-trace e)))
+      ))
+  )
 
 (defn get-pattern-tbl [& patterns]
   (mapcat

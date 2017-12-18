@@ -417,7 +417,7 @@
         snd (* 0.2 (g-verb snd 40 10 0.6 0.6 -3 -9 -11))
         snd (moog-ff snd (+ cutoff (* (sin-osc:kr 0.08) (/ cutoff 10))) 3 0)
         ;; snd (delay-c snd 1.5 1)
-        snd (* snd (env-gen:kr (adsr-ng (* 0.1 dur) (* 0.1 dur) (* 0.6 dur) (* 0.2 dur)) :action FREE))
+        snd (* snd (env-gen:kr (adsr-ng (* 0.1 dur) 1 (* 0.1 dur) (* 0.6 dur) (* 0.2 dur)) :action FREE))
         snd (* amp (allpass-c snd 0.5 0.05 0.3))
         ]
     (out out-bus [snd snd])
