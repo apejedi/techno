@@ -230,7 +230,7 @@
                                    (concat args [:out-bus (:bus p-fx)]) args)
                             args (if (and (not (nil? (:group p-fx))) (nil? synth-inst))
                                    (concat [[:head (:group p-fx)]] args) args)
-                            pos (str [bar note])]
+                            pos (str [bar (if (fn? (get v bar)) 1 note)])]
                         (when (not (nil? a))
                           (if gated
                             (if (not (nil? synth-inst))
@@ -359,7 +359,7 @@
         x (stop-s 0)
         player (get-s tempo {:id 0 :queued true})]
     (doseq [p patterns]
-      (add-p player p (keyword (gensym "pattern")) {:no-group true}))
+      (add-p player p (if (contains? p :key) (:key p) (keyword (gensym "pattern"))) {:no-group true}))
     (let [state (:state (get @(:jobs-ref @pool) player))]
       (add-listener 0 :one-shot
                     (fn [b] (when (= b (:size @state))

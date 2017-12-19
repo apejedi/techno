@@ -45,110 +45,38 @@
   )
 
 (def template
-  {:drum1 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:Kit15-Electro]
-             []
-             1/4))
-   :drum2 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:Kit15-Electro]
-             []
-             1/4))
-   :drum3 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:Kit15-Electro]
-             []
-             1/4))
-   :drum4 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:Kit15-Electro]
-             []
-             1/4))
-   :drum5 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:Kit15-Electro]
-             []
-             1/4))
-   :drum6 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:Kit15-Electro]
-             []
-             1/4))
-   :drum7 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:Kit15-Electro]
-             []
-             1/4))
-   :drum8 (let [o o-kick
-                s o-snr
-                b b-kick
-                bs b-snr
-                c o-clap
-                h o-hat
-                d dirty-kick
-                g g-kick
-                r r-kick]
-            (drum-p2
-             [:Kit15-Electro]
-             []
-             1/4))
+  {:drum1 (drum-p2
+           [:Kit15-Electro]
+           []
+           1/4)
+   :drum2 (drum-p2
+           [:Kit15-Electro]
+           []
+           1/4)
+   :drum3 (drum-p2
+           [:Kit15-Electro]
+           []
+           1/4)
+   :drum4 (drum-p2
+           [:Kit15-Electro]
+           []
+           1/4)
+   :drum5 (drum-p2
+           [:Kit15-Electro]
+           []
+           1/4)
+   :drum6 (drum-p2
+           [:Kit15-Electro]
+           []
+           1/4)
+   :drum7 (drum-p2
+           [:Kit15-Electro]
+           []
+           1/4)
+   :drum8 (drum-p2
+           [:Kit15-Electro]
+           []
+           1/4)
    :motif1 (p/phrase-p
             bpfsaw
             []
@@ -1354,5 +1282,64 @@
                :04 :2>>     :|
                :02 :1>> [:decay 4.4]     :| :| :| :| :|]
               1/8 0 [:atk 0.5 :f-dur 0.001 :echo 0 :decay 3 :amp 1.0 :cutoff 2000.0 :cutoff2 4000 ])
+
+   })
+
+(def pad-test
+  {:motif1 (merge
+            (p/scale-p
+             bass2
+             :C2 :major
+             [(fn [d n]
+                (cond (= n 1)
+                      (choose [:1 :3< :5<])
+                      (odd? n) (get-in d [1 1]))
+                ) :| :|]
+             1/4 0 [:dur 0.3 :cutoff2 6000 :f-dur 1])
+            {:fx {:reverb [p/p-reverb :roomsize 30]}}
+            )
+
+   :harmony1 (p/scale-p
+              chicago-pad
+              :C4 :major
+              [[:3> :6>]     :|
+               :|
+               :06 :2> :5>   :|
+               :|
+               :|
+               :05 [:1 :4]   :|
+               :|
+               :|
+               :03 [:7> :3>] :| :| :| :|]
+              1/8 0 [:cutoff 500.0 :amp 1.0 :dur 4 ])
+
+   :drum1 (drum-p2
+           [:Kit14-Acoustic]
+           [[r-kick [] o-kick [:amp 0.3]] :|]
+           1/8)
+
+   :drum2 (drum-p2
+           [:Kit12-Vinyl]
+           [(fn [d n]
+              [(choose [:c1 :c2 :c3 nil]) [:amp 0.5]]
+              ) :|]
+           1/4)
+   :zap (merge
+         (p/scale-p
+          zap
+          :C4 :major
+          [:2< :05 :2< :|
+           :04 :2<     :|
+           :02 :2<     :|
+           :1<         :|]
+          1/8 0 [:dur 0.4 :amp 1.0 :sig2 1 :mul 0.5 ])
+         {:fx {:reverb [p/p-reverb :roomsize 30 :drylevel 2]}})
+   :clap (merge
+          (drum-p2
+           [:Kit15-Electro]
+           [                            :|
+            :cl1 (fn [d] (choose [:cl1 nil])) (fn [d] (choose [:cl1 nil])) :|]
+           1/4)
+          {:fx {:reverb [p/p-reverb :roomsize 70]}})
 
    })

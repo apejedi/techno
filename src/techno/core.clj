@@ -282,9 +282,10 @@
                                           (.contains word "phrase-p") :phrase-p
                                           (.contains word "drum-p") :drum-p
                                           true type)
-                               c (.read stream)]
+                               c (.read stream)
+                               offsets (assoc offsets n [start-pos pos])]
                            (if (and (> c 0) (> (count tokens) 0))
-                               (recur (rest tokens) (inc pos) c type (assoc offsets n [start-pos pos]) (inc n))
+                               (recur (rest tokens) (inc pos) c type offsets (inc n))
                              [type offsets])
                            )
                          )))
@@ -313,18 +314,20 @@
                                   false is-note? is-rest?
                                   (fn [in a & args]
                                     [(str a)]))
-          pattern-map (clojure.walk/prewalk #(if (and (list? %) (= (first %) 'fn)) (str %) %) pattern-map)
+          pattern-map (clojure.walk/prewalk
+                       #(if (and (list? %) (= (first %) 'fn)) (str %) %)
+                       pattern-map)
           size (p/p-size pattern-map)
           offset-map (loop [pos 1 offset-map '() pattern pattern n 0]
                        (let [path (p/get-pos pos (/ 1 div))
                              action (get-in pattern-map path)
-                             [pattern n] (if (and (not (= action [])) (not (nil? action)))
-                                           (loop [p pattern n n]
-                                             (if (and (not (.equals action (str (first p)))) (> (count p) 0))
-                                               (recur (rest p) (inc n))
-                                               [p n]))
-                                           [pattern n])
-                             offset-map (if (and (not (= action [])) (not (nil? action)))
+                             [pattern n found] (if (and (not (= action [])) (not (nil? action)))
+                                                 (loop [p pattern n n]
+                                                   (if (and (not (.equals action (str (first p)))) (> (count p) 0))
+                                                     (recur (rest p) (inc n))
+                                                     [p n true]))
+                                                 [pattern n false])
+                             offset-map (if found
                                           (conj offset-map
                                                 (list
                                                  (str path)
@@ -332,7 +335,10 @@
                                                           (first pattern-pos) 2)
                                                        (+ (second (get pattern-offsets n))
                                                           (first pattern-pos) 2))))
-                                          offset-map)]
+                                          offset-map)
+                             [pattern n] (if found
+                                           [(rest pattern) (inc n)]
+                                           [pattern n])]
                          (if (< pos size)
                            (recur (inc pos) offset-map pattern n)
                            offset-map)))]
@@ -340,7 +346,7 @@
       )
     (catch Exception e
       (println (.getMessage e))
-      ;(spit "log" (with-out-str (clojure.stacktrace/print-stack-trace e)))
+      ;(clojure.stacktrace/print-stack-trace e)
       ))
   )
 
