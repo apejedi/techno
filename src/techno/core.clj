@@ -253,12 +253,11 @@
                      (let [stream (java.io.StringReader. text)]
                        (loop [tokens source pos 0 c (.read stream) type nil offsets {} n 0]
                          (let [token (first tokens)
-                               [pos c] (loop [c c p pos]
+                               [pos c] (loop [c c p pos in-comment (.booleanValue (= c 59))]
                                          (if (and (> c 0)
-                                              (re-matches
-                                               (re-pattern (str "[" whitespace "]"))
-                                               (str (char c))))
-                                           (recur (.read stream) (inc p))
+                                                  (or (re-matches (re-pattern (str "[;" whitespace "]")) (str (char c)))
+                                                      in-comment))
+                                           (recur (.read stream) (inc p) (cond (= c 59) true (= c 10) false true in-comment))
                                            [p c]))
                                start-pos pos
                                [pos word c] (loop [c c p pos w "" d 0]
@@ -278,6 +277,7 @@
                                                              true d)
                                                        )
                                                 [p w c]))
+                               ;x (if prin (println word) (first tokens))
                                type (cond (.contains word "scale-p") :scale-p
                                           (.contains word "phrase-p") :phrase-p
                                           (.contains word "drum-p") :drum-p
@@ -291,6 +291,10 @@
                            )
                          )))
           [type offset-map] (tokenize text tree "\\s()" false)
+          is-rest? (cond (= type :scale-p) #(and (keyword? %) (= \0 (first (name %))))
+                         (or (= type :drum-p) (= type :phrase-p)) #(and (keyword? %) (re-find #"^\d" (name %))))
+          div (/ 1 (:div (load-string data)))
+          is-note? #(and (not (is-rest? %)) (not (and (sequential? %) (keyword? (first %)) (number? (second %)))) (not (= :| %)))
           pattern-idx (+ (first
                           (keep-indexed
                            #(if (.contains (str %2) (name type)) %1) tree))
@@ -299,21 +303,15 @@
                                (= type :drum-p) 2
                                (= type :map-p) 1
                                true 0))
+          pad (if (or (= :scale-p type) (= :phrase-p type))
+                (nth tree (+ pattern-idx 2))
+                0)
           pattern (nth tree pattern-idx)
           pattern-pos (get offset-map pattern-idx)
           pattern-offsets (second (tokenize (.substring text (inc (first pattern-pos)) (dec (second pattern-pos))) pattern "\\s" true))
-          is-rest? (cond (= type :scale-p) #(and (keyword? %) (= \0 (first (name %))))
-                         (or (= type :drum-p) (= type :phrase-p)) #(and (keyword? %) (re-find #"^\d" (name %))))
-          div (/ 1 (:div (load-string data)))
-          is-note? #(and (not (is-rest? %)) (not (and (sequential? %) (keyword? (first %)) (number? (second %)))) (not (= :| %)))
-          ;; (cond (= type :scale-p)
-                   ;;       #(let [r (fn [n] (re-matches #"([1-9]+)([b#><]+)*\|?([1-9]+)?" n))]
-                   ;;          (or (and (keyword? %) (r (name %)))
-                   ;;              (and (sequential? %) (keyword? (first %)) (r (name (first %))))))
-                   ;;       true false)
           pattern-map (if (= type :map-p)
                         (p/build-map-p pattern div)
-                        (p/phrase-p nil pattern div nil []
+                        (p/phrase-p nil pattern div pad []
                                     (fn [n & [n-args]]
                                       (str n))
                                     false is-note? is-rest?
