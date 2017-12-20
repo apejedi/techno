@@ -281,6 +281,7 @@
                                type (cond (.contains word "scale-p") :scale-p
                                           (.contains word "phrase-p") :phrase-p
                                           (.contains word "drum-p") :drum-p
+                                          (.contains word "map-p") :map-p
                                           true type)
                                c (.read stream)
                                offsets (assoc offsets n [start-pos pos])]
@@ -296,6 +297,7 @@
                          (cond (= type :scale-p) 4
                                (= type :phrase-p) 2
                                (= type :drum-p) 2
+                               (= type :map-p) 1
                                true 0))
           pattern (nth tree pattern-idx)
           pattern-pos (get offset-map pattern-idx)
@@ -303,17 +305,20 @@
           is-rest? (cond (= type :scale-p) #(and (keyword? %) (= \0 (first (name %))))
                          (or (= type :drum-p) (= type :phrase-p)) #(and (keyword? %) (re-find #"^\d" (name %))))
           div (/ 1 (:div (load-string data)))
-          is-note? (cond (= type :scale-p)
-                         #(let [r (fn [n] (re-matches #"([1-9]+)([b#><]+)*\|?([1-9]+)?" n))]
-                            (or (and (keyword? %) (r (name %)))
-                                (and (sequential? %) (keyword? (first %)) (r (name (first %))))))
-                         true false)
-          pattern-map (p/phrase-p nil pattern div nil []
-                                  (fn [n & [n-args]]
-                                    (str n))
-                                  false is-note? is-rest?
-                                  (fn [in a & args]
-                                    [(str a)]))
+          is-note? #(and (not (is-rest? %)) (not (and (sequential? %) (keyword? (first %)) (number? (second %)))) (not (= :| %)))
+          ;; (cond (= type :scale-p)
+                   ;;       #(let [r (fn [n] (re-matches #"([1-9]+)([b#><]+)*\|?([1-9]+)?" n))]
+                   ;;          (or (and (keyword? %) (r (name %)))
+                   ;;              (and (sequential? %) (keyword? (first %)) (r (name (first %))))))
+                   ;;       true false)
+          pattern-map (if (= type :map-p)
+                        (p/build-map-p pattern div)
+                        (p/phrase-p nil pattern div nil []
+                                    (fn [n & [n-args]]
+                                      (str n))
+                                    false is-note? is-rest?
+                                    (fn [in a & args]
+                                      [(str a)])))
           pattern-map (clojure.walk/prewalk
                        #(if (and (list? %) (= (first %) 'fn)) (str %) %)
                        pattern-map)
@@ -323,7 +328,7 @@
                              action (get-in pattern-map path)
                              [pattern n found] (if (and (not (= action [])) (not (nil? action)))
                                                  (loop [p pattern n n]
-                                                   (if (and (not (.equals action (str (first p)))) (> (count p) 0))
+                                                   (if (and (not (.equals (str action) (str (first p)))) (> (count p) 0))
                                                      (recur (rest p) (inc n))
                                                      [p n true]))
                                                  [pattern n false])
