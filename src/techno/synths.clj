@@ -849,7 +849,7 @@
         sig (saw:ar freq)
         sig2 (* 0.2 (pulse:ar (* freq (midiratio -4)) (lin-exp (lf-noise1:kr 10) -1 1 0.2 0.9)))
         sig (mix:ar [sig sig2])
-        sig (moog-ff:ar sig (x-line:ar freq (* freq max-freq)))
+        sig (moog-ff:ar sig (x-line:ar freq (* freq max-freq) (* dur release)))
         env (env-gen:kr (envelope [0 1 0.7 0] [(* dur atk) (* dur 0.4 release) (* dur release 0.6)]) :action FREE)
         sig (* sig env)]
    (out:ar out-bus [sig sig])

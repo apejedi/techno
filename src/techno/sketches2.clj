@@ -1343,3 +1343,50 @@
           {:fx {:reverb [p/p-reverb :roomsize 70]}})
 
    })
+
+(def cs3
+  {:motif1 (p/scale-p
+            bass2
+            :D4 :major
+            [:3<<< :| :|
+             :5<<< :| :|
+             :1<< :| :|
+             :7<<< :| :|]
+            1/8 0 [:atk 1 :f-dur 0.5 :echo 0 :decay 2 :amp 1.0 :cutoff 2000 :cutoff2 1000 ])
+
+   :drum3 (drum-p2
+           [:Kit15-Electro]
+           [ :| :cl1 :|]
+           1/4)
+   :drum2 (drum-p2
+           [:Kit5-Electro]
+           [(fn [d n]
+              (cond (= n 1) (choose [:k1 :k2])
+                    (odd? n) (choose [:fx1 :fx3 :s1 :hf nil])
+                    true (p/w-choose {:s1 0.5 nil 0.5}))
+              ) :|]
+           1/4)
+   :harmony1 (merge
+              (p/scale-p
+               cs80
+               :D4 :major
+               [:1> :|
+                :|
+                :5> :|
+                :|
+                :02 :3> :|
+                :|
+                :07 :7 [:dur 4] :| :| :| :| :| :|]
+               1/8 0 [:amp 0.2 :dur 3.0 :atk 0.3 :rq 0.5 :cutoff 3000 :dtune 0.002 :vibrate 1.0 :vibdepth 0 :freq-lag 0.1 ])
+                                        ;{:fx {:shift [p/p-pitch-shift :pitch-ratio 1.5]}}
+              )
+   :motif2 (p/scale-p
+            bass2
+            :D4 :major
+            [:1< :01 :1< :03 :7<< :|
+             :02 :3< :02 :5< :|
+             :3< :01 (fn [d] (choose [:4< :4 :3])) :03 :1< :| :|]
+            1/8 0 [:atk 0.001 :f-dur 0.5
+                   :echo 0 :decay 1.3 :amp 1.0 :cutoff 2000 :cutoff2 5000])
+
+   })

@@ -249,35 +249,37 @@
           r (readers/source-logging-push-back-reader data)
           source (edn/read {:eof false} r)
           tree (filter #(not (list? %)) (tree-seq list? identity source))
+          read-whitespace (fn [cur pos stream whitespace]
+                            (loop [c cur p pos in-comment (.booleanValue (= c 59))]
+                              (if (and (> c 0)
+                                       (or (re-matches (re-pattern (str "[,;" whitespace "]")) (str (char c)))
+                                           in-comment))
+                                (recur (.read stream) (inc p) (cond (= c 59) true (= c 10) false true in-comment))
+                                [p c])))
+          read-token (fn [cur pos stream whitespace list-as-token map-as-token]
+                       (loop [c cur p pos w "" d 0]
+                         ;; (if (and (not map-as-token) (> c 0)) (print (char c)))
+                         (if (and (> c 0)
+                                  (or (> d 0)
+                                      (re-matches
+                                       (re-pattern
+                                        (str "[^" whitespace "]"))
+                                       (str (char c))))
+                                  (not (and (not map-as-token) (or (= c 123) (= c 125)))))
+                           (recur (.read stream)
+                                  (inc p)
+                                  (str w (char c))
+                                  (cond (or (= (char c) \[) (and map-as-token (= (char c) \{)) (and list-as-token (= (char c) \())) (inc d)
+                                        (or (= (char c) \]) (and map-as-token (= (char c) \})) (and list-as-token (= (char c) \)))) (dec d)
+                                        true d))
+                           [p w c])))
           tokenize (fn [text source whitespace list-as-token]
                      (let [stream (java.io.StringReader. text)]
                        (loop [tokens source pos 0 c (.read stream) type nil offsets {} n 0]
                          (let [token (first tokens)
-                               [pos c] (loop [c c p pos in-comment (.booleanValue (= c 59))]
-                                         (if (and (> c 0)
-                                                  (or (re-matches (re-pattern (str "[;" whitespace "]")) (str (char c)))
-                                                      in-comment))
-                                           (recur (.read stream) (inc p) (cond (= c 59) true (= c 10) false true in-comment))
-                                           [p c]))
+                               [pos c] (read-whitespace c pos stream whitespace)
                                start-pos pos
-                               [pos word c] (loop [c c p pos w "" d 0]
-                                              (if (and (> c 0)
-                                                       (or (> d 0)
-                                                           (re-matches
-                                                            (re-pattern
-                                                             (str "[^" whitespace "]"))
-                                                            (str (char c)))))
-                                                (recur (.read stream)
-                                                       (inc p)
-                                                       (str w (char c))
-                                                       (cond (= (char c) \[) (inc d)
-                                                             (= (char c) \]) (dec d)
-                                                             (and list-as-token (= (char c) \()) (inc d)
-                                                             (and list-as-token (= (char c) \))) (dec d)
-                                                             true d)
-                                                       )
-                                                [p w c]))
-                               ;x (if prin (println word) (first tokens))
+                               [pos word c] (read-token c pos stream whitespace list-as-token true)
                                type (cond (.contains word "scale-p") :scale-p
                                           (.contains word "phrase-p") :phrase-p
                                           (.contains word "drum-p") :drum-p
@@ -288,8 +290,7 @@
                            (if (and (> c 0) (> (count tokens) 0))
                                (recur (rest tokens) (inc pos) c type offsets (inc n))
                              [type offsets])
-                           )
-                         )))
+                           ))))
           [type offset-map] (tokenize text tree "\\s()" false)
           is-rest? (cond (= type :scale-p) #(and (keyword? %) (= \0 (first (name %))))
                          (or (= type :drum-p) (= type :phrase-p)) #(and (keyword? %) (re-find #"^\d" (name %))))
@@ -308,10 +309,13 @@
                 0)
           pattern (nth tree pattern-idx)
           pattern-pos (get offset-map pattern-idx)
-          pattern-offsets (second (tokenize (.substring text (inc (first pattern-pos)) (dec (second pattern-pos))) pattern "\\s" true))
-          pattern-map (if (= type :map-p)
+          pattern-offsets (if (map? pattern) {}
+                              (second (tokenize (.substring text (inc (first pattern-pos)) (dec (second pattern-pos))) pattern "\\s" true)))
+          pattern-map (cond
+                        (map? pattern) '()
+                        (= type :map-p)
                         (p/build-map-p pattern div)
-                        (p/phrase-p nil pattern div pad []
+                        true (p/phrase-p nil pattern div pad []
                                     (fn [n & [n-args]]
                                       (str n))
                                     false is-note? is-rest?
@@ -320,31 +324,62 @@
           pattern-map (clojure.walk/prewalk
                        #(if (and (list? %) (= (first %) 'fn)) (str %) %)
                        pattern-map)
-          size (p/p-size pattern-map)
-          offset-map (loop [pos 1 offset-map '() pattern pattern n 0]
-                       (let [path (p/get-pos pos (/ 1 div))
-                             action (get-in pattern-map path)
-                             [pattern n found] (if (and (not (= action [])) (not (nil? action)))
-                                                 (loop [p pattern n n]
-                                                   (if (and (not (.equals (str action) (str (first p)))) (> (count p) 0))
-                                                     (recur (rest p) (inc n))
-                                                     [p n true]))
-                                                 [pattern n false])
-                             offset-map (if found
-                                          (conj offset-map
-                                                (list
-                                                 (str path)
-                                                 (list (+ (first (get pattern-offsets n))
-                                                          (first pattern-pos) 2)
-                                                       (+ (second (get pattern-offsets n))
-                                                          (first pattern-pos) 2))))
-                                          offset-map)
-                             [pattern n] (if found
-                                           [(rest pattern) (inc n)]
-                                           [pattern n])]
-                         (if (< pos size)
-                           (recur (inc pos) offset-map pattern n)
-                           offset-map)))]
+          size (if (not (map? pattern)) (p/p-size pattern-map))
+          offset-map (if (map? pattern)
+                       ;'()
+                       (let [stream (java.io.StringReader. (.substring text (inc (first pattern-pos)) (dec (second pattern-pos))))
+                             cur (.read stream)
+                             whitespace "\\s"]
+                         (loop [c cur pos 0 key? true in-bar? true bar nil note nil offsets '()]
+                           ;(println "in-bar" in-bar? "key" key? "bar" bar "note" note)
+                           (let [[start-pos c] (read-whitespace c pos stream whitespace)
+                                 [pos token c] (read-token c start-pos stream whitespace true false)
+                                 is-number? (re-matches #"\d+" token)
+                                 bar (if (and in-bar? key? is-number?)
+                                       (Integer/parseInt token)
+                                       bar)
+                                 note (if (and (not in-bar?) key? is-number?)
+                                       (Integer/parseInt token)
+                                       note)
+                                 ;x (if (> c 0) (println (char c) start-pos pos))
+                                 is-boundary? (or (= c 123) (= c 125))
+                                 insert (and (or (not (.endsWith token "}")) (not is-boundary?)) (not key?))
+                                 in-bar? (if is-boundary?
+                                           (not in-bar?)
+                                           in-bar?)
+                                 key? (if is-boundary? true (not key?))]
+                             ;(println token "insert" insert)
+                             (if (> c 0)
+                               (recur (.read stream) (inc pos) key? in-bar? bar note
+                                      (if insert (conj offsets (list (str [bar note])
+                                                                     (list (+ (first pattern-pos) start-pos 2)
+                                                                           (+ (first pattern-pos) pos 2)))) offsets))
+                               offsets)
+                             )))
+                       (loop [pos 1 offset-map '() pattern pattern n 0]
+                         (let [path (p/get-pos pos (/ 1 div))
+                               action (get-in pattern-map path)
+                               [pattern n found] (if (and (not (= action [])) (not (nil? action)))
+                                                   (loop [p pattern n n]
+                                                     (if (and (not (.equals (str action) (str (first p)))) (> (count p) 0))
+                                                       (recur (rest p) (inc n))
+                                                       [p n true]))
+                                                   [pattern n false])
+                               offset-map (if found
+                                            (conj offset-map
+                                                  (list
+                                                   (str path)
+                                                   (list (+ (first (get pattern-offsets n))
+                                                            (first pattern-pos) 2)
+                                                         (+ (second (get pattern-offsets n))
+                                                            (first pattern-pos) 2))))
+                                            offset-map)
+                               [pattern n] (if found
+                                             [(rest pattern) (inc n)]
+                                             [pattern n])]
+                           (if (< pos size)
+                             (recur (inc pos) offset-map pattern n)
+                             offset-map))))]
       offset-map
       )
     (catch Exception e

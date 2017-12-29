@@ -173,6 +173,7 @@
               divs (conj (map #(get % :div) (vals (get @patterns id))) (:div state))
               div (apply lcmv divs)
               bpm (:bpm state)
+              old-size (:size state)
               size (apply max
                           (map
                            (fn [[k p]]
@@ -181,12 +182,16 @@
                                s
                                ))
                            (get @patterns id)))
-              counter (:state (get-job id))]
-                                        ;(println div (:div state))
+              counter (:counter state)
+              new-counter (apply get-beat
+                             (conj (get-pos @counter (:div state) size div)
+                                   div))]
           (when (or (not (= 0 (mod div (:div state)))) (> div (:div state)))
             (stop-s id true false)
             (get-s bpm (merge state {:id id :div div :size size})))
           (set-size id size)
+          (dosync
+           (ref-set counter new-counter))
           ))
     (catch Exception e
       (println (str "caught exception: " (.getMessage e))))
@@ -386,9 +391,10 @@
   )
 (defn set-sp [id speed]
   (let [step (:step @(:state (get-job id)))
-        counter (:counter (get-job id))]
+        counter (:counter (get-job id))
+        div (:div (get-state id))]
     (stop-s id true false)
-    (get-s speed {:id id :counter counter})
+    (get-s speed {:id id :counter counter :div div})
     (update-player id)
    )
   )
@@ -1129,6 +1135,13 @@
 (defsynth p-compander [audio-bus 10 out-bus 0 thresh 0.5 below 1 above 1 clamp-time 0.01 relax-time 0.1]
   (let [source (in:ar audio-bus 1)
         snd (compander source source thresh  below above clamp-time relax-time)]
+    (replace-out:ar out-bus [snd snd])
+    )
+  )
+
+(defsynth p-pitch-shift [audio-bus 10 out-bus 0 window-size 0.2 pitch-ratio 1 pitch-dispersion 0 time-dispersion 0]
+  (let [source (in:ar audio-bus 1)
+        snd (pitch-shift source window-size pitch-ratio pitch-dispersion time-dispersion)]
     (replace-out:ar out-bus [snd snd])
     )
   )
