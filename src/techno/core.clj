@@ -294,7 +294,7 @@
           [type offset-map] (tokenize text tree "\\s()" false)
           is-rest? (cond (= type :scale-p) #(and (keyword? %) (= \0 (first (name %))))
                          (or (= type :drum-p) (= type :phrase-p)) #(and (keyword? %) (re-find #"^\d" (name %))))
-          div (/ 1 (:div (load-string data)))
+          div (/ 1 (:div (load-string text)))
           is-note? #(and (not (is-rest? %)) (not (and (sequential? %) (keyword? (first %)) (number? (second %)))) (not (= :| %)))
           pattern-idx (+ (first
                           (keep-indexed

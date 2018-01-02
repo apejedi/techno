@@ -134,7 +134,7 @@
          job (schedule-job @pool
                            play
                            period
-                           (merge {:bpm bpm :size size :div div}
+                           (merge {:bpm bpm :size size :div div :counter counter}
                                   args)
                            counter)
          ]
@@ -194,7 +194,9 @@
            (ref-set counter new-counter))
           ))
     (catch Exception e
-      (println (str "caught exception: " (.getMessage e))))
+      (.println System/out (str "caught exception: " (.getMessage e)))
+      ;(.printStackTrace e)
+      )
     )
   )
 
@@ -263,8 +265,7 @@
                (commute counter inc))))
           ))
     (catch Exception e (println (.getMessage e))
-           (if (= id 0) (stop-s 0))
-           (.printStackTrace e)))
+           (if (= id 0) (stop-s 0))))
   )
 
 (defn get-action-str [action & [samples sample-var]]
@@ -365,11 +366,11 @@
         player (get-s tempo {:id 0 :queued true})]
     (doseq [p patterns]
       (add-p player p (if (contains? p :key) (:key p) (keyword (gensym "pattern"))) {:no-group true}))
-    (let [state (:state (get @(:jobs-ref @pool) player))]
+    (let [state (get-state player)]
       (add-listener 0 :one-shot
-                    (fn [b] (when (= b (:size @state))
+                    (fn [b] (when (= b (:size state))
                               (stop-s 0))))
-      (swap! state dissoc :queued))
+      (swap! (:state (get @(:jobs-ref @pool) player)) dissoc :queued))
     )
   )
 (defn mod-p [& args]
@@ -677,11 +678,21 @@
                           (or (keyword? action) (number? action) (not (empty? action))) (vec (mk-note action args note-arg))))
         bar-fn (fn [f bar]
                  (fn [p key b]
-                   (let [a (f (get-in @p (conj key :data)) b)]
+                   (let [args (if (some #{3}
+                                        (map #(alength (.getParameterTypes %))
+                                             (-> f class .getDeclaredMethods)))
+                                [p (conj key :data) b]
+                                [(get-in @p (conj key :data)) b])
+                         a (apply f args)]
                      (swap! p assoc-in (conj key :data bar b) a) (action-fn a))))
         bar-note-fn (fn [f bar note]
                       (fn [p key]
-                        (let [a (f (get-in @p (conj key :data)))]
+                        (let [args (if (some #{2}
+                                        (map #(alength (.getParameterTypes %))
+                                             (-> f class .getDeclaredMethods)))
+                                [p (conj key :data)]
+                                [(get-in @p (conj key :data))])
+                              a (apply f args)]
                           (swap! p assoc-in (conj key :data bar note) a)
                           (action-fn a))))
         mk-action (fn [a b]
