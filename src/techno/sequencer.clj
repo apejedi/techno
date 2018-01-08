@@ -692,6 +692,19 @@
   (get @pattern-fx key)
   )
 
+(defn add-pattern-fx [pat key nod]
+  (swap! pattern-fx assoc-in [pat key] nod)
+  )
+
+(defn rm-pattern-fx [pat key]
+  (swap! pattern-fx
+         (fn [p]
+           (if (node? (get-in p [pat key]))
+               (kill (get-in p [pat key])))
+           (assoc p pat (dissoc (get p pat) key))))
+  )
+
+
 (defn handle-pattern-fx [key attrs kill-group & [fx]]
   (when (and (contains? @pattern-groups key) kill-group)
     ;; (kill (get-in @pattern-groups [pattern :id]))
