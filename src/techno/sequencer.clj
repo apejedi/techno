@@ -691,6 +691,7 @@
 (defn get-pattern-fx [key]
   (get @pattern-fx key)
   )
+
 (defn handle-pattern-fx [key attrs kill-group & [fx]]
   (when (and (contains? @pattern-groups key) kill-group)
     ;; (kill (get-in @pattern-groups [pattern :id]))
