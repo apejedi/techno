@@ -126,7 +126,14 @@ The UGen outputs the six individual oscillator signals."
     ;;         (let [[ ctl mod] args]
     ;;           (println (concat ctl mod))
     ;;           (concat ctl mod)))
-    }])
+    }
+   {:name "Meddis",
+    :args [{:name "in"
+            :default 0.0
+            :doc "input signal to be processed"}]
+    :doc "Implementation of a hair cell model based on Implementation details of a computation model of the inner hair-cell/auditory-nerve synapse"
+    :auto-rate true}
+   ])
 
 (doseq [spec specs]
   (def-ugen 'techno.ugens spec 0)

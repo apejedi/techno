@@ -248,7 +248,9 @@
   {:tempo 97
    :mainsaw    (p/phrase-p
                 bpfsaw
-                [(chord :A3 :m7) :8 (chord :B3 :m7) :6]
+                [(chord :A3 :m7) :| :| (chord :B3 :m7) :| :|
+                                        ;(chord :G3 :M7)  :| :| (chord :C4 :M7) :| :|
+                 ]
                 1/4 0 [:rq 0.6 :dur 1.6 :amp 0.08 :atk 0.7])
    :lead    (p/phrase-p
              bass2
@@ -262,8 +264,7 @@
           1/8)
    :claps    (p/build-map-p
 
-              [:5 [o-clap []
-                   (drum-s [:Kit15-Electro] :cl1) [:amp 2]
+              [:5 [(drum-s [:Kit15-Electro] :cl1) [:amp 2]
                    ]]
               1/4)
    :beat2 (let []
@@ -283,6 +284,29 @@
               :p-size [1 8]
               }
              1/8))
+   :sc303 (p/scale-p
+           sc303
+           :C2 :major
+           [(fn [d n]
+              (if (odd? n)
+                [(choose [:2 :5 :1])
+                 [:sus (max 0.2 (rand 0.7))
+                  :cutoff (max 300 (rand 2000))
+                  :dec (max 0.5 (rand))
+                  :wave (choose [0 1])
+                  ]])
+              ) :|]
+           1/8 0 [:amp 0.2 :res 0.2
+                                        ;:env 2000
+                  ])
+   :lead3 (p/scale-p
+           bass2
+           :C4 :major
+           [:7 :05 :6                                                                    :|
+            :04 :7                                                                       :|
+            :02 :6                                                                       :|
+            :3 :03 :6 :01 (fn [d] (choose [[(choose [:7> :6> :3>]) [:release 0.3]] nil])) :|]
+           1/8 0 [:amp 2.0 :decay 1 :echo 0])
    :bass2 (p/scale-p
            acid-bass
            :C2 :major
@@ -753,10 +777,12 @@
         [:c1 :1]
         1/4)
 
-   :saw (p/phrase-p
-              bpfsaw2
-              [[:E4 :E3] :| :| :| [:A3 :A4] :| :| :| [:D4 :D3] :| :|]
-              1/8 0 [:t 3 :detune 0])
+   :saw (merge
+         (p/phrase-p
+          bpfsaw2
+          [[:E4 :E3] :| :| :| [:A3 :A4] :| :| :| [:D4 :D3] :| :|]
+          1/8 0 [:t 3 :detune 0])
+         {:fx {1 [p/p-hi-shelf :freq 6000 :db -12]}})
    :kicks  (let [c1 [(drum-s [:Kit7-Electro] :c1) []]
                  c2 [(drum-s [:Kit7-Electro] :c2) []]]
              (drum-p2
@@ -956,10 +982,12 @@
 
    })
 (def house2
-  {:harmony (p/phrase-p
-             rise-fall-pad2
-             [[:C3 :G3 :E3 :B3] [:F3 :C4 :A3 :E4] :34]
-             1/4 32 [:t 5])
+  {:harmony (merge
+             (p/phrase-p
+              rise-fall-pad2
+              [[:C3 :G3 :E3 :B3] [:F3 :C4 :A3 :E4] :34]
+              1/4 32 [:t 5])
+             {:fx {1 [p/p-low-shelf :db -24 :freq 400 :rs 1]}})
    :motif (p/phrase-p
            bass-synth
            [[:E3 :B3] [:A3 :F3] :34]
@@ -974,21 +1002,22 @@
                   true (let [n (note (cond (< (p/get-beat b no 4) 34) :E3
                                            (< (p/get-beat b no 4) 52) :D3
                                            true :F3))
-                             action (vector plk-bass [:note (note n) :amp 0.6]
-                                            wire-bass [:amp 0.4 :dur 2 :coef 0.01 :decay 0.8])]
+                             action (vector plk-bass [:note (note n) :amp 0.4 :plk 1]
+                                            ;wire-bass [:amp 0.4 :dur 2 :coef 0.01 :decay 0.8]
+                                            )]
                          action)))}
    :clap (drum-p2
           [:Kit15-Electro]
-          [:4 [:cl1 [o-clap []]] :3]
+          [:4 :cl1 :3]
           1/4)
    :motif2 (p/phrase-p
            bass-synth
            [[:E4 :B3] [:A4 [:amp 0.3] :F4 [:amp 0.3]] :34]
            1/4 32 [:release 6 :amp 0.4 :detune 4])
    :motif3 (p/phrase-p
-            reverb-test
-            [:A4 :B4 :D4 :C4 :B4]
-            1/4 2)
+            bpfsaw
+            [:A4 :B4 :D4 :C4 :B4 :2]
+            1/4 2 [:atk 0.01 :dur 1 :rq 0.7])
    :kick (drum-p2
           [:Kit4-Electro :Kit3-Acoustic]
           [:k1 :1 :o1 [:amp 0.3] :1]
@@ -1370,15 +1399,23 @@
               (p/scale-p
                cs80
                :D4 :major
-               [:1> :|
+               [:1>                        :|
                 :|
-                :5> :|
+                :5>                        :|
                 :|
-                :02 :3> :|
+                :02 :3>                    :|
                 :|
-                :07 :7 [:dur 4] :| :| :| :| :| :|]
+                :07 :7 [:dur 4]            :| :| :| :| :| :|
+                :4>                        :|
+                :|
+                :3>                        :|
+                :|
+                :02 :3>                    :|
+                :|
+                :07 [:7 :1 :5 :3 {:dur 4}] :| :| :| :| :| :|]
                1/8 0 [:amp 0.2 :dur 3.0 :atk 0.3 :rq 0.5 :cutoff 3000 :dtune 0.002 :vibrate 1.0 :vibdepth 0 :freq-lag 0.1 ])
                                         ;{:fx {:shift [p/p-pitch-shift :pitch-ratio 1.5]}}
+              {:p-size [12 8]}
               )
    :motif2 (p/scale-p
             bass2

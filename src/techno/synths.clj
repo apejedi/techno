@@ -717,7 +717,7 @@
         o (+ o (* env0 (sin-osc env1m 0.5)))
         o (* o 1.2)
         o (clip2 o 1)
-        o (* o amp)
+        o (* o amp 0.5)
         ]
     (out:ar out-bus [o o])
     )

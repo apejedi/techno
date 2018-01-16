@@ -1156,3 +1156,10 @@
     (replace-out:ar out-bus [snd snd])
     )
   )
+
+(defsynth p-peak-eq [audio-bus 10 out-bus 0 freq 100 db 0 rq 1]
+  (let [source (in:ar audio-bus 1)
+        snd (b-peak-eq:ar source freq rq db)]
+    (replace-out:ar out-bus [snd snd])
+    )
+  )

@@ -263,7 +263,7 @@
                     ;;   (rec/record-action [inst args])
                     ;;   (apply inst args)
                     ;;   )
-                    (node "fmTest"  {:freq (midi->hz (:midi-note info))} {:position :tail :target 7})
+                    (node "test"  {:freq (midi->hz (:midi-note info))} {:position :tail :target 7})
                     ;; (if (= (rand-int 4) 0)
                     ;;     (osc-send @techno.controller/client
                     ;;               (str "/fundamental")
