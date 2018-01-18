@@ -456,11 +456,11 @@
 ;;   )
 
 
-(defsynth drone-noise [freq 440 amp 1 dur 2 out-bus 0]
+(defsynth drone-noise [freq 440 amp 1 atk 0.3 dur 2 out-bus 0]
   (let [freqs (map #(* freq %) [2 4 1])
         sig (klank [freqs (repeat (count freqs) (/ 1 (count freqs)))] (pink-noise))
         sig (bpf (tanh sig) freq)
-        sig (* (env-gen:kr (perc (* 0.3 dur) (* 0.7 dur)) :action FREE) sig)
+        sig (* (env-gen:kr (perc (* atk dur) (* (- 1 atk) dur)) :action FREE) sig)
         sig (* sig 0.5 amp)
         ]
     (out:ar out-bus [sig sig])

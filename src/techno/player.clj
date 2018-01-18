@@ -1163,3 +1163,10 @@
     (replace-out:ar out-bus [snd snd])
     )
   )
+
+(defsynth p-meddis [audio-bus 10 out-bus 0]
+  (let [source (in:ar audio-bus 1)
+        snd (techno.ugens/meddis source)]
+    (replace-out:ar out-bus [snd snd])
+    )
+  )
