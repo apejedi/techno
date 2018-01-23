@@ -220,7 +220,7 @@
 (defsynth bpfsaw2 [freq 500 atk 2 sus 0 rel 3 c1 1 c2 -1
 		 detune 0.2 pan 0 cfhzmin 0.1 cfhzmax 0.3
 		cfmin 500 cfmax 2000 rqmin 0.1 rqmax 0.2
-                   lsf 200 ldb 0 amp 1 rs 0.5 out-bus 0]
+                   lsf 200 ldb 0 hsf 6000 hdb 0 amp 1 rs 0.5 out-bus 0]
   (let [env (env-gen:kr (envelope [0 1 1 0] [atk sus rel] [c1 0 c2]) :action 2)
         f (* freq (midiratio (* (lf-noise0:kr 0.5) detune)))
         sig (saw [f f])
@@ -230,6 +230,7 @@
                -1 1 cfmin cfmax)
         sig (bpf sig noise (lin-exp (lf-noise1:kr 0.1) -1 1 rqmin rqmax))
         sig (b-low-shelf:ar sig lsf rs ldb)
+        sig (b-hi-shelf:ar sig hsf rs hdb)
         sig (balance2 (first sig) (second sig))
         sig (* sig env amp)]
     (out out-bus sig)
@@ -495,7 +496,7 @@
 ;;     )
 ;;   )
 (defsynth rise-fall-pad2
-  [freq 440 t 4 amt 0.3 amp 0.8 delay 0.3 decay 0.5 damp 0.5 out-bus 0]
+  [freq 440 t 4 amt 0.3 amp 0.8 delay 0.3 decay 0.5 damp 0.5 lsf 400 ldb 0 out-bus 0]
   (let [f-env      (env-gen (perc t t) 1 1 0 1 FREE)
         src        (saw [freq (* freq 1.01)])
         signal     (rlpf (* 0.3 src)
@@ -507,6 +508,7 @@
         dampener   (+ 1 (* 0.5 (sin-osc:kr damp)))
         reverb     (free-verb compressor 0.5 0.5 dampener)
         echo       (comb-n reverb delay delay decay)
+        echo (b-low-shelf:ar echo lsf 0.5 ldb)
         sig (* amp echo)]
     (out:ar out-bus [sig sig])))
 
