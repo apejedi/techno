@@ -268,155 +268,168 @@
    })
 (def chill
   {:tempo 97
-   :mainsaw    (p/phrase-p
-                bpfsaw
-                [(chord :A3 :m7) :8 (chord :B3 :m7) :6
-                                        ;(chord :G3 :M7)  :| :| (chord :C4 :M7) :| :|
-                 ]
-                1/4 0 [:rq 0.6 :dur 1.6 :amp 0.08 :atk 0.7])
-   :lead    (p/phrase-p
-             bass2
-             [:D4 :1 :G4 :2 :C4 :2 :A4 :3]
-             1/4 0 [:dur 0.3 :decay 3 :amp 1.5])
-   :kicks    (p/build-map-p
-              [[o-kick []] :1 [o-hat []] :2 [o-hat []] :2]
-              1/4)
-   :hat  (p/build-map-p
-          [[(drum-s [:KurzweilKit03] :c1) []] :|]
-          1/8)
-   :claps    (p/build-map-p
+   :kicks     (p/build-map-p
+               [[o-kick []] :1 [o-hat []] :2 [o-hat []] :2]
+               1/4)
+   :lead     (p/phrase-p
+              bass2
+              [:D4 :1 :G4 :2 :C4 :2 :A4 :3]
+              1/4 0 [:dur 0.3 :decay 3 :amp 1.5])
+   :lead2  (p/scale-p
+            bass2
+            :C4 :major
+            [:6< :01 :6< :03 :6<   :|
+             :02 :4 :01 :1> :01 :2> :|
+             :04 :6<                :|
+             :3< :03 :6<            :|]
+            1/8 0 [:atk 0.001 :f-dur 0.1 :decay 2 :amp 2.0 :cutoff 2000.0 :cutoff2 4000])
+   :lead3  (let [a [:7 :05 :6                                                                    :|
+                    :04 :7                                                                       :|
+                    :02 :6                                                                       :|
+                    :3 :03 :6 :01 (fn [d] (choose [[(choose [:7> :6> :3>]) [:release 0.3]] nil])) :|]
+                 b [:7 :03 :6 :|
+                    :04 :3>   :|
+                    :04 :7    :|
+                    :04 :6    :|
+                    :7 :03 :6 :|
+                    :04 :3    :|
+                    :04 :6    :| :|]]
+             (p/scale-p
+              bass2
+              :C4 :major
+              b
+              1/8 0 [:amp 2.0 :decay 1 :echo 0]))
+   :mainsaw (merge
+             (p/phrase-p
+              bpfsaw
+              [(chord :A3 :m7) :8 (chord :B3 :m7) :6
+                                        ;(chord :G3 :M7) :| :| (chord :C4 :M7) :| :|
+               ]
+              1/4 0 [:rq 0.6 :dur 1.6 :amp 0.08 :atk 0.7])
+             {:fx {:low [p/p-peak-eq :freq 400 :db -18]}})
 
-              [:5 [(drum-s [:Kit15-Electro] :cl1) [:amp 2]
-                   ]]
-              1/4)
-   :beat2 (let []
-            (drum-p2
-             [:Kit6-Electro]
-             {1 {1 [[o-kick []]] 3 :c1 5 :c1 7 :c2 8 []}
-              2 (fn [d n]
-                  (get
-                   (p/w-choose
-                    {{1 [[o-kick []]] 3 :c1 5 :c1 7 :c2 8 []} 0.1
-                     {1 (p/w-choose {[[o-snr []]] 0.7 [[o-kick []]] 0.3})
-                      3 (p/w-choose {:c1 0.3 :cl1 0.3 :o1 0.2 (get-in d [2 1]) 0.2})
-                      5 (get-in d (p/w-choose {[2 1] 0.7 [2 3] 0.3}))
-                      7 (get-in d (p/w-choose {[2 5] 0.7 [2 1] 0.3}))
-                      8 []} 0.9})
-                   n))
-              :p-size [1 8]
-              }
-             1/8))
-   :sc303 (p/scale-p
-           sc303
-           :C2 :major
-           [(fn [d n]
-              (if (odd? n)
-                [(choose [:2 :5 :1])
-                 [:sus (max 0.2 (rand 0.7))
-                  :cutoff (max 300 (rand 2000))
-                  :dec (max 0.5 (rand))
-                  :wave (choose [0 1])
-                  ]])
-              ) :|]
-           1/8 0 [:amp 0.2 :res 0.2
+   :sc303  (merge
+            (p/scale-p
+             sc303
+             :C2 :major
+             [(fn [d n]
+                (if (odd? n)
+                  [(choose [:2 :5 :1])
+                   [:sus (max 0.2 (rand 0.7))
+                    :cutoff (max 300 (rand 2000))
+                    :dec (max 0.5 (rand))
+                    :wave (choose [0 1])
+                    ]])
+                ) :|]
+             1/8 0 [:amp 0.2 :res 0.2
                                         ;:env 2000
-                  ])
-   :lead3 (let [a [:7 :05 :6                                                                    :|
-                   :04 :7                                                                       :|
-                   :02 :6                                                                       :|
-                   :3 :03 :6 :01 (fn [d] (choose [[(choose [:7> :6> :3>]) [:release 0.3]] nil])) :|]
-                b [:7 :03 :6 :|
-                   :04 :3>   :|
-                   :04 :7    :|
-                   :04 :6    :|
-                   :7 :03 :6 :|
-                   :04 :3    :|
-                   :04 :6    :| :|]]
-              (p/scale-p
-                bass2
-                :C4 :major
-                b
-                1/8 0 [:amp 2.0 :decay 1 :echo 0]))
-   :bass2 (p/scale-p
-           acid-bass
-           :C2 :major
-           {1 {1 :2 3 :2 7 :4 8 []}
-            2 {1 :6<
-               ;; 3 (fn [d] (p/w-choose {[:2 :5] 0.2 nil 0.8}))
-               ;; 5 (fn [d] (p/w-choose {[:7< :3< {:dur 0.5}] 0.3 nil 0.7}))
-               8 []}
-            }
-           1/8 0 [:dur 0.23622047244094488])
-
-   :bass   (p/phrase-p
-            acid-bass
-            [:F1 :1 :B1 :2 :G1 :2 :A1 :3]
-            1/4 0 [:dur 0.3])
-   :lead2 (p/scale-p
-           bass2
-           :C4 :major
-           [:6< :01 :6< :03 :6<   :|
-            :02 :4 :01 :1> :01 :2> :|
-            :04 :6<                :|
-            :3< :03 :6<            :|]
-           1/8 0 [:atk 0.001 :f-dur 0.1 :decay 2 :amp 2.0 :cutoff 2000.0 :cutoff2 4000])
-   :zap (assoc
-         (p/build-map-p
-          [[ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 698.4564628660078 :amp 0.3] ] :5
-           [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 987.7666025122483 :amp 0.3]  ]   :|
-           :4
-           [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 1046.5022612023945 :amp 0.3]  ]  :|
-           :4
-           [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 1174.6590716696303 :amp 0.3]   ] :1
-           [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 783.9908719634985 :amp 0.3]    ] :|
-           [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 1046.5022612023945 :amp 0.3]  ]  :|
-           ] 1/8)
-         :fx {:reverb [p/p-reverb
-                       :roomsize 50
-                       :revtime 1
-                       :damping 0.8
-                       :inputbw 0.4 :drylevel 2 :earlylevel 1 :taillevel 4]})
-   :brsh (assoc
-          (drum-p2
-           [:KurzweilKit05]
-           [(fn [d n]
-              (if (odd? n)
-                (p/w-choose
-                 {[:brsh2 :brsh1 [:amp 0.3]] 0.9
-                  [:brsh3 [:amp 0.3]] 0.1
-                  }))
-              ) :|]
-           1/4)
-          :p-size [1 3])
-   :beat3 (drum-p2
-           [:Kit1-Acousticclose]
-           [(fn [d n]
-              (p/w-choose
-               {(keyword (str (choose ["rim" "s"]) (choose (range 3 8)))) (if (odd? n) 0.9 0.5)
-                nil (if (odd? n) 0.1 0.5)})
-              ) :|]
-           1/4)
-   :cs (assoc
-        (p/scale-p
-         cs80
-         :C3 :minor
-         [[:4b>> [:atk 0.4]]      :|
-          :06 :2>>                :|
-          :|
-          :1>>> [:amp 0.3 :dur 3] :|
-          :|
-          :015 :1>                :|
-          :010 :2>                :|
-          :07 :4b>                :|
-          :|
-          :01 :1b                 :|
-          :|
-          :02 :4b                 :|
-          :| :| :| :|]
-         1/16 0 [:amp 0.5 :dur 2 :atk 0.01 :rq 0.5 :cutoff 4000 :dtune 0.002 :vibrate 4.0 :vibdepth 0.015 :freq-lag 0.1 ])
-        :s 1
+                    ])
+            {:mono true})
+   :zap  (assoc
+          (p/build-map-p
+           [[ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 698.4564628660078 :amp 0.3] ] :5
+            [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 987.7666025122483 :amp 0.3]  ]   :|
+            :4
+            [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 1046.5022612023945 :amp 0.3]  ]  :|
+            :4
+            [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 1174.6590716696303 :amp 0.3]   ] :1
+            [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 783.9908719634985 :amp 0.3]    ] :|
+            [ zap [:freq2 400 :dur 0.3 :amp 1 :freq1 1046.5022612023945 :amp 0.3]  ]  :|
+            ] 1/8)
+          :fx {:reverb [p/p-reverb
+                        :roomsize 50
+                        :revtime 1
+                        :damping 0.8
+                        :inputbw 0.4 :drylevel 2 :earlylevel 1 :taillevel 4]})
+   :hat   (p/build-map-p
+           [[(drum-s [:KurzweilKit03] :c1) []] :|]
+           1/8)
+   :cs  (assoc
+         (p/scale-p
+          cs80
+          :C3 :minor
+          [[:4b>> [:atk 0.4]]      :|
+           :06 :2>>                :|
+           :|
+           :1>>> [:amp 0.3 :dur 3] :|
+           :|
+           :015 :1>                :|
+           :010 :2>                :|
+           :07 :4b>                :|
+           :|
+           :01 :1b                 :|
+           :|
+           :02 :4b                 :|
+           :| :| :| :|]
+          1/16 0 [:amp 0.5 :dur 2 :atk 0.01 :rq 0.5 :cutoff 4000 :dtune 0.002 :vibrate 4.0 :vibdepth 0.015 :freq-lag 0.1 ])
+         :s 1
                                         ;:fx {:delay [p/p-delay :max-delay 2 :delay 0.1 :decay 4]}
-        )
+         )
+   :claps     (p/build-map-p
+
+               [:5 [(drum-s [:Kit15-Electro] :cl1) [:amp 2]
+                    ]]
+               1/4)
+   :brsh  (assoc
+           (drum-p2
+            [:KurzweilKit05]
+            [(fn [d n]
+               (if (odd? n)
+                 (p/w-choose
+                  {[:brsh2 :brsh1 [:amp 0.3]] 0.9
+                   [:brsh3 [:amp 0.3]] 0.1
+                   }))
+               ) :|]
+            1/4)
+           :p-size [1 3])
+   :beat3  (drum-p2
+            [:Kit1-Acousticclose]
+            [(fn [d n]
+               (p/w-choose
+                {(keyword (str (choose ["rim" "s"]) (choose (range 3 8)))) (if (odd? n) 0.9 0.5)
+                 nil (if (odd? n) 0.1 0.5)})
+               ) :|]
+            1/4)
+   :beat2  (let []
+             (drum-p2
+              [:Kit6-Electro]
+              {1 {1 [[o-kick []]] 3 :c1 5 :c1 7 :c2 8 []}
+               2 (fn [d n]
+                   (get
+                    (p/w-choose
+                     {{1 [[o-kick []]] 3 :c1 5 :c1 7 :c2 8 []} 0.1
+                      {1 (p/w-choose {[[o-snr []]] 0.7 [[o-kick []]] 0.3})
+                       3 (p/w-choose {:c1 0.3 :cl1 0.3 :o1 0.2 (get-in d [2 1]) 0.2})
+                       5 (get-in d (p/w-choose {[2 1] 0.7 [2 3] 0.3}))
+                       7 (get-in d (p/w-choose {[2 5] 0.7 [2 1] 0.3}))
+                       8 []} 0.9})
+                    n))
+               :p-size [1 8]
+               }
+              1/8))
+   :bass2 (merge
+           (p/scale-p
+            acid-bass
+            :C2 :major
+            {1 {1 :2 3 :2 7 :4 8 []}
+             2 {1 :6<
+                3 (fn [d] (p/w-choose {[:2 :5] 0.2 nil 0.8}))
+                5 (fn [d] (p/w-choose {[:7< :3< {:dur 0.5}] 0.3 nil 0.7}))
+                8 []}
+             }
+            1/8 0 [:dur 0.23622047244094488])
+           {:fx {:comp [p/p-compander :thresh 0.3 :above 0.5]}}
+           )
+   :bass (merge
+          (p/phrase-p
+           acid-bass
+           [:F1 :1 :B1 :2 :G1 :2 :A1 :3]
+           1/4 0 [:dur 0.3 :amp 1])
+          {:fx {:hi [p/p-hi-shelf :freq 500 :db -18]
+                :comp [p/p-compander :thresh 0.3 :above 0.001]
+                }}
+          )
+
    })
 
 (def wavy
@@ -1517,3 +1530,190 @@
             1/8 0 [:attack 0.01 :amp 0.3 :atk 0.01 :dur 1.4 :release 1 :detune 0 :bwr 1.4 ])
 
    })
+
+(def khamaj
+  {:motif1 (p/scale-p
+            ks2
+            :E4 :major
+            [[:3 :5<] :05 [:4 :6<]  [:2 :5<] :05 :6 :05
+             :1 :01 :2 :01 :3 :03 :2 :03 :1 :03 :6<
+             ]
+            1/8 3 [:coef 0.1]
+            )
+   })
+
+(def pads
+  {:piano (p/scale-p
+           piano
+           :D4 :major
+           [:5<< :02 :1< :02 :1     :|
+            :01 :5 :05 [:7< :2<]    :|
+            :|
+            :02 [:5< :1< :7<]       :|
+            :05 :1                  :|
+            :03 :2                  :|
+            :01 [:7< :2< :5<]       :| :| :|
+            :| :| :|
+            :04 [:7 :7< :5<] :02 :6 :|
+            :02 :5 :02 :3  :05  :4  :|
+            :01 [:3 :5< :2<]        :| :|
+            [:4< :1< :7<]           :|
+            :01 :1 :05  :2          :| :|
+            [:7< :5 :2 ]            :| :| :| :|
+            ]
+           1/8 0 [:amp 0.4 :dur 5 :vel 100.0 :decay 0.8 :release 0.8 :hard 0.3 :velhard 0.8 :muffle 3 :velmuff 0.8 :velcurve 0.8 :stereo 0.2 :tune 0.5 :random 0.1 :stretch 0.1 :sustain 0.5 ])
+   :perc (merge
+          (drum-p2
+           [:Shakers :claves]
+           [(fn [d] (choose [:shaker1 :shaker2 :shaker4 :shaker6 :hit4 :hit5 :hit1])) :01 :| :|
+            :| :|]
+           1/4)
+          {:fx {:delay [p-delay :max-delay 1 :delay 0.2 :decay 5]
+                ;:shift [p/p-pitch-shift :pitch-ratio 4 :pitch-dispersion 1.4]
+                }})
+   :bell (merge
+            (p/scale-p
+             reverb-test
+             :D4 :major
+             [:5<< :04 :1    :|
+              :02 :7<        :|
+              :6< :04 :4<<   :|
+              :02 :2 :04 :7< :|
+              :04 :5<        :|
+              :02 :3<<       :|
+              :6<  :04 :3<   :|
+              :02 :5<        :| :| :| :| :|
+              ]
+             1/8 0 [:max-delay 0.5 :delay-time 0.3 :decay 3 :amp 0.5 ])
+            )
+   :saw  (p/scale-p
+               bpfsaw2
+               :D4 :major
+               [[:7 :7] :01 [:7 :7] :01 [:7 :7] :02 [:7 :7]           :|
+                :01 [:7 :7] :01 [:7 :7] :02 [:7 :7]                   :|
+                [:7 :7] :04 [:6 :6]                                   :|
+                [:6 :6] :01 [:6 :6] :02 [:6 :6] :01 [:6 :6]           :|
+                :01 [:6 :6]                                           :|
+                :02 [:5 :5] :01 [:5 :5] :02 [:5 :5]                   :|
+                :02 [:5 :5] :01 [:5 :5] :01 [:5 :5]                   :|
+                :06 [:3 :3]                                           :|
+                [:3 :3] :01 [:3 :3] :01 [:3 :3] :01 [:3 :3]           :|
+                :|
+                :|
+                :|
+                :05 [:7 :7] :01 [:7 :7]                               :|
+                :02 [:7 :7] :01 [:7 :7] :01 [:7 :7]                   :|
+                :01 [:7 :7] :01 [:7 :7] :02 [:7 :7]                   :|
+                [:7 :7] :05 [:6 :6]                                   :|
+                :01 [:6 :6] :01 [:6 :6] :01 [:6 :6] :01 [:6 :6]       :|
+                :|
+                :04 [:4> :4> :1> :1>] :01 [:4> :4> :1> :1>]           :|
+                :01 [:4> :4> :1> :1>] :02 [:1> :1>] :01 [:4> :4>]     :|
+                :|
+                [:7 :7] :02 [:7 :7 :3> :3>] :01 [:7 :7] :01 [:3> :3>] :|
+                [:7 :7] :01 [:3> :3>]                                 :| :|]
+               1/8 0 [:atk 2.0 :sus 0.0 :rel 3.0 :c1 1.0 :c2 -1.0 :detune 0.2 :pan 0.0 :cfhzmin 0.1 :cfhzmax 0.3 :cfmin 500.0 :cfmax 2000.0 :rqmin 0.1 :rqmax 0.2 :lsf 200.0 :ldb 0.0 :hsf 6000.0 :hdb 0.0 :amp 0.3 :rs 0.5 ])
+   :cs80  (p/scale-p
+               cs80
+               :D4 :major
+               [[:7 :7] :01 [:7 :7] :01 [:7 :7] :02 [:7 :7]           :|
+                :01 [:7 :7] :01 [:7 :7] :02 [:7 :7]                   :|
+                [:7 :7] :04 [:6 :6]                                   :|
+                [:6 :6] :01 [:6 :6] :02 [:6 :6] :01 [:6 :6]           :|
+                :01 [:6 :6]                                           :|
+                :02 [:5 :5] :01 [:5 :5] :02 [:5 :5]                   :|
+                :02 [:5 :5] :01 [:5 :5] :01 [:5 :5]                   :|
+                :06 [:3 :3]                                           :|
+                [:3 :3] :01 [:3 :3] :01 [:3 :3] :01 [:3 :3]           :|
+                :|
+                :|
+                :|
+                :05 [:7 :7] :01 [:7 :7]                               :|
+                :02 [:7 :7] :01 [:7 :7] :01 [:7 :7]                   :|
+                :01 [:7 :7] :01 [:7 :7] :02 [:7 :7]                   :|
+                [:7 :7] :05 [:6 :6]                                   :|
+                :01 [:6 :6] :01 [:6 :6] :01 [:6 :6] :01 [:6 :6]       :|
+                :|
+                :04 [:4> :4> :1> :1>] :01 [:4> :4> :1> :1>]           :|
+                :01 [:4> :4> :1> :1>] :02 [:1> :1>] :01 [:4> :4>]     :|
+                :|
+                [:7 :7] :02 [:7 :7 :3> :3>] :01 [:7 :7] :01 [:3> :3>] :|
+                [:7 :7] :01 [:3> :3>]                                 :| :|]
+               1/8 0 [:amp 0.01 :dur 3.0 :atk 0.3 :rq 0.5 :cutoff 6000 :dtune 0.002 :vibrate 4.0 :vibdepth 0.015 :freq-lag 0.1 ])
+   :pad (merge
+              (p/scale-p
+               overpad2
+               :D4 :major
+               [[:7< :5<]               :|
+                :03 [:7< :5<]           :|
+                [:5< :7<] :05 [:4< :6<] :|
+                :|
+                :01 [:6< :4<]           :|
+                :06 [:3< :2]            :|
+                :|
+                :01 [:3< :1]            :|
+                :05 [:7< :5<]           :| :| :| :|]
+               1/8 0 [:amp 0.4 :attack 2 :release 2.0 ])
+              {:fx {:low-pass [p/p-low-shelf :freq 500 :db -18]
+                    :peak [p/p-peak-eq :freq 120 :db -18]
+                    }})
+
+   })
+
+(def summer
+  {:tempo 100
+   :motif2 (p/scale-p
+            bass-synth
+            :G4 :major
+            [(fn [d] (choose [:7< [:7< :5<]])) :03 :1 :|
+             :04 (fn [d] (choose [:3 [:3 :1]]))       :|
+             :04 :1                                  :|
+             :04 :6<                                 :|
+             :04 (fn [d] (choose [:1 [:4< :1]]))      :| :| :| :|]
+            1/8 0 [:attack 0.01 :amp 0.5 :release 2 :detune 0 :bwr 1.0 ])
+
+   :motif1 (p/scale-p
+            plk-bass
+            :G4 :major
+            [:5<< :05 :7<<< :|
+             :04 :5<<       :|
+             :04 :2<<       :|
+             :4<< :03 :3<<  :|
+             :1<< :05 :2<<  :| :| :| :|]
+            1/8 0 [:dur 0.5 :amp 0.5 :plk 2])
+
+   :harmony1 (p/scale-p
+              klang-test
+              :G4 :major
+              [[:5 :7] :05 [:3 :5] :|
+               :02 [:7 :5]         :|
+               [:3 :5] :03 [:7 :5] :|
+               :04 [:6 :4]         :|
+               :04 [:6 :4]         :| [:2 :4] :| :| :|]
+              1/8 0 [:amp 0.2 :atk 0.01 :dur 2 ])
+
+   :drum1 (drum-p2
+           [:Kit13-Acoustic]
+           [:k1 :5 :k2 :| :s1 :|
+            ]
+           1/8)
+   :drum2 (drum-p2
+           [:Bongos :Congas]
+           [:bongo4  :1 :bongo4 :3 :bongo5 :| :4 :Conga10 :|]
+           1/8)
+
+   })
+
+(def eastern
+  {:string (p/scale-p
+            ks2
+            :G4 :major
+            [
+             [:2< :2<<] :02 :3b< :02 :6< :|
+             :01 :5< :02 [:3b< :1<<]    :|
+             :2< :03 :1<                :|
+             :02 [:7<< :7<<<]            :|
+             :01 [:7<<< :7<<] :03 :1<    :|
+             :2< :06 [:2< :2<<]          :| :|
+             ]
+            1/8 0 [:amp 0.8 :dur 2.0 :decay 30.0 :coef 0.3 ])})

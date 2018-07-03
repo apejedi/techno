@@ -230,7 +230,8 @@
                                       true (get-in v [bar note]))
                         gated (:gated v)
                         synth (:synth v)
-                        synth-inst (:synth-inst v)]
+                        synth-inst (:synth-inst v)
+                        mono (:mono v)]
                     (doseq [[a args] (partition 2 actions)]
                       (let [has-gate (if gated (not (= -1 (.indexOf args :gate))) false)
                             args (if (and (not (nil? (:bus p-fx))) (nil? synth-inst))
@@ -240,11 +241,12 @@
                             pos (str [bar (if (fn? (get v bar)) 1 note)])]
                         (when (not (nil? a))
                           (if gated
-                            (if (not (nil? synth-inst))
-                              (apply ctl (concat [synth-inst] (if has-gate [] [:gate 1]) args))
-                              (swap! patterns
-                                     assoc-in [id k :synth-inst]
-                                     (apply synth args)))
+                            (if mono
+                                (if (not (nil? synth-inst))
+                                  (apply ctl (concat [synth-inst] (if has-gate [] [:gate 1]) args))
+                                  (swap! patterns
+                                         assoc-in [id k :synth-inst]
+                                         (apply synth args))))
                             (apply a args))
                           (when (and (= @send-offsets k) (or (= true @written) (.isDone @written)))
                             (.clear @tekno-buffer)
@@ -460,6 +462,54 @@
                           %) rest-p))]
     [inst phrase-p (/ 1 (:div pattern)) params]
     )
+  )
+
+(defn get-step-offsets [text]
+
+  )
+(defn step-mode-p [pattern div rest-regex]
+  (let []
+    (loop [cur (first pattern) pos 1 pattern pattern new-pattern [] prev (first pattern)]
+      (let [is-rest (or (= :| cur) (and (keyword? cur) (re-matches (re-pattern rest-regex) (name cur))))
+            old-pos pos
+            [res cur pattern pos prev] (if is-rest
+                                         (if (= :| cur)
+                                           (do
+                                             (if (and (not (= :| prev)) (= 0 (mod (dec pos) div)))
+                                               [[] (second pattern) (rest pattern) pos cur]
+                                               (let [[bar note] (get-pos pos div)
+                                                     rests (- div (dec note))]
+                                                 [(into (vec (repeat rests :01)) [:|]) (second pattern) (rest pattern) (+ pos rests) cur])))
+                                           (let [n (Integer/parseInt (name cur))]
+                                             (if (> n 0) [[:01] (keyword (str "0" (dec n))) pattern (inc pos) cur]
+                                                 [[] (second pattern) (rest pattern) pos cur])))
+                                    [[cur] (second pattern) (rest pattern) (inc pos) cur])
+            res (if (and (= div (second (get-pos old-pos div))) (not (= :00 prev)) (not (= :| prev)))
+                  (conj res :|)
+                  res)
+   ;         x (println prev cur res old-pos)
+            new-pattern (into new-pattern res)]
+        (if (> (count pattern) 0)
+          (recur cur pos pattern new-pattern prev)
+          new-pattern)
+        )
+      )
+    )
+  )
+
+(defn text-mode-p [pattern div]
+  (let [pattern (step-mode-p pattern div "\\d+")]
+      (reduce
+       (fn [p a]
+         (let [l (last p)]
+           (into (vec (butlast p))
+                 (cond (and (keyword l) (re-matches #"\d+" (name l)) (keyword a) (re-matches #"\d+" (name a)))
+                       [(keyword (str "0" (+ (Integer/parseInt (name l)) (Integer/parseInt (name a)))))]
+                       (and (= :| a) (keyword l) (re-matches #"\d+" (name l))) [a]
+                   true [l a]))))
+       [(first pattern)]
+       (rest pattern)
+       ))
   )
 (defn is-phrase? [pattern]
   (let [size (p-size pattern)
