@@ -464,14 +464,13 @@
     )
   )
 
-(defn get-step-offsets [text]
 
-  )
 (defn step-mode-p [pattern div rest-regex]
   (let []
     (loop [cur (first pattern) pos 1 pattern pattern new-pattern [] prev (first pattern)]
       (let [is-rest (or (= :| cur) (and (keyword? cur) (re-matches (re-pattern rest-regex) (name cur))))
             old-pos pos
+            [r re] (if (.contains rest-regex "0") [:01 "0"] [:1 ""])
             [res cur pattern pos prev] (if is-rest
                                          (if (= :| cur)
                                            (do
@@ -479,12 +478,12 @@
                                                [[] (second pattern) (rest pattern) pos cur]
                                                (let [[bar note] (get-pos pos div)
                                                      rests (- div (dec note))]
-                                                 [(into (vec (repeat rests :01)) [:|]) (second pattern) (rest pattern) (+ pos rests) cur])))
+                                                 [(into (vec (repeat rests r)) [:|]) (second pattern) (rest pattern) (+ pos rests) cur])))
                                            (let [n (Integer/parseInt (name cur))]
-                                             (if (> n 0) [[:01] (keyword (str "0" (dec n))) pattern (inc pos) cur]
+                                             (if (> n 0) [[r] (keyword (str re (dec n))) pattern (inc pos) cur]
                                                  [[] (second pattern) (rest pattern) pos cur])))
                                     [[cur] (second pattern) (rest pattern) (inc pos) cur])
-            res (if (and (= div (second (get-pos old-pos div))) (not (= :00 prev)) (not (= :| prev)))
+            res (if (and (= div (second (get-pos old-pos div))) (not (or (= :00 prev) (= :0 prev))) (not (= :| prev)))
                   (conj res :|)
                   res)
    ;         x (println prev cur res old-pos)
@@ -497,20 +496,44 @@
     )
   )
 
-(defn text-mode-p [pattern div]
-  (let [pattern (step-mode-p pattern div "\\d+")]
+
+(defn text-mode-p [pattern div rest-regex]
+  (let [pattern (step-mode-p pattern div rest-regex)]
       (reduce
        (fn [p a]
          (let [l (last p)]
            (into (vec (butlast p))
-                 (cond (and (keyword l) (re-matches #"\d+" (name l)) (keyword a) (re-matches #"\d+" (name a)))
+                 (cond (and (keyword l) (re-matches (re-pattern rest-regex) (name l)) (keyword a) (re-matches (re-pattern rest-regex) (name a)))
                        [(keyword (str "0" (+ (Integer/parseInt (name l)) (Integer/parseInt (name a)))))]
-                       (and (= :| a) (keyword l) (re-matches #"\d+" (name l))) [a]
+                       (and (= :| a) (keyword l) (re-matches (re-pattern rest-regex) (name l))) [a]
                    true [l a]))))
        [(first pattern)]
        (rest pattern)
        ))
   )
+
+(defn shift-step-p [pattern div pos dir rest-regex]
+  (let [pattern (step-mode-p pattern div rest-regex)
+        pattern (vec (filter #(not (= :| %)) pattern))
+        pos (dec (if (number? pos) pos (get-beat (first pos) (second pos) div)))]
+    (if (= dir :right)
+      (into (into (subvec pattern 0 pos) [:01]) (subvec pattern pos))
+      (into (vec (butlast (subvec pattern 0 pos))) (into (subvec pattern pos) [:01]))
+      )
+    )
+  )
+
+(defn move-step-p [pattern div pos dir rest-regex]
+  (let [pattern (step-mode-p pattern div rest-regex)
+        pattern (vec (filter #(not (= :| %)) pattern))
+        pos (dec (if (number? pos) pos (get-beat (first pos) (second pos) div)))]
+    (if (= dir :right)
+      (assoc (assoc pattern (inc pos) (nth pattern pos)) pos :01)
+      (assoc (assoc pattern (dec pos) (nth pattern pos)) pos :01)
+      )
+    )
+  )
+
 (defn is-phrase? [pattern]
   (let [size (p-size pattern)
         pattern (into {} (mapcat

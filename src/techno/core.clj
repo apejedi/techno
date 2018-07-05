@@ -304,6 +304,8 @@
                                (= type :drum-p) 2
                                (= type :map-p) 1
                                true 0))
+          rest-regex (cond (= type :scale-p) "0\\\\d+"
+                           true "\\\\d+")
           pad (if (or (= :scale-p type) (= :phrase-p type))
                 (nth tree (+ pattern-idx 2))
                 0)
@@ -380,12 +382,27 @@
                            (if (< pos size)
                              (recur (inc pos) offset-map pattern n)
                              offset-map))))]
-      offset-map
+      ;offset-map
+      (conj (conj (conj offset-map (list "pattern" (seq pattern-pos))) (list "div" (int (/ 1 div)))) (list "rest-regex" rest-regex))
       )
     (catch Exception e
       (println (.getMessage e))
       ;(clojure.stacktrace/print-stack-trace e)
       ))
+  )
+
+(defn get-step-mode-bounds [pattern]
+  (let [bounds (filter #(or (.equals (first %) "pattern") (.equals (first %) "rest-regex") (.equals (first %) "div"))
+                       (get-annotated-pattern pattern))
+        reg (second (first (filter #(if (.equals (first %) "rest-regex") (second %)) bounds)))
+        pos (second (first (filter #(if (.equals (first %) "pattern") (second %)) bounds)))
+        div (second (first (filter #(if (.equals (first %) "div") (second %)) bounds)))
+        pattern (.substring pattern (inc (first pos)) (dec (second pos)))
+        tokens (let [r (java.io.PushbackReader. (java.io.InputStreamReader. (java.io.ByteArrayInputStream. (.getBytes pattern))) )
+                     eof (Object.)]
+                 (take-while #(not= % eof) (repeatedly #(read r false eof))))]
+    pattern
+    )
   )
 
 (defn get-pattern-tbl [& patterns]
