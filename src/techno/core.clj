@@ -239,40 +239,57 @@
     )
   )
 
-
+(defn read-whitespace [cur pos stream whitespace]
+  (loop [c cur p pos in-comment (.booleanValue (= c 59))]
+    (if (and (> c 0)
+             (or (re-matches (re-pattern (str "[,;" whitespace "]")) (str (char c)))
+                 in-comment))
+      (recur (.read stream) (inc p) (cond (= c 59) true (= c 10) false true in-comment))
+      [p c])))
+(defn read-token [cur pos stream whitespace list-as-token map-as-token]
+  (loop [c cur p pos w "" d 0]
+    ;; (if (and (not map-as-token) (> c 0)) (print (char c)))
+    (if (and (> c 0)
+             (or (> d 0)
+                 (re-matches
+                  (re-pattern
+                   (str "[^" whitespace "]"))
+                  (str (char c))))
+             (not (and (not map-as-token) (or (= c 123) (= c 125)))))
+      (recur (.read stream)
+             (inc p)
+             (str w (char c))
+             (cond (or (= (char c) \[) (and map-as-token (= (char c) \{)) (and list-as-token (= (char c) \())) (inc d)
+                   (or (= (char c) \]) (and map-as-token (= (char c) \})) (and list-as-token (= (char c) \)))) (dec d)
+                   true d))
+      [p w c])))
+(defn get-token-map [text source whitespace list-as-token]
+  (let [stream (java.io.StringReader. text)]
+    (loop [tokens source pos 0 c (.read stream) type nil offsets {} n 0]
+      (let [token (first tokens)
+            [pos c] (read-whitespace c pos stream whitespace)
+            start-pos pos
+            [pos word c] (read-token c pos stream whitespace list-as-token true)
+            c (.read stream)
+            offsets (assoc offsets n [start-pos pos])]
+        (if (and (> c 0) (> (count tokens) 0))
+          (recur (rest tokens) (inc pos) c type offsets (inc n))
+          offsets)
+        ))))
+(defn get-token-tree [data]
+  (let [r (readers/source-logging-push-back-reader data)
+        source (edn/read {:eof false} r)
+        tree (filter #(not (list? %)) (tree-seq list? identity source))]
+    tree
+    )
+  )
 (defn get-annotated-pattern [data]
   (try
     (let [text data
           data (string/replace
                 (string/replace data " #(" " \\#(")
                 " @" " \\@")
-          r (readers/source-logging-push-back-reader data)
-          source (edn/read {:eof false} r)
-          tree (filter #(not (list? %)) (tree-seq list? identity source))
-          read-whitespace (fn [cur pos stream whitespace]
-                            (loop [c cur p pos in-comment (.booleanValue (= c 59))]
-                              (if (and (> c 0)
-                                       (or (re-matches (re-pattern (str "[,;" whitespace "]")) (str (char c)))
-                                           in-comment))
-                                (recur (.read stream) (inc p) (cond (= c 59) true (= c 10) false true in-comment))
-                                [p c])))
-          read-token (fn [cur pos stream whitespace list-as-token map-as-token]
-                       (loop [c cur p pos w "" d 0]
-                         ;; (if (and (not map-as-token) (> c 0)) (print (char c)))
-                         (if (and (> c 0)
-                                  (or (> d 0)
-                                      (re-matches
-                                       (re-pattern
-                                        (str "[^" whitespace "]"))
-                                       (str (char c))))
-                                  (not (and (not map-as-token) (or (= c 123) (= c 125)))))
-                           (recur (.read stream)
-                                  (inc p)
-                                  (str w (char c))
-                                  (cond (or (= (char c) \[) (and map-as-token (= (char c) \{)) (and list-as-token (= (char c) \())) (inc d)
-                                        (or (= (char c) \]) (and map-as-token (= (char c) \})) (and list-as-token (= (char c) \)))) (dec d)
-                                        true d))
-                           [p w c])))
+          tree (get-token-tree data)
           tokenize (fn [text source whitespace list-as-token]
                      (let [stream (java.io.StringReader. text)]
                        (loop [tokens source pos 0 c (.read stream) type nil offsets {} n 0]
@@ -394,14 +411,27 @@
 (defn get-step-mode-bounds [pattern]
   (let [bounds (filter #(or (.equals (first %) "pattern") (.equals (first %) "rest-regex") (.equals (first %) "div"))
                        (get-annotated-pattern pattern))
-        reg (second (first (filter #(if (.equals (first %) "rest-regex") (second %)) bounds)))
-        pos (second (first (filter #(if (.equals (first %) "pattern") (second %)) bounds)))
+        reg (.replace (second (first (filter #(if (.equals (first %) "rest-regex") (second %)) bounds))) "\\\\" "\\")
+        p-pos (second (first (filter #(if (.equals (first %) "pattern") (second %)) bounds)))
         div (second (first (filter #(if (.equals (first %) "div") (second %)) bounds)))
-        pattern (.substring pattern (inc (first pos)) (dec (second pos)))
+        orig pattern
+        pattern (.substring pattern (inc (first p-pos)) (dec (second p-pos)))
         tokens (let [r (java.io.PushbackReader. (java.io.InputStreamReader. (java.io.ByteArrayInputStream. (.getBytes pattern))) )
-                     eof (Object.)]
-                 (take-while #(not= % eof) (repeatedly #(read r false eof))))]
-    pattern
+                          eof (Object.)]
+                 (take-while (fn [a] (not= a eof)) (repeatedly (fn [] (read r false eof)))))
+        offsets  (get-token-map pattern tokens "\\s" true)]
+    (loop [pos 1 idx 0 bounds bounds tokens tokens]
+      (let [t (first tokens)
+            is-rest (and (keyword? t) (re-matches (re-pattern reg) (name t)))
+            offset (get offsets idx)
+            offset (if offset [(+ (first offset) (first p-pos) 1) (+ 1 (second offset) (first p-pos))])
+            bounds (if (and offset (not (= :| t))) (conj bounds (list (str (p/get-pos pos div)) (seq offset))) bounds)
+            pos (if (not (= :| t)) (inc pos) pos)]
+        (if (> (count tokens) 0)
+          (recur pos (inc idx) bounds (rest tokens))
+          bounds)
+        )
+      )
     )
   )
 
