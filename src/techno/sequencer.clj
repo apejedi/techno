@@ -32,7 +32,7 @@
 (osc-handle
  @sc-server "/response"
  (fn [m]
-   (println m)
+   ;(println m)
    (reset! sc-resp m)
    (let [o (read-string (first (:args m)))]
      (when (and (map? o) (contains? o :busses))
