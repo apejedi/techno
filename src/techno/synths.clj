@@ -5,6 +5,11 @@
   (:require [techno.sequencer :as s]
             [techno.ugens :refer [dwg-bowed-tor:ar dwg-sound-board:ar dwg-plucked2:ar fm7]]))
 
+(defn load-synth-descs ()
+  (techno.sequencer/eval-sc "~descs = \"[\";SynthDescLib.global.synthDescs.keys.do({|s| ~descs = ~descs + s + \",\"}); \"{:descs\" +  ~descs + \"]}\"")
+  (let [a (read-string (first (:args @techno.sequencer/sc-resp)))]
+    )
+  )
 (defsynth sweet [note 60 dur 1 amp 1 vib 0.02 out-bus 0]
   (let [freq (midicps note)
         ratios (map float [1 3/4 1/5 2/7 11/5 5/8])
