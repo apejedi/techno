@@ -5,11 +5,12 @@
   (:require [techno.sequencer :as s]
             [techno.ugens :refer [dwg-bowed-tor:ar dwg-sound-board:ar dwg-plucked2:ar fm7]]))
 
-(defn load-synth-descs ()
-  (techno.sequencer/eval-sc "~descs = \"[\";SynthDescLib.global.synthDescs.keys.do({|s| ~descs = ~descs + s + \",\"}); \"{:descs\" +  ~descs + \"]}\"")
-  (let [a (read-string (first (:args @techno.sequencer/sc-resp)))]
-    )
-  )
+(overtone.helpers.lib/defrecord-ifn Sc-synth [name params]
+  (fn [syn & args]
+    (node (:name syn) (if args (into {} (map vec (partition 2 args))) {}))))
+
+;(def sc-test (map->Sc-synth {:name "test" :params [{:name "freq" :default 200}]}))
+
 (defsynth sweet [note 60 dur 1 amp 1 vib 0.02 out-bus 0]
   (let [freq (midicps note)
         ratios (map float [1 3/4 1/5 2/7 11/5 5/8])
@@ -1015,3 +1016,26 @@
 ;;        ]
 ;;    [w w]
 ;;    ))
+
+(defn load-synth-descs []
+  (let [syns (techno.sequencer/eval-sc "~descs = \"\";SynthDescLib.global.synthDescs.keys.do({|s| ~descs = ~descs + \"\\\"\" + s + \"\\\"\" + \",\"}); \"[\" +  ~descs + \"]\"" ":synths")
+        a (read-string (first (deref syns 4000 [])))
+        names (map #(do (.trim %)) (filter #(not (.contains % "system")) a))]
+    (doseq [syn names]
+      (let [p (techno.sequencer/eval-sc (str "SynthDescLib.at(\\" syn ").asString; ") ":desc")
+            desc (first (deref p 3000 []))
+            lines (clojure.string/split desc #"\n")
+            params (reduce
+                    (fn [params p]
+                      (if (.startsWith p "ControlName")
+                        (let [[_ _ _ name _ default] (clojure.string/split p #"\s+")]
+                          (conj params {:name name :default (Float/parseFloat default)})
+                          )
+                        params)
+                      ) [] lines)]
+        (intern 'techno.synths (symbol syn) (map->Sc-synth {:name syn :params params}))
+        )
+      )
+    )
+  )
+(load-synth-descs)

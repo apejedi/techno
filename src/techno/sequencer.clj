@@ -19,6 +19,7 @@
 (defonce ^:private midi-clip (atom {}))
 (defonce ^:private  sc-lang (atom (osc-client "127.0.0.1" 57120)))
 (defonce ^:private  sc-server (atom (osc-server 4420)))
+(defonce ^:private  sc-promises (atom {}))
 (defonce ^:private  bus-pool (atom []))
 (defonce ^:private  bus-pool-using (atom []))
 (defonce  sc-resp (atom nil))
@@ -32,11 +33,14 @@
 (osc-handle
  @sc-server "/response"
  (fn [m]
-   ;(println m)
    (reset! sc-resp m)
-   (let [o (read-string (first (:args m)))]
+   (let [o (read-string (first (:args m)))
+         key (last (:args m))]
      (when (and (map? o) (contains? o :busses))
        (reset! bus-pool (:busses o)))
+     (when (and (string? key) (.startsWith key ":"))
+       (deliver (get @sc-promises (keyword (.substring key 1))) (butlast (:args m)))
+       )
      )
    ))
 
@@ -589,8 +593,12 @@
    )
   )
 
-(defn eval-sc [code]
-  (osc-send @sc-lang "/evalCode" code)
+(defn eval-sc [code & [key]]
+  (let [key (if key key ":techno")]
+    (osc-send @sc-lang "/evalCode" code key)
+    (let [p (promise)]
+      (swap! sc-promises assoc (keyword (.substring key 1)) p)
+      p))
   )
 
 (defn alloc-audio-bus []

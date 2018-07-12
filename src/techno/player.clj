@@ -724,7 +724,8 @@
 
 (defn phrase-p [inst pattern div & [space args mk-note ret-seq is-note? is-space? mk-block]]
   (let [note-arg (if (or (instance? overtone.studio.inst.Inst inst)
-                         (instance? overtone.sc.synth.Synth inst))
+                         (instance? overtone.sc.synth.Synth inst)
+                         (instance? techno.synths.Sc-synth inst))
                    (cond (some #(= (:name %) "freq") (:params inst)) :freq
                          (some #(= (:name %) "note") (:params inst)) :note
                          (some #(= (:name %) "freq1") (:params inst)) :freq1
