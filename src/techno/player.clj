@@ -209,7 +209,6 @@
               beat @counter
               size (:size state)
               s-div (:div state)]
-          ;; (println "beat " beat)
           (when (not (get state :queued false))
             (doseq [[k v] (get @patterns id)]
               (let [beat (if (< (:size v) beat) (mod beat (:size v)) beat)
@@ -231,6 +230,7 @@
                         gated (:gated v)
                         synth (:synth v)
                         synth-inst (:synth-inst v)
+                        nodes (get v :nodes {})
                         mono (:mono v)]
                     (doseq [[a args] (partition 2 actions)]
                       (let [has-gate (if gated (not (= -1 (.indexOf args :gate))) false)
@@ -246,7 +246,14 @@
                                   (apply ctl (concat [synth-inst] (if has-gate [] [:gate 1]) args))
                                   (swap! patterns
                                          assoc-in [id k :synth-inst]
-                                         (apply synth args))))
+                                         (apply synth args)))
+                                (let [n (if (not (= -1 (.indexOf args :note)))
+                                          (nth args (inc (.indexOf args :note)))
+                                          (hz->midi (nth args (inc (.indexOf args :freq)))))]
+                                  (if (contains? nodes n)
+                                    (apply ctl (concat [(get nodes n)] args))
+                                    (swap! patterns assoc-in [id k :nodes]
+                                           (assoc nodes n (apply a args))))))
                             (apply a args))
                           (when (and (= @send-offsets k) (or (= true @written) (.isDone @written)))
                             (.clear @tekno-buffer)

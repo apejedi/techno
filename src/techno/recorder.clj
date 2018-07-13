@@ -198,7 +198,7 @@
   (let [t (System/nanoTime)]
     (when @recording
       (.add @time-pattern [t [inst args]])
-      (.add @note-pattern [t n]))
+      (.add @note-pattern [t n args]))
     )
   )
 
@@ -253,13 +253,16 @@
   ([bpm div]
    (let [quant (float (/ 60 bpm div)) ;;duration of step
          begin (first (first @note-pattern))
-         pat (reduce (fn [pat [o a]]
+         pat (reduce (fn [pat [o a args]]
                        (let [o (inc (int (Math/floor (/ (- o begin) quant 1000000000))))
                              pos (p/get-pos o div)
                              c (get-in pat pos)
-                             a (cond (number? c) (vector c a)
-                                     (sequential? c) (vec (conj c a))
-                                     true a)]
+                             a (if (not (= -1 (.indexOf args :gate))) [a [:gate (nth args (inc (.indexOf args :gate)))]] a)
+                             a (cond (and (vector? a) (number? c)) (conj a c)
+                                 (and (number? a) (number? c)) (vector c a)
+                                 (and (number? a) (sequential? c)) (vec (conj c a))
+                                 (and (vector? a) (sequential? c)) (vec (concat c a))
+                                 true a)]
                          (assoc-in pat pos a)
                          ))
                      {:div div}
@@ -268,7 +271,7 @@
      ))
   )
 
-(defn degree-fn [scale n]
+(defn degree-fn [scale n & args]
   (let [notes (map find-pitch-class-name scale)
         f-notes (map #(note-info (find-note-name %)) scale)
         info (note-info (find-note-name n))
@@ -300,7 +303,7 @@
          rest-p (p/build-rest-p (mk-map-p bpm div))]
      (vec (map #(cond (number? %) (f %)
                       (keyword? %) (r %)
-                      (sequential? %) (vec (map f %))
+                      (sequential? %) (vec (map (fn [a] (if (number? a) (f a) a)) %))
                       true %)
                rest-p))
      )
