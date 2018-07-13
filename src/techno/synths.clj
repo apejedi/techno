@@ -7,7 +7,12 @@
 
 (overtone.helpers.lib/defrecord-ifn Sc-synth [name params]
   (fn [syn & args]
-    (node (:name syn) (if args (into {} (map vec (partition 2 args))) {}))))
+    (let [args (if args args [])
+          target (if (vector? (first args)) (first args) nil)
+          args (if (vector? (first args)) (rest args) args)]
+        (node (:name syn)
+              (into {} (map vec (partition 2 args)))
+              (if target {:position (first target) :target (second target)})))))
 
 ;(def sc-test (map->Sc-synth {:name "test" :params [{:name "freq" :default 200}]}))
 

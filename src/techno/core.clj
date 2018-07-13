@@ -16,6 +16,7 @@
 (defonce s-player (atom nil))
 (declare player)
 (declare synth-grp)
+(def live-synths (atom {}))
 
 (comment
   (if (or (nil? player) (not (node-active? player)))
@@ -482,22 +483,3 @@
      data)
     )
   )
-
-;; (defn get-pattern-fx [pattern]
-;;   (let [pattern (if (string? pattern) (keyword (subs pattern 1)) pattern)
-;;         fx (map
-;;             (fn [[k v]]
-;;               (str
-;;                (name k) ": ["
-;;                (apply str
-;;                       (map (fn [p]
-;;                              (str (:name p) ": "
-;;                                   (node-get-control v (keyword (:name p))) " "))
-;;                            (:pnames (:sdef v))))
-;;                "]
-;; "))
-;;             (s/p-fx pattern))
-;;         fx (apply str fx)]
-;;     fx
-;;     )
-;;   )
