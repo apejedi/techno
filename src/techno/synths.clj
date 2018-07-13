@@ -5,6 +5,9 @@
   (:require [techno.sequencer :as s]
             [techno.ugens :refer [dwg-bowed-tor:ar dwg-sound-board:ar dwg-plucked2:ar fm7]]))
 
+(declare synth-grp)
+(def live-synths (atom {}))
+
 (overtone.helpers.lib/defrecord-ifn Sc-synth [name params]
   (fn [syn & args]
     (let [args (if args args [])

@@ -16,7 +16,6 @@
 (defonce s-player (atom nil))
 (declare player)
 (declare synth-grp)
-(def live-synths (atom {}))
 
 (comment
   (if (or (nil? player) (not (node-active? player)))
@@ -458,6 +457,7 @@
   )
 
 (defn get-synths []
+  (load-synth-descs)
   (let [synths  (filter #(or (= (type %) overtone.studio.inst.Inst)
                              (= (type %) overtone.sc.synth.Synth)
                              (= (type %) techno.synths.Sc-synth)

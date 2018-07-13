@@ -39,13 +39,22 @@
 (declare update-size)
 (declare handle-beat-trigger)
 (declare shutdown-pool-now!)
+(defonce node-statuses (atom {}))
 
+(on-event "/n_end"
+          (fn [info]
+            (swap! node-statuses assoc-in [techno.core/player (first (:args info))] 0))
+          :node-freed)
 (defn get-val-if-ref [x]
   (if (instance? clojure.lang.Atom x)
     @x
     x
     )
   )
+(defn sc-node-info [node]
+  (let [ res (recv "/n_info")
+        s (snd "/n_query" (to-sc-id node))]
+    (deref res 100 false)))
 
 (defn get-pos [beat div & [size s-div]]
   (let [step (if s-div (/ s-div div) div)
@@ -230,30 +239,42 @@
                         gated (:gated v)
                         synth (:synth v)
                         synth-inst (:synth-inst v)
-                        nodes (get v :nodes {})
                         mono (:mono v)]
                     (doseq [[a args] (partition 2 actions)]
-                      (let [has-gate (if gated (not (= -1 (.indexOf args :gate))) false)
-                            args (if (and (not (nil? (:bus p-fx))) (nil? synth-inst))
-                                   (concat args [:out-bus (:bus p-fx)]) args)
-                            args (if (and (not (nil? (:group p-fx))) (nil? synth-inst))
-                                   (concat [[:head (:group p-fx)]] args) args)
-                            pos (str [bar (if (fn? (get v bar)) 1 note)])]
-                        (when (not (nil? a))
+                      (when (not (nil? a))
+                        (let [has-gate (if gated (not (= -1 (.indexOf args :gate))) false)
+                              args (if (and (not (nil? (:bus p-fx))) (nil? synth-inst))
+                                     (concat args [(if (and (map? a) (contains? a :params) (first (filter #(.equals "outBus" (:name %)) (:params a))))
+                                                     :outBus :out-bus)
+                                                   (:bus p-fx)]) args)
+                              args (if (and (not (nil? (:group p-fx))) (nil? synth-inst))
+                                     (concat [[:head (:group p-fx)]] args) args)
+                              pos (str [bar (if (fn? (get v bar)) 1 note)])]
                           (if gated
                             (if mono
-                                (if (not (nil? synth-inst))
-                                  (apply ctl (concat [synth-inst] (if has-gate [] [:gate 1]) args))
-                                  (swap! patterns
-                                         assoc-in [id k :synth-inst]
-                                         (apply synth args)))
-                                (let [n (if (not (= -1 (.indexOf args :note)))
-                                          (nth args (inc (.indexOf args :note)))
-                                          (hz->midi (nth args (inc (.indexOf args :freq)))))]
-                                  (if (contains? nodes n)
-                                    (apply ctl (concat [(get nodes n)] args))
+                              (if (not (nil? synth-inst))
+                                (apply ctl (concat [synth-inst] (if has-gate [] [:gate 1]) args))
+                                (swap! patterns
+                                       assoc-in [id k :synth-inst]
+                                       (apply synth args)))
+                              (let [n (if (not (= -1 (.indexOf args :note)))
+                                        (nth args (inc (.indexOf args :note)))
+                                        (hz->midi (nth args (inc (.indexOf args :freq)))))
+                                    c-args (if (vector? (first args)) (vec (rest args)) args)
+                                    nodes (get-in @patterns [id k :nodes] {})
+                                    node (get nodes n)
+                                    destroyed (get @node-statuses id)]
+                                (if (and node
+                                         (not (= 0 (get destroyed (to-sc-id node)))))
+                                  (try
+                                    (apply ctl (concat [node] c-args))
+                                    (catch Exception e))
+                                  (do
+                                    ;; (if node
+                                    ;;   (swap! node-statuses assoc id
+                                    ;;          (dissoc destroyed (to-sc-id node))))
                                     (swap! patterns assoc-in [id k :nodes]
-                                           (assoc nodes n (apply a args))))))
+                                           (assoc nodes n (apply a args)))))))
                             (apply a args))
                           (when (and (= @send-offsets k) (or (= true @written) (.isDone @written)))
                             (.clear @tekno-buffer)
@@ -274,6 +295,7 @@
                (commute counter inc))))
           ))
     (catch Exception e (println (.getMessage e))
+           (.printStackTrace e)
            (if (= id 0) (stop-s 0))))
   )
 
@@ -364,7 +386,14 @@
   (techno.sequencer/handle-pattern-fx key {} true)
   (if (= key :all)
     (swap! patterns dissoc id)
-    (swap! patterns (fn [p] (assoc p id (dissoc (get p id) key)))))
+    (let [pat (get-in @patterns [id key])]
+      (swap! patterns (fn [p] (assoc p id (dissoc (get p id) key))))
+      (if (:gated pat)
+        (doseq [syn (:nodes pat)]
+          (try
+            (ctl syn :gate 0)
+            (catch Exception e)))))
+    )
   (update-player id)
   )
 
@@ -1089,6 +1118,7 @@
        (rm-p id k))
      (swap! listeners dissoc id)
      (swap! patterns dissoc id)
+     (swap! node-statuses dissoc id)
      )
    (cancel-job-id id pool immediate))
   )
