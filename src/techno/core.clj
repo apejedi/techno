@@ -15,7 +15,7 @@
             [techno.core :as core]))
 (defonce s-player (atom nil))
 (declare player)
-(declare synth-grp)
+;; (declare synth-grp)
 
 (comment
   (if (or (nil? player) (not (node-active? player)))
@@ -189,54 +189,57 @@
   )
 
 (defn get-patterns-from-string [data & [sketch return-map?]]
-  (let [text data
-        data (string/replace
-              (string/replace data " #(" " \\#(")
-              " @" " \\@")
-        ;r (readers/source-logging-push-back-reader data)
-        r (readers/indexing-push-back-reader data)
-        get-val (fn [raw start end]
-                  (find-match
-                   (string/replace
-                    (string/replace
-                     (string/replace raw #"\\# ([^\s]+)" "#$1")
-                     #"\\@ ([^\s]+)" "@$1")
-                    #"," "")
-                   (string/join "\n"
-                    (subvec
-                     (string/split-lines text)
-                     (dec start)
-                     (dec end)))))
-        start (readers/get-line-number r)]
-    (loop [cur (edn/read {:eof false} r) patterns (sorted-map)
-           start start end (readers/get-line-number r)]
-      (if cur
-        (let [[e f g h] cur
-              [a b c d] (map str [e f g h])
-              patterns (cond (and (.contains a "add-p") (.startsWith c "("))
-                             (assoc patterns d (get-val c start end))
-                             (and (= "def" a) (= \{ (first c))
-                                  (or (not sketch) (nil? sketch) (= b sketch)))
-                             (reduce
-                              (fn [m [k v]]
-                                (assoc m (str k) (get-val (str v) start end))
-                                )
-                              patterns
-                              g)
-                             (= "swap!" a)
-                             (assoc patterns (str (keyword b)) (get-val c start end))
-                             (= "comment" a)
-                             (merge patterns (get-patterns-from-string (apply str (rest cur)) nil true))
-                             (= "do" a)
-                             (merge patterns (get-patterns-from-string (apply str (rest cur)) nil true))
-                             true patterns)]
-          (recur (edn/read {:eof false} r) patterns end (readers/get-line-number r)))
-        (if return-map?
-          patterns
-          (seq (map seq patterns))
-          ))
+  (try
+    (println data)
+    (let [text data
+          data (string/replace
+                (string/replace data " #(" " \\#(")
+                " @" " \\@")
+                                        ;r (readers/source-logging-push-back-reader data)
+          r (readers/indexing-push-back-reader data)
+          get-val (fn [raw start end]
+                    (find-match
+                     (string/replace
+                      (string/replace
+                       (string/replace raw #"\\# ([^\s]+)" "#$1")
+                       #"\\@ ([^\s]+)" "@$1")
+                      #"," "")
+                     (string/join "\n"
+                                  (subvec
+                                   (string/split-lines text)
+                                   (dec start)
+                                   (dec end)))))
+          start (readers/get-line-number r)]
+      (loop [cur (edn/read {:eof false} r) patterns (sorted-map)
+             start start end (readers/get-line-number r)]
+        (if cur
+          (let [[e f g h] cur
+                [a b c d] (map str [e f g h])
+                patterns (cond (and (.contains a "add-p") (.startsWith c "("))
+                               (assoc patterns d (get-val c start end))
+                               (and (= "def" a) (= \{ (first c))
+                                    (or (not sketch) (nil? sketch) (= b sketch)))
+                               (reduce
+                                (fn [m [k v]]
+                                  (assoc m (str k) (get-val (str v) start end))
+                                  )
+                                patterns
+                                g)
+                               (= "swap!" a)
+                               (assoc patterns (str (keyword b)) (get-val c start end))
+                               (= "comment" a)
+                               (merge patterns (get-patterns-from-string (apply str (rest cur)) nil true))
+                               (= "do" a)
+                               (merge patterns (get-patterns-from-string (apply str (rest cur)) nil true))
+                               true patterns)]
+            (recur (edn/read {:eof false} r) patterns end (readers/get-line-number r)))
+          (if return-map?
+            patterns
+            (seq (map seq patterns))
+            ))
+        )
       )
-    )
+    (catch Exception e (println (.getMessage e))))
   )
 
 (defn read-whitespace [cur pos stream whitespace]
@@ -483,3 +486,15 @@
      data)
     )
   )
+
+;; (on-event "/n_end"
+;;           (fn [info]
+;;             (if (contains? @techno.player/node-statuses (first (:args info)))
+;;              (let [n (first (:args info))
+;;                    k (get @techno.player/node-statuses n)
+;;                    nodes (get-in @techno.player/patterns [player k :nodes])]
+;;                (swap! techno.player/node-statuses dissoc n)
+;;                (swap! techno.player/patterns assoc-in [player k :nodes] (dissoc nodes n))))
+;;             )
+;;           :node-freed)
+;(remove-event-handler :node-freed)

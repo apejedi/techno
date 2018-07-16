@@ -41,10 +41,6 @@
 (declare shutdown-pool-now!)
 (defonce node-statuses (atom {}))
 
-(on-event "/n_end"
-          (fn [info]
-            (swap! node-statuses assoc-in [techno.core/player (first (:args info))] 0))
-          :node-freed)
 (defn get-val-if-ref [x]
   (if (instance? clojure.lang.Atom x)
     @x
@@ -263,18 +259,19 @@
                                     c-args (if (vector? (first args)) (vec (rest args)) args)
                                     nodes (get-in @patterns [id k :nodes] {})
                                     node (get nodes n)
-                                    destroyed (get @node-statuses id)]
+                                    ;destroyed (get @node-statuses id)
+                                    ]
                                 (if (and node
-                                         (not (= 0 (get destroyed (to-sc-id node)))))
+                                         (not (= :destroyed @(:status node)))
+                                         )
                                   (try
                                     (apply ctl (concat [node] c-args))
                                     (catch Exception e))
-                                  (do
-                                    ;; (if node
-                                    ;;   (swap! node-statuses assoc id
-                                    ;;          (dissoc destroyed (to-sc-id node))))
+                                  (let [no (apply a args)]
+                                    ;(println "created " no)
+                                    (swap! node-statuses assoc (to-sc-id no) k)
                                     (swap! patterns assoc-in [id k :nodes]
-                                           (assoc nodes n (apply a args)))))))
+                                           (assoc nodes n no))))))
                             (apply a args))
                           (when (and (= @send-offsets k) (or (= true @written) (.isDone @written)))
                             (.clear @tekno-buffer)
@@ -1118,7 +1115,7 @@
        (rm-p id k))
      (swap! listeners dissoc id)
      (swap! patterns dissoc id)
-     (swap! node-statuses dissoc id)
+     (reset! node-statuses {})
      )
    (cancel-job-id id pool immediate))
   )
