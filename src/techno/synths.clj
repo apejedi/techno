@@ -181,7 +181,7 @@
         env (env-gen (perc (/ 1 vel) dur) :action 2)
         snd (* amp env (mda-piano freq 1 vel  decay  release  hard  velhard  muffle  velmuff  velcurve  stereo  tune  random  stretch  sustain))
         snd2 (comb-n snd 0.2 0.2 dur)]
-    (out:ar 0 [snd snd])
+    (out:ar out-bus [snd snd])
     )
   )
 
