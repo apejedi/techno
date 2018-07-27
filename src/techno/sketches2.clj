@@ -457,6 +457,12 @@
                  :04 [:5 :4>]            :|
                  :02 [:4> :5]            :|]
                 1/8 0 [:amp 0.1 :atk 0.01 :dur 1.4 :attack 0.01 :decay 1])
+   :lead2 (p/scale-p
+           reverb-test
+           :C4 :major
+           [:2> :01 :3> :01 :6> :01
+            ]
+           1/8 0 [:attack 0.02 :decay 0.3 :amp 0.2 :delay-time 0.2 ])
    :drum2 (let []
             (drum-p2
              [:Kit7-Electro]
@@ -1134,12 +1140,12 @@
    :motif1 (p/scale-p
             acid-bass
             :C4 :major
-            [:5<< :05 :2<< :|
-             :04 :4<<      :|
-             :02 :3<<      :|
-             :2<<          :|
+            [:2<< :05 :2<<           :|
+             :04 :2<<                :|
+             :02 :2<<                :|
+             :2<< :01 :4<<< :01 :3<< :|
              ]
-            1/8 0 [:amp 0.5 :lg 1.0 :dur 0.3 :attack 0.001 :reverb 0 ])
+            1/8 0 [:amp 0.15 :lg 1.0 :dur 0.25 :attack 0.001 :reverb 1.0 ])
 
    :harmony1 (p/scale-p
               fmTest
@@ -1275,5 +1281,111 @@
                :05 [:5> [:gate 0] :1> [:gate 0]] :|  :|]
               1/8 0 [:gate 1.0 :outBus 0.0 :amp 0.1 ])
 
+
+   })
+(def tekno3
+  {:tempo 120
+   :motif2 (p/scale-p
+            bass-synth
+            :C4 :major
+            [:5>         :|
+             :1> :04 :2> :|
+             :04 :3>     :|
+             :04 :1>     :|
+             :6          :|
+             :|
+             :|
+             :|
+             :5>         :|
+             :1> :03 :2> :|
+             :04 :3>     :|
+             :04 :1>     :|
+             :04 :7      :|
+             :|
+             :|
+             :|
+             ]
+            1/8 0 [:attack 0.001 :amp 1.0 :release 1.0 :detune 3.0 :bwr 2.0 ])
+
+   :motif1 (p/scale-p
+            bass2
+            :C4 :major
+            [:4<< :|
+             :|
+             :|
+             :|
+             :3<< :|
+             :|
+             :|
+             :|
+             :6<< :|
+             :|
+             :|
+             :|
+             :2<< :|
+             :|
+             :|
+             :|
+             ]
+            1/8 0 [:atk 1 :f-dur 0.4 :echo 0 :decay 2.6 :amp 0.4 :cutoff 2000.0 :cutoff2 1000 ])
+
+   :harmony1 (p/scale-p
+              cs80
+              :C4 :major
+              [:6 :02 :6 :03 :6 :|
+               :|
+               :01 :6           :|
+               :07 :7           :|
+               :03 :7 :02 :7    :|
+               :01 :7           :|
+               :|
+               :|
+               :01 :1> :02 :1>  :|
+               :1>              :|
+               :1>              :|
+               :|
+               :3> :03 :3>      :|
+               :3> :03 :3>      :|
+               :|
+               :|
+               :01 :6 :04 :6    :|
+               :02 :6 :03 :6    :|
+               :02 :6           :|
+               :|
+               :7 :03 :7 :02 :7 :|
+               :|
+               :|
+               :|
+               :1> :03 :1>      :|
+               :1>              :|
+               :|
+               :06 :5>          :|
+               :02 :5> :02 :5>  :| :| :| :|]
+              1/8 0 [:amp 0.4 :dur 2.6 :atk 0.3 :rq 0.5 :cutoff 7000.0 :dtune 0.002 :vibrate 4.0 :vibdepth 0.015 :freq-lag 0.1 ])
+
+   :drum1 (drum-p2
+           [:Kit15-Electro]
+           [[(drum-s [:KurzweilKit08] :kick1) []]                                                                                :|
+            [(drum-s [:KurzweilKit08] :kick1) []]                                                                                :|
+            [(drum-s [:KurzweilKit08] :kick1) []] [(drum-s [:KurzweilKit08] :perc8) []] :1 [(drum-s [:KurzweilKit08] :perc8) []] :|
+            [(drum-s [:KurzweilKit08] :kick1) []] :1 [(drum-s [:KurzweilKit08] :sdst2) []]                                       :|
+            ]
+           1/4)
+   :drum4 (drum-p2
+           [:Kit15-Electro]
+           [:2 [(drum-s [:Kit17-Electro] :ophat) []] :|]
+           1/4)
+   :drum3 (drum-p2
+           [:Kit15-Electro]
+           [:| :cl1 :|]
+           1/4)
+   :drum2 (drum-p2
+           [:Kit15-Electro]
+           [[(drum-s [:KurzweilKit08] :pdhat) []] [(drum-s [:KurzweilKit08] :pdhat) []]                                    :|
+            :02 [(drum-s [:KurzweilKit08] :pdhat) []]                                                                      :|
+            [(drum-s [:KurzweilKit08] :tom2) []] [(drum-s [:KurzweilKit08] :tom3) []] [(drum-s [:KurzweilKit08] :tom2) []] :|
+            :02 [(drum-s [:KurzweilKit08] :tom2) []]                                                                       :|
+            ]
+           1/4)
 
    })
