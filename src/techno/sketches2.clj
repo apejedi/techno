@@ -987,6 +987,29 @@
                bass-synth
                [[:D4 :G3] :| :4 [:F3 :C4] :| :| :1 :E4 :A3 :| :7 [:E3 :B3] :| :| :3 [:G3 :D4] :| :|]
                1/8 0 [:release 2 :detune 0 :attack 1 :bwr 0.1 :amp 0.1])
+   :bass2 (merge
+           (p/phrase-p
+            pulsePad
+            [[:D4 :G3]                                                         :|
+             :07 [:D4 [:gate 0] :G3 [:gate 0]]                                 :|
+             [:F3 :C4]                                                         :|
+             [:F3 [:gate 0] :C4 [:gate 0]]                                     :|
+             [:E4 :A3]                                                         :|
+             :1 [:E4 [:gate 0] :A3 [:gate 0]] :1 [:E3 :B3]                     :|
+             :|
+             [:E3 [:gate 0] :B3 [:gate 0]] :06 [:D4 [:fdur 12] :G3 [:fdur 12]] :|
+             :|
+             :|
+             :|
+             :|
+             :|
+             :|
+             :|
+             :|
+             :02 [:D4 [:gate 0] :G3 [:gate 0]]                                 :|
+             ]
+            1/8 0 [:gate 1 :attack 0.3 :release 2])
+           {:rm-gate0 true})
    :drone (p/scale-p
            drone-noise
            :C5 :major
@@ -1285,27 +1308,29 @@
    })
 (def tekno3
   {:tempo 120
-   :motif2 (p/scale-p
-            bass-synth
-            :C4 :major
-            [:5>         :|
-             :1> :04 :2> :|
-             :04 :3>     :|
-             :04 :1>     :|
-             :6          :|
-             :|
-             :|
-             :|
-             :5>         :|
-             :1> :03 :2> :|
-             :04 :3>     :|
-             :04 :1>     :|
-             :04 :7      :|
-             :|
-             :|
-             :|
-             ]
-            1/8 0 [:attack 0.001 :amp 1.0 :release 1.0 :detune 3.0 :bwr 2.0 ])
+   :motif2 (merge
+            (p/scale-p
+             bass-synth
+             :C4 :major
+             [:5>         :|
+              :1> :04 :2> :|
+              :04 :3>     :|
+              :04 :1>     :|
+              :6          :|
+              :|
+              :|
+              :|
+              :5>         :|
+              :1> :03 :2> :|
+              :04 :3>     :|
+              :04 :1>     :|
+              :04 :7      :|
+              :|
+              :|
+              :|
+              ]
+             1/8 0 [:attack 0.001 :amp 1.0 :release 1.0 :detune 3.0 :bwr 2.0 ])
+            {:fx {:reverb [p/p-reverb :damping 0.8]}})
 
    :motif1 (p/scale-p
             bass2
@@ -1328,7 +1353,27 @@
              :|
              ]
             1/8 0 [:atk 1 :f-dur 0.4 :echo 0 :decay 2.6 :amp 0.4 :cutoff 2000.0 :cutoff2 1000 ])
-
+   :prophet (p/scale-p
+             prophet
+             :C4 :major
+             [[:2<< [:rq 0.6 :attack 2 :cutoff 2000 :decay 2.3]] :06 :3 :|
+              :07 :1>                                                   :|
+              :03 :3                                                    :|
+              :03 :6                                                    :|
+              :03 :3                                                    :|
+              :03 :5 :03 :3                                             :|
+              :03 :4 :03 :3                                             :|
+              :07 [:1<< [:rq 0.6 :attack 2 :cutoff 2000 :decay 2.4]]    :|
+              :07 :3                                                    :|
+              :07 :1>                                                   :|
+              :03 :3                                                    :|
+              :03 :6                                                    :|
+              :03 :3                                                    :|
+              :03 :6 :03 :3                                             :|
+              :03 :5 :03 :3                                             :|
+              :|
+              ]
+             1/8 0 [:amp 1.0 :cutoff 1000 :rq 0.1 :attack 0.01 :decay 1.2 ])
    :harmony1 (p/scale-p
               cs80
               :C4 :major
@@ -1361,7 +1406,7 @@
                :|
                :06 :5>          :|
                :02 :5> :02 :5>  :| :| :| :|]
-              1/8 0 [:amp 0.4 :dur 2.6 :atk 0.3 :rq 0.5 :cutoff 7000.0 :dtune 0.002 :vibrate 4.0 :vibdepth 0.015 :freq-lag 0.1 ])
+              1/8 0 [:amp 0.4 :dur 2.6 :atk 0.3 :rq 0.5 :cutoff 6000.0 :dtune 0.002 :vibrate 2.0 :vibdepth 0.015 :freq-lag 0.1 ])
 
    :drum1 (drum-p2
            [:Kit15-Electro]
@@ -1387,5 +1432,70 @@
             :02 [(drum-s [:KurzweilKit08] :tom2) []]                                                                       :|
             ]
            1/4)
+
+   })
+
+(def tekno4
+  {:tempo 120
+   :motif1 (p/scale-p
+            acid-bass
+            :C4 :major
+            [:2<< :05 :5<<< :|
+             :04 :7<<<      :|
+             :02 :1<<       :|
+             :7<<<          :|
+             ]
+            1/8 0 [:amp 0.3 :lg 1.0 :dur 0.6 :attack 0.001 :reverb 1.0 ])
+
+   :drum3 (drum-p2
+           [:Kit15-Electro]
+           [:| :cl1 :|]
+           1/4)
+   :drum2 (drum-p2
+           [:Kit6-Electro]
+           [:2 :o1 :|]
+           1/4)
+   :drum1 (drum-p2
+           [:Kit15-Electro]
+           [[(drum-s [:KurzweilKit04] :kick2) []] :1 [(drum-s [:KurzweilKit04] :pdhat) []] :1 [(drum-s [:KurzweilKit04] :pdhat) []]                          :|
+            [(drum-s [:KurzweilKit04] :kick2) []] :03 (fn [d] [[(drum-s [:KurzweilKit04] (choose [:ophat :c1 :pdhat])) []]])                                  :|
+            [(drum-s [:KurzweilKit04] :kick2) []] :1 [(drum-s [:KurzweilKit04] :kick1) []]                                                                   :|
+            [(drum-s [:KurzweilKit04] :kick2) []] :1 (fn [d] (choose [nil [[(drum-s [:KurzweilKit04] :kick1) []]]])) :1 [(drum-s [:KurzweilKit04] :kick1) []] :|
+            ]
+           1/8)
+   :harmony1 (merge
+              (p/scale-p
+               sawPad
+               :C4 :major
+               [[:3 :5< :7< :1]                                                                   :|
+                :|
+                :|
+                :|
+                :|
+                [:5< [:gate 0]] :01 [:7< [:gate 0] :1 [:gate 0] :3 [:gate 0]] :02 [:3 :5< :7< :1] :|
+                [:5< [:gate 0]] [:1 [:gate 0] :7< [:gate 0] :3 [:gate 0]] :02 [:7< :3 :5< :1]     :|
+                [:7< [:gate 0] :5< [:gate 0] :1 [:gate 0] :3 [:gate 0]] :02 [:6< :4< :3 :1]       :|
+                :|
+                :|
+                :|
+                :06 [:6< [:gate 0] :4< [:gate 0] :1 [:gate 0] :3 [:gate 0] {:release 5}]          :| :| :| :| :|]
+               1/8 0 [:gate 1.0 :amp 0.2 :cutoff 1000 :cutoff2 600 :fdur 3.0 ])
+              {:rm-gate0 true})
+
+   :harmony2 (p/scale-p
+              pulsePad
+              :C4 :major
+              [[:7> :3>]                               :|
+               :|
+               :|
+               :03 [:7> [:gate 0]] :01 [:3> [:gate 0]] :|
+               :05 [:2> :7>]                           :|
+               :03 :4 :01 [:7> [:gate 0]]              :|
+               :02 :6> :01 [:4 [:gate 0]]              :|
+               :|
+               :|
+               :05 [:6> [:gate 0] :2> [:gate 0] {:release 3}]       :| :| :| :| :| :| :|]
+              1/8 0 [:gate 1.0 :fdur 3.0 :amp 3 :attack 0.001 :release 0.6 :decay 0.3 ])
+
 
    })

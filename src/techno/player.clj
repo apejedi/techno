@@ -256,22 +256,21 @@
                               (let [n (if (not (= -1 (.indexOf args :note)))
                                         (nth args (inc (.indexOf args :note)))
                                         (hz->midi (nth args (inc (.indexOf args :freq)))))
+                                    gate (if (not (= -1 (.indexOf args :gate)))
+                                           (nth args (inc (.indexOf args :gate))) 1)
                                     c-args (if (vector? (first args)) (vec (rest args)) args)
                                     nodes (get-in @patterns [id k :nodes] {})
-                                    node (get nodes n)
-                                    ;destroyed (get @node-statuses id)
-                                    ]
-                                (if (and node
-                                         (not (= :destroyed @(:status node)))
-                                         )
+                                    node (get nodes n)]
+                                (if (and node (not (= :destroyed @(:status node))))
                                   (try
                                     (apply ctl (concat [node] c-args))
                                     (catch Exception e))
                                   (let [no (apply a args)]
-                                    ;(println "created " no)
-                                    (swap! node-statuses assoc (to-sc-id no) k)
                                     (swap! patterns assoc-in [id k :nodes]
-                                           (assoc nodes n no))))))
+                                           (assoc nodes n no))))
+                                (if (and (:rm-gate0 v) (= gate 0))
+                                  (swap! patterns assoc-in [id k :nodes]
+                                         (dissoc nodes n)))))
                             (apply a args))
                           (when (and (= @send-offsets k) (or (= true @written) (.isDone @written)))
                             (.clear @tekno-buffer)
