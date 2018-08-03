@@ -1041,7 +1041,7 @@
                           )
                         params)
                       ) [] lines)]
-        (intern 'techno.synths (symbol syn) (map->Sc-synth {:name syn :params params :args (map #(get % :name) (:params stuttertest))}))
+        (intern 'techno.synths (symbol syn) (map->Sc-synth {:name syn :params params :args (map #(get % :name) params)}))
         )
       )
     )
