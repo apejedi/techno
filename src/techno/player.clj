@@ -402,6 +402,7 @@
   )
 
 (defn add-fx-p [id pattern for-p fx-syn key]
+  (rm-p id key)
   (let [fx (techno.sequencer/get-pattern-fx for-p)
         syn (first (filter #(.equals (:name fx-syn) (:synth %)) (vals fx)))
         syn (if (or (nil? syn) (= :destroyed @(:status syn)))
@@ -418,7 +419,7 @@
                 x)
               syn)]
     (if (not (nil? syn))
-        (p/add-p id (merge
+        (add-p id (merge
                      pattern
                      {:mono true
                       :gated true :synth-inst syn :no-fx true}) key))))
