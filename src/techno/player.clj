@@ -404,7 +404,7 @@
 (defn add-fx-p [id pattern for-p fx-syn key]
   (let [fx (techno.sequencer/get-pattern-fx for-p)
         syn (first (filter #(.equals (:name fx-syn) (:synth %)) (vals fx)))
-        syn (if (nil? syn)
+        syn (if (or (nil? syn) (= :destroyed @(:status syn)))
               (let [out-bus (if (not (= -1 (.indexOf (:args fx-syn) "outBus"))) :outBus :out-bus)
                     audio-bus (if (not (= -1 (.indexOf (:args fx-syn) "audioBus"))) :audioBus :audio-bus)
                     fx (techno.sequencer/get-pattern-fx for-p)
