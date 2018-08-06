@@ -716,6 +716,11 @@
 (defn handle-pattern-fx [key attrs kill-group & [fx]]
   (when (and (contains? @pattern-groups key) kill-group)
     ;; (kill (get-in @pattern-groups [pattern :id]))
+    (doseq [[f x] (get @pattern-fx key)]
+      (when (and (node? x) (not (= f :mixer)) (not (= f :group))
+                 (node-active? x))
+        (kill x)
+        ))
     (when (not (nil? (get-in @pattern-fx [key :mixer])))
       (try
         (ctl (get-in @pattern-fx [key :mixer]) :start-release 1)
@@ -744,10 +749,10 @@
         (swap! pattern-fx assoc-in [key :group] p-group))
       )
     )
-  (doseq [[f x] (get @pattern-fx key)]
-    (if (and (not (= f :mixer)) (not (= f :group))
-             (node-active? x))
-      (kill x)))
+  ;; (doseq [[f x] (get @pattern-fx key)]
+  ;;   (when (and (not (= f :mixer)) (not (= f :group))
+  ;;              (node-active? x))
+  ;;     (kill x)))
   (when (and (map? fx) (contains? @pattern-groups key))
     (let [p-group (get @pattern-groups key)
           p-bus (get-in @pattern-fx [key :bus])]

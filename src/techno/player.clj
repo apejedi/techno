@@ -32,6 +32,7 @@
 (declare scheduled-jobs)
 (declare set-size)
 (declare rm-p)
+(declare add-fx-p)
 (declare seq-to-p)
 (declare stop-s)
 (declare schedule-job)
@@ -249,7 +250,8 @@
                           (if gated
                             (if mono
                               (if (not (nil? synth-inst))
-                                (apply ctl (concat [synth-inst] (if has-gate [] [:gate 1]) args))
+                                (if (node-active? synth-inst)
+                                    (apply ctl (concat [synth-inst] (if has-gate [] [:gate 1]) args)))
                                 (swap! patterns
                                        assoc-in [id k :synth-inst]
                                        (apply synth args)))
@@ -359,22 +361,26 @@
 (defn add-p
   ([id pattern key] (add-p id pattern key {}))
   ([id pattern key attrs]
-   (when (:gated pattern)
-     (rm-p id key)
-     (if-let [mixer (get (techno.sequencer/get-pattern-fx key) :mixer)]
-       (ctl mixer :volume 0)
-       ))
-   (if (:add-at-1 attrs)
-     (add-listener
-      id key (fn [b]
-               (when (= b (get-state id :size))
-                 (swap! listeners (fn [l] (update-in l [id] dissoc key)))
-                 (add-p id pattern key (dissoc attrs :add-at-1)))
-               ))
+   (if (:fx-p pattern)
+     (add-fx-p id (dissoc pattern :fx-p) (:for-p pattern) (:fx-synth pattern) key)
      (do
-       (techno.sequencer/handle-pattern-fx key attrs false (if (map? pattern) (:fx pattern)))
-       (swap! patterns assoc-in [id key] (seq-to-p (merge pattern attrs)))
-       (update-player id)))
+       (when (:gated pattern)
+         (rm-p id key)
+         (if-let [mixer (get (techno.sequencer/get-pattern-fx key) :mixer)]
+           (ctl mixer :volume 0)
+           ))
+       (if (:add-at-1 attrs)
+         (add-listener
+          id key (fn [b]
+                   (when (= b (get-state id :size))
+                     (swap! listeners (fn [l] (update-in l [id] dissoc key)))
+                     (add-p id pattern key (dissoc attrs :add-at-1)))
+                   ))
+         (do
+           (if (not (:no-fx pattern))
+             (techno.sequencer/handle-pattern-fx key attrs false (if (map? pattern) (:fx pattern))))
+           (swap! patterns assoc-in [id key] (seq-to-p (merge pattern attrs)))
+           (update-player id)))))
    nil)
   )
 
@@ -383,6 +389,8 @@
   (if (= key :all)
     (swap! patterns dissoc id)
     (let [pat (get-in @patterns [id key])]
+      (if (and (contains? pat :for-p))
+        (techno.sequencer/rm-pattern-fx (:for-p pat) key))
       (swap! patterns (fn [p] (assoc p id (dissoc (get p id) key))))
       (if (:gated pat)
         (doseq [syn (:nodes pat)]
@@ -392,6 +400,28 @@
     )
   (update-player id)
   )
+
+(defn add-fx-p [id pattern for-p fx-syn key]
+  (let [fx (techno.sequencer/get-pattern-fx for-p)
+        syn (first (filter #(.equals (:name fx-syn) (:synth %)) (vals fx)))
+        syn (if (nil? syn)
+              (let [out-bus (if (not (= -1 (.indexOf (:args fx-syn) "outBus"))) :outBus :out-bus)
+                    audio-bus (if (not (= -1 (.indexOf (:args fx-syn) "audioBus"))) :audioBus :audio-bus)
+                    fx (techno.sequencer/get-pattern-fx for-p)
+                    grp (:group fx)
+                    mixer (to-sc-id (:mixer fx))
+                    bus (:bus fx)
+                    x (fx-syn [:before mixer] audio-bus bus out-bus bus)]
+                (techno.sequencer/add-pattern-fx for-p
+                                                 key
+                                                 x)
+                x)
+              syn)]
+    (if (not (nil? syn))
+        (p/add-p id (merge
+                     pattern
+                     {:mono true
+                      :gated true :synth-inst syn :no-fx true}) key))))
 
 (defn play-p [& args]
   (let [tempo (if (number? (last args)) (last args) 80)

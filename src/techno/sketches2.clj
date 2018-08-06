@@ -1331,7 +1331,12 @@
               ]
              1/8 0 [:attack 0.001 :amp 1.0 :release 1.0 :detune 3.0 :bwr 2.0 ])
             {:fx {:reverb [p/p-reverb :damping 0.8]}})
-
+   :stutter-fx {1
+                {1 (fn [& args] [1 [:t_reset (choose [0 1]) :fragmentlength (max 0.2 (rand 0.9))]]) 4 []}
+                :div 4 :fx-p true
+                :for-p :motif2
+                :fx-synth stuttertest
+                }
    :motif1 (p/scale-p
             bass2
             :C4 :major
@@ -1456,10 +1461,10 @@
            1/4)
    :drum1 (drum-p2
            [:Kit15-Electro]
-           [[(drum-s [:KurzweilKit04] :kick2) []] :1 [(drum-s [:KurzweilKit04] :pdhat) []] :1 [(drum-s [:KurzweilKit04] :pdhat) []]                          :|
-            [(drum-s [:KurzweilKit04] :kick2) []] :03 (fn [d] [[(drum-s [:KurzweilKit04] (choose [:ophat :c1 :pdhat])) []]])                                  :|
-            [(drum-s [:KurzweilKit04] :kick2) []] :1 [(drum-s [:KurzweilKit04] :kick1) []]                                                                   :|
-            [(drum-s [:KurzweilKit04] :kick2) []] :1 (fn [d] (choose [nil [[(drum-s [:KurzweilKit04] :kick1) []]]])) :1 [(drum-s [:KurzweilKit04] :kick1) []] :|
+           [[o-kick []] :1 [(drum-s [:KurzweilKit04] :pdhat) []] :1 [(drum-s [:KurzweilKit04] :pdhat) []]                          :|
+            [o-kick []] :03 (fn [d] [[(drum-s [:KurzweilKit04] (choose [:k1 :c1 :pdhat])) []]])                                  :|
+            [o-kick []] :1 [(drum-s [:KurzweilKit04] :kick1) []]                                                                   :|
+            [o-kick []] :1 (fn [d] (choose [nil [[(drum-s [:KurzweilKit04] :kick1) []]]])) :1 [(drum-s [:KurzweilKit04] :kick1) []] :|
             ]
            1/8)
    :harmony1 (merge
@@ -1481,20 +1486,22 @@
                1/8 0 [:gate 1.0 :amp 0.2 :cutoff 1000 :cutoff2 600 :fdur 3.0 ])
               {:rm-gate0 true})
 
-   :harmony2 (p/scale-p
-              pulsePad
-              :C4 :major
-              [[:7> :3>]                               :|
-               :|
-               :|
-               :03 [:7> [:gate 0]] :01 [:3> [:gate 0]] :|
-               :05 [:2> :7>]                           :|
-               :03 :4 :01 [:7> [:gate 0]]              :|
-               :02 :6> :01 [:4 [:gate 0]]              :|
-               :|
-               :|
-               :05 [:6> [:gate 0] :2> [:gate 0] {:release 3}]       :| :| :| :| :| :| :|]
-              1/8 0 [:gate 1.0 :fdur 3.0 :amp 3 :attack 0.001 :release 0.6 :decay 0.3 ])
+   :harmony2 (merge
+              (p/scale-p
+               pulsePad
+               :C4 :major
+               [[:7> :3>]                               :|
+                :|
+                :|
+                :03 [:7> [:gate 0]] :01 [:3> [:gate 0]] :|
+                :05 [:2> :7>]                           :|
+                :03 :4 :01 [:7> [:gate 0]]              :|
+                :02 :6> :01 [:4 [:gate 0]]              :|
+                :|
+                :|
+                :05 [:6> [:gate 0] :2> [:gate 0] {:release 3}]       :| :| :| :| :| :| :|]
+               1/8 0 [:gate 1.0 :fdur 3.0 :amp 3 :attack 0.001 :release 0.6 :decay 0.3 ])
+              {:rm-gate0 true})
    :lead (p/scale-p
           bass2
           :C4 :major
