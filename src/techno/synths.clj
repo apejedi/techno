@@ -804,7 +804,7 @@
     (out:ar out-bus [sig sig])
     )
   )
-(defsynth b-kick [note 113 dur 0.3 amp 1 depth 2 reson 1]
+(defsynth b-kick [note 113 dur 0.3 amp 1 depth 2 reson 1 out-bus 0]
     (let [f (+ (mod note 12) 108)
           fenv (midicps (env-gen
                          (envelope [f (/ f 2) (/ f 3) (/ f 4)]
@@ -816,7 +816,7 @@
           osc (mix:ar [osc click])
           osc (* osc aenv amp)
           ]
-      (out:ar 0 [osc osc])
+      (out:ar out-bus [osc osc])
       )
   )
 

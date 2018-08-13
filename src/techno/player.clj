@@ -793,7 +793,7 @@
                          (some #(= (:name %) "note") (:params inst)) :note
                          (some #(= (:name %) "freq1") (:params inst)) :freq1
                          true false))
-        gated (some #(= (:name %) "gate") (:params inst))
+        gated (some #(or (= (:name %) "gate") (= (:name %) "t_gate")) (:params inst))
         note-p #(do ;%
                   (if (= note-arg :freq) (midi->hz (note %)) (note %))
                   )
