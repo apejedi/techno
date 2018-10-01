@@ -979,13 +979,13 @@
   {:string (p/scale-p
             ks2
             :G4 :major
-            [
-             [:2< :2<<] :02 :3b< :02 :6< :|
-             :01 :5< :02 [:3b< :1<<]    :|
-             :2< :03 :1<                :|
-             :02 [:7<< :7<<<]            :|
-             :01 [:7<<< :7<<] :03 :1<    :|
-             :2< :06 [:2< :2<<]          :| :|
+            [[:2< :2<<] :02 :3b< :02 :6< :|
+             :01 :5< :02 [:3b< :1<<]     :|
+             :2< :03 :1<                 :|
+             [:7<< :7<<<]                :|
+             :02 [:7<<< :7<<] :03 :1<    :|
+             :01 :2<                     :|
+             [:2< :2<<]                  :|
              ]
             1/8 0 [:amp 0.8 :dur 2.0 :decay 30.0 :coef 0.3 ])
    :asd {}})
@@ -1608,7 +1608,7 @@
    })
 
 (def house4
-  {:tempo 120
+  {:tempo 80
    :motif2  (p/phrase-p
              prophet
              [[:E3 :B3] [:A3 :F3] :34]
@@ -1648,12 +1648,9 @@
           1/16 0 [:amp 1.0 :cutoff 1500.0 :rq 0.3 :attack 0.01 :decay 0.9 ])
 
    :motif (p/phrase-p
-           prophet
-           {1 {1 [:E3 :B3]}
-            16 {1 [:A3 :F3]}
-            24 {4 []}}
-                                        ; [[:E3 :B3] [:A3 :F3] :34]
-           1/4 32 [:decay 9 :amp 0.4 :detune 4])
+           bass-synth
+           [[:E3 :B3] [:A3 :F3] :34]
+           1/4 32 [:release 6 :amp 0.4 :detune 4])
 
    :kick (drum-p2
           [:Kit4-Electro :Kit3-Acoustic]
@@ -1668,13 +1665,16 @@
                {:fx {:low [p/p-low-shelf :freq 200 :db -18]}})
    :harmony (merge
              (p/phrase-p
-              rise-pad
-              {1 {1 [:C3 :G3 :E3 :B3]}
-               16 {1 [:F3 :C4 :A3 :E4 {:t 6}]}
-               24 {4 []}}
-              ;; [[:C3 :G3 :E3 :B3]
-              ;;  [:F3 :C4 :A3 :E4] :34]
-              1/4 32 [:t 8 :lsf 400 :ldb -18])
+              rise-fall-pad2
+              ;; {1 {1 [:C3 :G3 :E3 :B3]}
+              ;;  16 {1 [:F3 :C4 :A3 :E4 {:t 6}]}
+              ;;  24 {4 []}}
+              [[:C3 :G3 :E3 :B3]
+               [:F3 :C4 :A3 :E4] :34]
+              1/4 32
+                                        ;[:t 8 :lsf 400 :ldb -18]
+              [:t 4.5 :lsf 400 :ldb -18]
+              )
              {:fx {:low [p/p-low-shelf :freq 200 :db -18]}})
    :clap  (drum-p2
            [:Kit15-Electro]
@@ -1712,8 +1712,8 @@
            )
    :bass  (merge
            (p/phrase-p
-            prophet2
-                                        ;plk-bass
+            ;prophet2
+            plk-bass
             [:E3 [:cutoff 600] :E3 :E3 :E3  :|
              :E3 :E3 :E3 :E3                :|
              :E3 :E3 :E3 :E3                :|
@@ -1731,10 +1731,129 @@
              :F3 :F3 :F3 :F3                :|
              :F3 :F3 :F3 :F3                :|
              :F3 :F3 :F3 :F3                :|]
-            1/4 0 [:t_gate 1 :fdur 1.7 :attack 0.01 :decay 0.2 :release 0.4
-                                        ;:amp 0.4 :plk 1
+            1/4 0 [;:t_gate 1 :fdur 1.7 :attack 0.01 :decay 0.2 :release 0.4
+                   :amp 0.2 :plk 1
                    ])
                                         ;{:mono true}
            )
+
+   })
+
+(def sketch2
+  {:tempo 60
+   :motif1 (p/scale-p
+            bass-synth
+            :C4 :major
+            [[:5< :2] :02 :4< :02 :5<                  :|
+             (fn [d] (choose [:2< :1 nil])) :4< :02 :5< :|
+             ]
+            1/8 0 [:attack 0.01 :amp 0.35 :release 0.6 :detune 0 :bwr 1 ])
+
+   :motif2 (p/scale-p
+            sin-inst
+            :C4 :major
+            [[:2 :7 :2>] :|
+             :|
+             [:2> :2 :7] :|
+             :|]
+            1/8 0 [:dur 0.6 :amp 0.15 :atk 0.01 ])
+
+   :harmony1 (merge
+              (p/scale-p
+               sawPad
+               :C4 :major
+               [[:5< :7< :2<]                                  :|
+                :|
+                :07 [:5< [:gate 0] :6< :7< [:gate 0]]          :|
+                :04 [:6< [:gate 0] :5<]                        :|
+                [:5< [:gate 0] :4<] :05 [:4< [:gate 0] :5<]    :|
+                :04 [:6< :5< [:gate 0] :1< :2< [:gate 0]]      :|
+                :|
+                :02 [:6< [:gate 0] :1< [:gate 0] {:release 2}] :|
+                ]
+               1/8 0 [:gate 1.0 :amp 0.15 :cutoff 2000 :cutoff2 1000 :fdur 2 :release 1 ])
+              {:rm-gate0 true})
+
+   :drum2 (drum-p2
+           [:Kit15-Electro]
+           [[(drum-s [:Kit5-Electro] :kick1) []] :1]
+           1/4)
+   :drum1 (drum-p2
+           [:Kit1-Acousticclose]
+           [(fn [d n] [[(choose [:sd1 :sd2 :sd3 :sd4]) [:amp 0.3]]
+                      (if (even? n) (choose [:c3 :c4 :c5 nil]))
+                      (cond
+                        (= n 1) (choose [:k1 :k2])
+                        (= n 5) :s3
+                        (odd? n) (p/w-choose {(choose [:s1 :s2]) 0.5 nil 0.5}))]) :|]
+           1/8)
+
+
+   })
+
+(def fm-tekno
+  {:motif2 (p/scale-p
+            bass2
+            :C4 :major
+            [:2 :05 :2 :|
+             :04 :2b   :|
+             :02 :2    :|
+             :5<       :|]
+            1/8 0 [:atk 0.01 :f-dur 0.4 :echo 0 :decay 0.8 :amp 1.0 :cutoff 6000 :cutoff2 2000.0 ])
+
+   :motif1 (p/scale-p
+            wire-bass
+            :C4 :major
+            [:5<<< :04 :2b<<< :|
+             :04 :1<<<        :|
+             :|
+             :|
+             ]
+            1/8 0 [:coef 0.1 :amp 4 :dur 3.0 ])
+
+   :drum4 (drum-p2
+           [:Kit15-Electro]
+           [[(drum-s [:Kit7-Electro] :kick2) []]
+            :|]
+           1/4)
+   :drum3 (drum-p2
+           [:Kit15-Electro]
+           [:| :cl1 :|]
+           1/4)
+   :drum2 (drum-p2
+           [:Kit15-Electro]
+           [:02 [(drum-s [:Kit15-Electro] :ophat1) []] :|
+            ]
+           1/4)
+   :drum1 (drum-p2
+           [:Kit15-Electro]
+           [[(drum-s [:Kit1-Acousticclose] :kick6) []] :03 [(drum-s [:Kit1-Acousticclose] :pdhat1) []]                                                                                         :|
+            [(drum-s [:Kit1-Acousticclose] :kick6) []] :1 [(drum-s [:Kit1-Acousticclose] :pdhat1) []] :1 [(drum-s [:Kit1-Acousticclose] :pdhat1) [] (drum-s [:Kit1-Acousticclose] :ophat3) []] :|
+            [(drum-s [:Kit1-Acousticclose] :kick6) []] :1 [(drum-s [:Kit1-Acousticclose] :kick6) []] :1 [(drum-s [:Kit1-Acousticclose] :ophat3) []]                                            :|
+            [(drum-s [:Kit1-Acousticclose] :kick6) []] :03 [(drum-s [:Kit1-Acousticclose] :pdhat1) []]                                                                                         :|
+            ]
+           1/8)
+   :harmony1 (p/scale-p
+              fmTest
+              :C4 :major
+              [[:5 :2>]                                        :|
+               :|
+               :|
+               :|
+               :|
+               :|
+               :|
+               :|
+               :01 [:4 :1> :5 [:gate 0] :2> [:gate 0]]         :|
+               :|
+               :|
+               :|
+               :3b>                                            :|
+               :|
+               :|
+               :04 [:3b> [:gate 0] :4 [:gate 0] :1> [:gate 0]] :|
+               ]
+              1/8 0 [:gate 1.0 :amp 3 ])
+
 
    })

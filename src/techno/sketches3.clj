@@ -473,3 +473,86 @@
           1/8 0 [:attack 1 :amp 1.0 :release 2 :detune 3.0 :bwr 0.4 ])
 
    })
+(def sketch3
+  {:tempo 100
+   :motif1 (p/scale-p
+            plucked
+            :C4 :major
+            [:2> :03 :2>                               :|
+             :1> :03 [:7 :3]                           :|
+             :04 :6                                    :|
+             :04 [:7 :2]                               :|
+             :04 :1>                                   :|
+             :04 [:5 :1 {:release 3}]                  :|
+             :|
+             :|
+             :2> :03 :2>                               :|
+             :1> :03 [:7 :3]                           :|
+             :04 :6                                    :|
+             :04 [:7 :2]                               :|
+             :04 :1>                                   :|
+             :04 [:5> :3 :1> [:amp 0.05] {:release 3}] :|
+             :|
+             :|
+             ]
+            1/8 0 [:amp 0.1 :mistune 1.008 :pos 0.8 :gc 0.01 :mp 1 :c3 20 :release 2.0 ])
+
+   :harmony2 (p/scale-p
+              sawPad
+              :C4 :major
+              [[:5< :6]                                               :|
+               :07 :5                                                 :|
+               :|
+               :05 [:5< [:gate 0]] [:6 [:gate 0] :5 [:gate 0] :3] :6< :|
+               :|
+               :06 [:3 [:gate 0] :5]                                  :|
+               :|
+               :04 [:5 [:gate 0] :7] [:6< [:gate 0] :5<]              :|
+               :|
+               :|
+               :|
+               :07 [:7 [:gate 0]]                                     :|
+               [:5< [:gate 0]]                                        :| :| :| :|]
+              1/8 0 [:gate 1.0 :amp 0.3 :cutoff 2000 :cutoff2 1000 :fdur 3.0 :release 1.0 ])
+
+   :harmony1 (p/scale-p
+              fmTest
+              :C4 :major
+              [:3<                      :|
+               :|
+               :|
+               :01  [:7<< :3< [:gate 0]] :|
+               :01 [:7<< [:gate 0] :1<] :|
+               :|
+               :|
+               :06 [:1< [:gate 0]] :3<  :|
+               :|
+               :|
+               :|
+               :7<< [:3< [:gate 0]]     :|
+               [:7<< [:gate 0] :6<]     :|
+               :|
+               :|
+               :01 [:6< [:gate 0]]      :|
+               ]
+              1/8 0 [:gate 1.0 :amp 3 ])
+
+   :drum2 (drum-p2
+           [:Kit15-Electro]
+           [                                                                                :|
+            :02 [(drum-s [:Kit17-Electro] :snr2) []]                                        :|
+            :02 [(drum-s [:Kit17-Electro] :snr2) []]                                        :|
+            :1 [(drum-s [:Kit17-Electro] :snr2) []] :1 [(drum-s [:Kit17-Electro] :snr2) []] :|
+            ]
+           1/4)
+   :drum1 (drum-p2
+           [:Kit15-Electro]
+           [[(drum-s [:Kit13-Acoustic] :kick4) []] :1 [(drum-s [:Kit13-Acoustic] :c2) []] [(drum-s [:Kit13-Acoustic] :ophat1) []] [(drum-s [:Kit13-Acoustic] :c2) []] :1 [(drum-s [:Kit13-Acoustic] :c2) []]     :|
+            :02 [(drum-s [:Kit13-Acoustic] :c2) [] (drum-s [:Kit13-Acoustic] :ophat1) []] :1 [(drum-s [:Kit13-Acoustic] :ophat1) [] (drum-s [:Kit13-Acoustic] :c2) []]                                           :|
+            [(drum-s [:Kit13-Acoustic] :c2) [] (drum-s [:Kit13-Acoustic] :kick4) []] :03 [(drum-s [:Kit13-Acoustic] :c2) []]                                                                                     :|
+            [(drum-s [:Kit13-Acoustic] :kick4) []] :1 [(drum-s [:Kit13-Acoustic] :kick4) []] :1 [(drum-s [:Kit13-Acoustic] :c2) [] (drum-s [:Kit13-Acoustic] :ophat1) []] :1 [(drum-s [:Kit13-Acoustic] :c2) []] :|
+            ]
+           1/8)
+
+
+   })

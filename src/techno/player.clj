@@ -239,7 +239,10 @@
                         mono (:mono v)]
                     (doseq [[a args] (partition 2 actions)]
                       (when (not (nil? a))
-                        (let [has-gate (if gated (not (= -1 (.indexOf args :gate))) false)
+                        (let [has-gate (if gated (not (= -1 (.lastIndexOf args :gate))) false)
+                              args (if (contains? v :args)
+                                     (vec (concat (mapcat (fn [[param value]] [param (if (fn? value) (value bar note) value)]) (partition 2 (:args v))) args))
+                                     args)
                               args (if (and (not (nil? (:bus p-fx))) (nil? synth-inst))
                                      (concat args [(if (and (map? a) (contains? a :params) (first (filter #(.equals "outBus" (:name %)) (:params a))))
                                                      :outBus :out-bus)
@@ -255,11 +258,11 @@
                                 (swap! patterns
                                        assoc-in [id k :synth-inst]
                                        (apply synth args)))
-                              (let [n (if (not (= -1 (.indexOf args :note)))
-                                        (nth args (inc (.indexOf args :note)))
-                                        (hz->midi (nth args (inc (.indexOf args :freq)))))
-                                    gate (if (not (= -1 (.indexOf args :gate)))
-                                           (nth args (inc (.indexOf args :gate))) 1)
+                              (let [n (if (not (= -1 (.lastIndexOf args :note)))
+                                        (nth args (inc (.lastIndexOf args :note)))
+                                        (hz->midi (nth args (inc (.lastIndexOf args :freq)))))
+                                    gate (if (not (= -1 (.lastIndexOf args :gate)))
+                                           (nth args (inc (.lastIndexOf args :gate))) 1)
                                     c-args (if (vector? (first args)) (vec (rest args)) args)
                                     nodes (get-in @patterns [id k :nodes] {})
                                     node (get nodes n)]
@@ -805,14 +808,22 @@
         space (if (and (number? space) (> space 0)) (keyword (str space)) nil)
         merge-args (fn [a & [b]]
                      (vec (flatten (into [] (apply hash-map (concat a b))))))
-        args (if (and (sequential? pattern) (map? (last pattern))) (merge-args args (flatten (into [] (last pattern)))) args)
+        ;; args (if (and (sequential? pattern) (map? (last pattern)))
+        ;;        (merge-args args (flatten (into [] (last pattern))))
+        ;;        args)
+        l-args (if (and (sequential? pattern) (map? (last pattern)))
+               (merge-args [] (flatten (into [] (last pattern))))
+               nil)
         pattern (if (and (sequential? pattern) (map? (last pattern))) (vec (butlast pattern)) pattern)
         action-fn (fn [action]
                     (cond (and (sequential? action)
                                (not (empty? action)))
                           (vec (apply concat (phrase-p inst action div nil
                                                        args mk-note true is-note?)))
-                          (or (keyword? action) (number? action) (not (empty? action))) (vec (mk-note action args note-arg))))
+                          (or (keyword? action) (number? action) (not (empty? action)))
+                                        ;(vec (mk-note action args note-arg))
+                          (vec (mk-note action [] note-arg))
+                          ))
         bar-fn (fn [f bar]
                  (fn [p key b]
                    (let [args (if (some #{3}
@@ -839,11 +850,12 @@
                         (mk-block inst a div 0 args mk-note true is-note?)
                         [(vec (apply concat (phrase-p inst a div 0 args mk-note true is-note?)))])
                       (is-note? a) [(mk-note a
-                                             (merge-args args (if (is-arg? b) b []))
+                                        ;(merge-args args (if (is-arg? b) b []))
+                                             (merge-args (if l-args l-args [])
+                                                         (if (is-arg? b) b []))
                                              note-arg)]
                           (is-arg? a) nil
                           true [a]))
-                                        ;x (println pattern (conj (vec (rest pattern)) nil))
         pattern (if (map? pattern)
                   (let [pattern (assoc pattern :div (int (/ 1 div)))]
                       (reduce
@@ -878,7 +890,9 @@
                     div is-space? bar-fn bar-note-fn)
                    (if gated
                      {:synth inst :gated true}
-                     {})))]
+                     {})
+                   {:args args}
+                   ))]
     pattern
     )
   )
@@ -918,7 +932,8 @@
                               n)]
                     (vector inst
                             (vec (concat [note-arg n]
-                                         (if s-args s-args args))))))]
+                                        (if s-args s-args args)
+                                         )))))]
     (phrase-p inst notes div space args note-fn
               false
               #(let [r (fn [n] (re-matches #"([1-9]+)([b#><]+)*\|?([1-9]+)?" n))]
