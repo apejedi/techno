@@ -76,6 +76,59 @@ There are several excellent livecoding environments for music e.g. Supercollider
 
 
 
+## Sequencer Overview
+
+The sequencer works within the context of a tempo and division of beats (or a measure). Each pattern has a defined division or a number of notes for each measure/bar.
+
+For example take two patterns with divisions 6 and 4 respectively and lengths of 1 measure each.
+
+p1: [1 2 3 4 5 6]
+
+p2: [1 2 3 4]
+
+In order to play both patterns at the same time we need to establish a timeline in which they fit perfectly. We can do this by taking a lowest common multiple of the divisions which is 12.
+
+sequencer: [1 2 3 4 5 6 7 8 9 10 11 12]
+
+Internally the sequencer will count 1 through 12, executing the adjusted beats for each pattern.
+
+e.g. for p1 beats 1, 2, 3, 4 will correspond to sequencer beats 1, 4, 7, 10 respectively
+and for p2 beats 1, 2, 3, 4, 5, 6 will correspond to sequencer beats 1, 3, 5, 7, 9, 11 respectively
+
+
+The sequencer will infinitely loop patterns (wrapping around as necessary). This is useful for electronic music which has a lot of repetition.
+
+
+## Pattern DSL Overview
+
+Patterns are defined using the (phrase-p) function which takes a clojure vector and converts it to a map which can relate each measure,note tuple to a executable action.
+
+e.g. (phrase-p piano ;the function to execute for each applicable beat
+        [:c4 :| :b3 :1 [:f4 :g5]:|] ; pattern definition
+	1/4 ; division, in this case 4 beats per measure
+	[:atk 0.01] ;default argument applied to each action
+        )
+
+Here is a rough grammar
+pattern:
+| pattern actions
+| pattern group_action
+| pattern rest
+
+parameters: [key value...]
+
+actions: string | string parameters
+
+group_action: [actions]
+
+rest: :[0-9]+ | :|
+
+a bar rest :| means add rests until end of measure
+e.g. [:a4 :| :b1 :|] -> {1 {1 :a4} 2 {1 :b1}} 
+
+a numeric rest is self explanatory
+
+e.g. [:2 :c4] -> {1 {3 :c4}}
 
 
 ## License
