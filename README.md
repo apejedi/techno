@@ -103,17 +103,17 @@ The sequencer will infinitely loop patterns (wrapping around as necessary). This
 
 Patterns are defined using the (phrase-p) function which takes a clojure vector and converts it to a map which can relate each measure,note tuple to a executable action.
 
-e.g. (phrase-p piano ;the function to execute for each applicable beat
-        [:c4 :| :b3 :1 [:f4 :g5]:|] ; pattern definition
-	1/4 ; division, in this case 4 beats per measure
-	[:atk 0.01] ;default argument applied to each action
-        )
+e.g. (phrase-p piano ;the function to execute for each applicable beat\
+        [:c4 :| :b3 :1 [:f4 :g5]:|] ; pattern definition\
+	1/4 ; division, in this case 4 beats per measure\
+	[:atk 0.01] ;default argument applied to each action\
+        )\
 
 Here is a rough grammar
-pattern:
-| pattern actions
-| pattern group_action
-| pattern rest
+pattern:\
+| pattern actions\
+| pattern group_action\
+| pattern rest\
 
 parameters: [key value...]
 
