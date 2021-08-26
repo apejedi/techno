@@ -103,19 +103,19 @@ The sequencer will infinitely loop patterns (wrapping around as necessary). This
 
 Patterns are defined using the (phrase-p) function which takes a clojure vector and converts it to a map which can relate each measure,note tuple to a executable action.
 
-e.g. (phrase-p piano ;the function to execute for each applicable beat\
-        [:c4 :| :b3 :1 [:f4 :g5]:|] ; pattern definition\
-	1/4 ; division, in this case 4 beats per measure\
-	[:atk 0.01] ;default argument applied to each action\
-        )\
+e.g. (phrase-p piano                                      ;the function to execute for each applicable beat\
+        [:c4 :| :b3 :1 [:f4 :g5]:|]                       ; pattern definition\
+	1/4                                               ; division, in this case 4 beats per measure\
+	[:atk 0.01]                                       ;default argument applied to each action\
+        )
 
 Here is a rough grammar
 pattern:\
 | pattern actions\
 | pattern group_action\
-| pattern rest\
+| pattern rest
 
-parameters: [key value...]
+parameters: [key value...]  
 
 actions: string | string parameters
 
@@ -123,12 +123,20 @@ group_action: [actions]
 
 rest: :[0-9]+ | :|
 
-a bar rest :| means add rests until end of measure
+a bar rest :| means add rests until end of measure\
 e.g. [:a4 :| :b1 :|] -> {1 {1 :a4} 2 {1 :b1}} 
 
 a numeric rest is self explanatory
 
 e.g. [:2 :c4] -> {1 {3 :c4}}
+
+
+Optional parameters can be added for each action\
+e.g. [:e4 [:attack 0.1] :|\
+     [:b4 [:amp 0.1] :d3] :|]
+
+-> 1 {1 [:e4 [ :attack 0.1]]} ,\
+   2 {1 [:b4 [:amp 0.1] :d3], 4 []}
 
 
 ## License
