@@ -144,7 +144,7 @@ e.g.
 ```
 is equivalent to
 
-![Staff](https://raw.githubusercontent.com/boostorg/beast/master/doc/images//staff1.png "Staff")
+![Staff](https://raw.githubusercontent.com/apejedi/techno/master/doc/images/staff1.png "Staff")
 
 
 a numeric rest is self explanatory
