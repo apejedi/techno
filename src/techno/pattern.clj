@@ -94,7 +94,8 @@
                                 [p (conj key :data) b]
                                 [(get-in @p (conj key :data)) b])
                          a (apply f args)]
-                     (swap! p assoc-in (conj key :data bar b) a) (action-fn a))))
+                                        ;(swap! p assoc-in (conj key :data bar b) a)
+                     (action-fn a))))
         bar-note-fn (fn [f bar note]
                       (fn [p key]
                         (let [args (if (some #{2}
@@ -103,7 +104,7 @@
                                 [p (conj key :data)]
                                 [(get-in @p (conj key :data))])
                               a (apply f args)]
-                          (swap! p assoc-in (conj key :data bar note) a)
+                          ;(swap! p assoc-in (conj key :data bar note) a)
                           (action-fn a))))
         mk-action (fn [a b]
                     (cond
@@ -159,4 +160,51 @@
     )
   )
 
+
+(defn scale-p [inst n-note type notes div & [space args]]
+  "Given a scale and a pattern referencing degrees within it, generates a map pattern with computed frequencies/notes"
+  (let [scale (scale (keyword n-note) (keyword type))
+        scale (if (= 0 (mod (last scale) (first scale)))
+                (butlast scale) scale)
+        pitches (cycle scale)
+        note-fn (fn [p & [s-args note-arg]]
+                  (let [[s no modify oct]
+                        (first (re-seq
+                                #"([0-9]+)([b#><]+)*\|?([1-9]+)?"
+                                (str p)))
+                        no (Integer/parseInt no)
+                        n (nth pitches
+                               (dec
+                                no))
+                        n (+ n (* 12 (int (/ no (count scale)))))
+                        n (if (not (nil? oct))
+                            (note
+                             (keyword (str
+                                       (name (find-pitch-class-name n))
+                                       oct)))
+                            n)
+                        n (if (not (nil? modify))
+                            (reduce (fn [n m]
+                                      (cond (= \b m) (dec n)
+                                            (= \# m) (inc n)
+                                            (= \> m) (+ 12 n)
+                                            (= \< m) (- n 12)
+                                            true n
+                                            ))
+                                    n modify)
+                            n)
+                        n (if (or (= note-arg :freq) (= note-arg :freq1)) (midi->hz n)
+                              n)]
+                    (vector inst
+                            (vec (concat [note-arg n]
+                                        (if s-args s-args args)
+                                         )))))]
+    (phrase-p inst notes div space args note-fn
+              false
+              #(let [r (fn [n] (re-matches #"([1-9]+)([b#><]+)*\|?([1-9]+)?" n))]
+                   (or (and (keyword? %) (r (name %)))
+                       (and (sequential? %) (keyword? (first %)) (r (name (first %))))))
+              #(and (keyword? %) (= \0 (first (name %)))))
+    )
+  )
 

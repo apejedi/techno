@@ -53,6 +53,13 @@
     )
   )
 
+(defn is-job-running? [id]
+  (let [jobs-ref @(get-in @pool [:jobs-ref])]
+    (and (contains? jobs-ref id) (deref (get-in jobs-ref [id :scheduled?])))
+    )
+  )
+
+
 (defmethod print-method PoolInfo
   [obj ^Writer w]
   (.write w (str "#<PoolInfo: " (:thread-pool obj) " "

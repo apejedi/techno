@@ -17,7 +17,7 @@
   "Create a sequencer instance which is essentially a scheduled job in the pool"
   (let [div (get options :div 4)
         period (calc-period bpm div)
-        options {:bpm bpm :div div}]
+        options (if options options {:bpm bpm :div div})]
     (techno.scheduler/start-sched)
     (techno.scheduler/start-job period play options))
   )
@@ -26,31 +26,40 @@
   "Stops a given sequencer"
   (techno.scheduler/stop-sched id))
 
-
+(defn is-running? [id]
+  (techno.scheduler/is-job-running? id)
+  )
   
 (defn play [id]
   "Main event handler which executes actions when a sequencer instance is running"
-  (let [state (get-state id)
-        counter (:counter state)
-        beat @(:counter state)
-        seq-size (get state :size 4)
-        seq-div (get state :div 4)]
-    ;(println "Beat " beat " seq-size " seq-size)
-    (doseq [[name data] (get @patterns id)]
-      (let [div (:div data) 
-            [bar note] (get-pos beat seq-size seq-div)
-            actions (cond (fn? (:fn data)) ((:fn data) patterns [id name] bar note)
-                          (fn? (get data bar)) ((get data bar) patterns [id name] note)
-                          (fn? (get-in data [bar note])) ((get-in data [bar note]) patterns [id data])
-                          true (get-in data [bar note]))]
-        (doseq [[a args] (partition 2 actions)]
-          (apply a args)           
-          )
-        ))
-    (dosync
-     (if (>= beat seq-size)
-       (ref-set counter 1)
-       (commute counter inc)))
+  (try
+    (let [state (get-state id)
+          counter (:counter state)
+          beat @(:counter state)
+          seq-size (get state :size 4)
+          seq-div (get state :div 4)]
+      ;(println "id " id "Beat " beat " seq-size " seq-size)
+      (doseq [[name data] (get @patterns id)]
+        (let [div (:div data)
+              [bar note] (get-pos beat div seq-size seq-div)
+              actions (cond (fn? (:fn data)) ((:fn data) patterns [id name] bar note)
+                            (fn? (get data bar)) ((get data bar) patterns [id name] note)
+                            (fn? (get-in data [bar note])) ((get-in data [bar note]) patterns [id data])
+                            true (get-in data [bar note]))]
+          (doseq [[a args] (partition 2 actions)]
+            (let [n (apply a args)]
+              )           
+            )
+          ))
+      (dosync
+       (if (>= beat seq-size)
+         (ref-set counter 1)
+         (commute counter inc)))
+      )
+    (catch Exception e
+      (.println System/out (str "caught exception: " (.getMessage e)))
+      ;(.printStackTrace e)
+      )
     )
   )
 
@@ -113,7 +122,7 @@
         ))
     (catch Exception e
       (.println System/out (str "caught exception: " (.getMessage e)))
-                                        ;(.printStackTrace e)
+      ;(.printStackTrace e)
       )
     )
   )

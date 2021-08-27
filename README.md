@@ -50,7 +50,7 @@ After making sure supercollider is up and running.
 
 #### Connect to supercollider
 
-> (connect-sc)
+> (init)
 
 #### Start a sequencer instance with 60 beats per minute
 
@@ -58,9 +58,14 @@ After making sure supercollider is up and running.
 
 #### Add a pattern to start making music
 
-> (add-pattern (phrase-p piano
-    [[:d4 :f4 :c5] :| [:g4 :b5 :a4] :| [:c4 :e4 :g4]]
-    1/4) :melody)
+```clojure 
+(add-pattern 
+    (phrase-p 
+        piano
+        [[:d4 :f4 :c5] :| [:g4 :b5 :a4] :| [:c4 :e4 :g4] :|]
+        1/4) 
+        :melody)
+```
 
 #### Remove a pattern
 
@@ -93,6 +98,7 @@ sequencer: [1 2 3 4 5 6 7 8 9 10 11 12]
 Internally the sequencer will count 1 through 12, executing the adjusted beats for each pattern.
 
 e.g. for p1 beats 1, 2, 3, 4 will correspond to sequencer beats 1, 4, 7, 10 respectively
+
 and for p2 beats 1, 2, 3, 4, 5, 6 will correspond to sequencer beats 1, 3, 5, 7, 9, 11 respectively
 
 
@@ -103,40 +109,107 @@ The sequencer will infinitely loop patterns (wrapping around as necessary). This
 
 Patterns are defined using the (phrase-p) function which takes a clojure vector and converts it to a map which can relate each measure,note tuple to a executable action.
 
-e.g. (phrase-p piano                                      ;the function to execute for each applicable beat\
-        [:c4 :| :b3 :1 [:f4 :g5]:|]                       ; pattern definition\
-	1/4                                               ; division, in this case 4 beats per measure\
-	[:atk 0.01]                                       ;default argument applied to each action\
-        )
+```clojure
+  (phrase-p 
+   piano  ;the function to execute for each applicable beat
+   
+   [:c4              :|  ; pattern definition
+    :b3 :1 [:f4 :g5] :|] 
+   
+   1/4  ; division, in this case 4 beats per measure
+   
+   [:atk 0.01 amp 0.1] ;default arguments applied to each action
+   )
+```
 
-Here is a rough grammar
-pattern:\
+Here is a rough grammar\
+pattern: empty\
 | pattern actions\
 | pattern group_action\
 | pattern rest
 
-parameters: [key value...]  
-
 actions: string | string parameters
+
+parameters: [key value...]  
 
 group_action: [actions]
 
-rest: :[0-9]+ | :|
+rest: :[number] or :|
 
 a bar rest :| means add rests until end of measure\
-e.g. [:a4 :| :b1 :|] -> {1 {1 :a4} 2 {1 :b1}} 
+e.g. 
+```clojure
+[:a4      :1 :e4 :| 
+[:b4 :d4]        :|] 
+```
+is equivalent to
+
+![Staff](https://raw.githubusercontent.com/boostorg/beast/master/doc/images//staff1.png "Staff")
+
 
 a numeric rest is self explanatory
 
-e.g. [:2 :c4] -> {1 {3 :c4}}
 
 
-Optional parameters can be added for each action\
-e.g. [:e4 [:attack 0.1] :|\
-     [:b4 [:amp 0.1] :d3] :|]
+Optional parameters can be added for each action
+```clojure
+[:e4 [:attack 0.1]      :|
+[:b4 [:amp 0.1]    :d3] :|]
+```
 
--> 1 {1 [:e4 [ :attack 0.1]]} ,\
-   2 {1 [:b4 [:amp 0.1] :d3], 4 []}
+Aside from static actions, anonymous functions can be provided to dynamically generate data.
+
+``` clojure
+[:e4 [:attack 0.1]                         :|
+[:b4 [:amp 0.1]    (fn [d] (choose [:b4 :g3 :f3]))] :|]
+```
+
+The function will be called each time on beat 2 of measure 2.
+
+
+
+### Scale based patterns
+
+Patterns can be defined within the context of a scale, expressing notes as degrees. This makes transposing trivial.
+
+e.g. within context of C Major
+
+:1 -> C, :3 -> E, :7 -> B
+
+Each note can be modified in following ways<br>
+appending "b" flattens the degree e.g. :3b -> Eb<br>
+appending "#" sharpens the degree e.g. :4# -> F#<br>
+appending ">" raises the octave by one e.g. :5> -> G5 (Base note is C4)<br>
+appending "<" lowers the octave by one e.g. :6< -> A3 (Base note is C4)<br>
+
+Numeric rests need to have a leading 0 to differentiate them 
+e.g :1 :03 :5 -> C [3 rests] G
+
+These can be compounded
+e.g. :7b>>   =  Bb6
+
+(scale-p) can be used to make these
+
+``` clojure
+(add-pattern 
+   (scale-p
+    bass-synth
+    :C4 :major
+    [[:2b> :5b] :05 [:2b> :5b] :|
+     :04 [:2b> :5b]            :|
+     :02 [:2b> :5b]            :|
+     [:2b> :5b] :03 [:5b :2b>] :|
+     [:5# :2b>] :05 [:5# :2b>] :|
+     :04 [:2b> :5#]            :|
+     :02 [:2b> :5#]            :|
+     [:2b> :5#] :03 [:2b> :5#] :|
+     [:2b> :6] :05 [:2b> :6]   :|
+     :04 [:2b> :6]             :|
+     :02 [:6 :2b>]             :|
+     [:7 :2b>] :03 [:7 :2b>]   :|]
+    1/8 0 [:attack 0.01 :amp 1.0 :release 1 :detune 3.0 :bwr 0.6 ]) :bass)
+```
+
 
 
 ## License
